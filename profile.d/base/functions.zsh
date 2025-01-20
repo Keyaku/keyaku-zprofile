@@ -709,6 +709,8 @@ function addpath {
 		## Define prepending flag if arg is an int
 		if is_int $1; then
 			prepend=$1
+		elif haspath "$1"; then
+			retval=0
 		## If given path exists & it's not set in variable
 		elif ! haspath "$1" && [[ -d "$1" ]]; then
 			retval=0

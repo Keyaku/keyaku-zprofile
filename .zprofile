@@ -9,6 +9,58 @@
 # and to set session-wide environment variables.
 #####################################################################
 
+### Check for zprofile git repo changes
+if [[ -d "${ZDOTDIR}/.git" ]]; then
+	function zprofile-update() {
+		# FIXME: use get_funcname as soon as it's available globally
+		local usage=(
+			"Usage: ${funcstack[1]:-$FUNCNAME[1]} [OPTION...]"
+			"\t[-h|--help]"
+			"\t[-q|--quiet]"
+			"\t[-v|--verbose]"
+		)
+
+		## Setup parseopts
+		local f_help f_verbose f_quiet
+		zparseopts -D -F -K -- \
+			{h,-help}=f_help \
+			v+=f_verbose \
+			q+=f_quiet \
+			|| return 1
+
+		## Help/usage message
+		if [[ "$f_help" ]]; then
+			>&2 print -l $usage
+			[[ "$f_help" ]]; return $?
+		fi
+
+		# Set verbosity
+		local verbosity=1 # defaults to some verbosity
+		(( verbosity += ($#f_verbose - $#f_quiet) ))
+
+		# Check for updates
+		(cd "${ZDOTDIR}" || return 1
+			local UPSTREAM='@{u}'
+			local LOCAL=$(git rev-parse @)
+			local REMOTE=$(git rev-parse "$UPSTREAM")
+			local BASE=$(git merge-base @ "$UPSTREAM")
+
+			if [[ $LOCAL = $REMOTE ]]; then
+				(( 0 < $verbosity )) && echo "Up-to-date"
+			elif [[ $LOCAL = $BASE ]]; then
+				(( 0 < $verbosity )) && echo "Need to pull"
+				git pull
+			elif [[ $REMOTE = $BASE ]]; then
+				(( 0 < $verbosity )) && echo "Need to push"
+			else
+				(( 0 < $verbosity )) && echo "Diverged"
+			fi
+		)
+	}
+
+	zprofile-update -q
+fi
+
 ### Load login environment via env_update (and load it in case it isn't)
 if ! command -v env_update &>/dev/null; then
 	grep -rEl "\s*(function\s+)(get_funcname|env_update|command_has)(\s*\(\))?" "${ZDOTDIR}/profile.d" | while IFS= read; do
