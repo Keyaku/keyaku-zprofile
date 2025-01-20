@@ -37,7 +37,7 @@ export ZSH="$HOME/.local/git/ohmyzsh"
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-if find "${ZSH_CUSTOM:-$ZSH/custom}/themes" -type f -name "powerlevel10k.zsh-theme" -print -quit | \grep -q .; then
+if find -L "${ZSH_CUSTOM:-$ZSH/custom}/themes" -type f -name "powerlevel10k.zsh-theme" -print -quit | \grep -q .; then
 	ZSH_THEME="powerlevel10k"
 else
 	ZSH_THEME="robbyrussell"
