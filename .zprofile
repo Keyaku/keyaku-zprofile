@@ -11,7 +11,7 @@
 
 ### Check for zprofile git repo changes
 if [[ -d "${ZDOTDIR}/.git" ]]; then
-	function zprofile-update() {
+	function zprofile-update {
 		# FIXME: use get_funcname as soon as it's available globally
 		local usage=(
 			"Usage: ${funcstack[1]:-$FUNCNAME[1]} [OPTION...]"

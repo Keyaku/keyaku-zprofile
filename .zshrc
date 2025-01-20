@@ -157,10 +157,9 @@ command -v pkgfile &>/dev/null && {
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
 [[ -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
 
-# Loading custom functions
-# TODO
-# fpath=( "${ZDOTDIR}"/.zfunc "${ZDOTDIR}"/.zfunc/**/*~*/(CVS)#(/N) ${fpath})
-# autoload -Uz
+# Loading ALL custom functions under .zfunc
+fpath=("${ZDOTDIR}"/.zfunc/**/*~*/(CVS)#(/N) ${fpath})
+autoload -Uz "${ZDOTDIR}"/.zfunc/**/*(.)
 
 # Performance profile: Uncomment this second
 # zprof

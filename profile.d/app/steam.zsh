@@ -1,4 +1,4 @@
-if command_has steam com.valvesoftware.Steam &>/dev/null; then
+if command_has steam com.valvesoftware.Steam; then
 
 ### WeMod launcher
 WEMOD_HOME="${GIT_HOME:-$HOME/.local/git}/_games/wemod-launcher"
@@ -181,55 +181,5 @@ function steam-app-proton {
 
 ### Flatpak version
 
-if flatpak-has 'com.valvesoftware.Steam'; then
-	alias steam='com.valvesoftware.Steam'
-
-	# Steam
-	function steam_desktop_updater {
-		local PATH_steam="$HOME/.var/app/com.valvesoftware.Steam/data/Steam"
-
-		# Check if Steam Flatpak is installed; otherwise, don't bother
-		if ! flatpak list --columns=application | \grep -q 'com.valvesoftware.Steam'; then
-			echo "Steam Flatpak is not installed. Running this tool is useless."
-			return 1
-		elif [[ ! -d "$PATH_steam" ]]; then
-			echo "Steam Flatpak might not have been initialized. Set it up first before running this tool"
-			return 2
-		fi
-
-		install_supd() {
-			cd "$GIT_HOME"
-			echo "Cloning steam-desktop-updater..."
-			git clone -q "https://github.com/gasinvein/steam-desktop-updater"
-			if ! command_has pip; then
-				echo "python-pip is not installed. Install it via your package manager"
-				return 1
-			fi
-			echo "Installing dependencies..."
-			python3 -m pip install --user pillow vdf steam
-		}
-
-		# Check if the tool is in place
-		local PATH_supd="$GIT_HOME/steam-desktop-updater"
-		if [[ -z "$GIT_HOME" ]]; then
-			echo "\$GIT_HOME variable not defined. Set it before running this tool, by prepending it before the command, or under your Shell environment settings (with 'export')"
-			return 3
-		elif [[ ! -d "$GIT_HOME" ]]; then
-			echo "'$GIT_HOME' directory not found"
-			return 4
-		elif [[ ! -d "$PATH_supd" ]]; then
-			echo "Path to steam-desktop-updater ('$PATH_supd') not found."
-			ask_yn -p "Would you like to install it?"
-			if [[ $? -ne 0 ]]; then
-				echo "Aborted."
-				return 5
-			fi
-			install_supd || return 5
-		fi
-
-		# Run tool
-		"$PATH_supd"/steam_desktop_updater.py "$HOME"/.var/app/com.valvesoftware.Steam/data/Steam
-	}
-fi
 
 fi
