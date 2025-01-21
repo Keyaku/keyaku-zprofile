@@ -17,6 +17,11 @@ This tasklist contains all ideas or improvements for this environment setup.
 
 * [ ] Write function to initialize this entire environment without manual setup.
 * [ ] Rewrite some of the functions from functions.zsh as loadable `fpath` functions, and load them in `.zshrc`.
+	* [x] Load from `.zfunc` in `.zshrc`.
+	* [ ] Rewrite core functions: `command_has`, `env_update`/`env_find`, `get_funcname`.
+	* [ ] Rewrite argument tester functions: `is_int`, `is_num`, `is_array`, `is_dict`.
+	* [ ] Rewrite print functions: `print_callstack`, `print_error`, `print_warn`, `print_noenv`.
+
 
 ### `profile.d/`
 

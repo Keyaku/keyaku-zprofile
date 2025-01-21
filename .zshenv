@@ -42,17 +42,6 @@ export HISTCONTROL=ignoredups:erasedups
 
 [[ "$(uname -o)" == Android ]] && setopt re_match_pcre
 
-# TODO: Fetch all PATH additions from configuration files to be added here
-# so that all programs make use of it.
-# May not be necessary if programs are well configured.
-
-### Load login environment via env_update (and load it in case it isn't)
-if ! command -v env_update &>/dev/null; then
-	grep -rEl "\s*(function\s+)(get_funcname|env_update|command_has)(\s*\(\))?" "${ZDOTDIR}/profile.d" | while IFS= read; do
-		source "$REPLY"
-	done
-fi
-
 
 ##############################################################################
 ### Custom packages locations
@@ -72,8 +61,14 @@ fi
 if command -v adb &>/dev/null; then
 	export ANDROID_HOME="${XDG_DATA_HOME}/android"
 	export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
+	export ANDROID_SDK_ROOT="$ANDROID_HOME/sdk"
+	export ANDROID_NDK_HOME="$ANDROID_HOME/ndk"
+	export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
 	alias adb="HOME=$ANDROID_HOME adb"
-	[[ -d ${XDG_DATA_HOME}/android ]] || mkdir -p "$ANDROID_HOME"
+
+	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
+	[[ -d "$ANDROID_SDK_ROOT" ]] || mkdir -p "$ANDROID_SDK_ROOT"
+	[[ -d "$ANDROID_NDK_HOME" ]] || mkdir -p "$ANDROID_NDK_HOME"
 fi
 
 
@@ -85,12 +80,6 @@ export BUNDLE_USER_PLUGIN="${XDG_DATA_HOME}"/bundle
 ### Cargo
 if command -v cargo &>/dev/null; then
 	export CARGO_HOME="$XDG_DATA_HOME"/cargo
-fi
-
-### Docker
-if command -v docker &>/dev/null && ! command -v podman &>/dev/null && [[ "$(env_find docker)" ]]; then
-	env_update docker
-	docker-set-env
 fi
 
 ### Editors
@@ -113,7 +102,7 @@ if command -v gpg-agent &>/dev/null && ! killall -0 gpg-agent &>/dev/null; then
 fi
 
 ### GTK
-export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtk-2.0/gtkrc-2.0"
+export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtkrc-2.0"
 export GTK_USE_PORTAL=1
 
 
@@ -163,7 +152,8 @@ export TK_LIBRARY=/usr/lib/tk8.6
 if command -v wget &>/dev/null; then
 	export WGETRC="${XDG_CONFIG_HOME}/wgetrc"
 	[[ ! -d "${XDG_DATA_HOME}"/wget ]] && mkdir -p "${XDG_DATA_HOME}"/wget
-	! alias wget &>/dev/null && alias wget='wget --hsts-file=${XDG_DATA_HOME}/wget/hsts'
+	# ! alias wget &>/dev/null && alias wget='wget --hsts-file=${XDG_DATA_HOME}/wget/hsts'
+	! \grep -Eqw 'hsts-file=~/.local/share/wget/hst' $XDG_CONFIG_HOME/wgetrc && echo "hsts-file=~/.local/share/wget/hsts" >> $XDG_CONFIG_HOME/wgetrc
 fi
 
 ### X11

@@ -11,6 +11,7 @@
 
 ### Check for zprofile git repo changes
 if [[ -d "${ZDOTDIR}/.git" ]]; then
+	# FIXME: Something wrong with rev-parse; not detecting changes at the moment
 	function zprofile-update {
 		# FIXME: use get_funcname as soon as it's available globally
 		local usage=(
