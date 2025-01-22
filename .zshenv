@@ -61,13 +61,15 @@ fi
 if command -v adb &>/dev/null; then
 	export ANDROID_HOME="${XDG_DATA_HOME}/android"
 	export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
-	export ANDROID_SDK_ROOT="$ANDROID_HOME/sdk"
+	# Contrary to search results, do NOT set ANDROID_SDK_ROOT
 	export ANDROID_NDK_HOME="$ANDROID_HOME/ndk"
-	export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
+
+	export GRADLE_USER_HOME="$XDG_DATA_HOME"/gradle
+	#export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
+
 	alias adb="HOME=$ANDROID_HOME adb"
 
 	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
-	[[ -d "$ANDROID_SDK_ROOT" ]] || mkdir -p "$ANDROID_SDK_ROOT"
 	[[ -d "$ANDROID_NDK_HOME" ]] || mkdir -p "$ANDROID_NDK_HOME"
 fi
 

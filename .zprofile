@@ -80,9 +80,8 @@ env_update
 
 ### Android development
 if command_has adb; then
-	if [[ -d "${ANDROID_HOME}/sdk" ]]; then
-		export ANDROID_SDK_HOME="${ANDROID_HOME}/sdk"
-		addpath 1 "${ANDROID_SDK_HOME}/platform-tools"
+	if [[ -d "${ANDROID_HOME}/sdk/platform-tools" ]]; then
+		addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
 	fi
 fi
 command_has termux-adb && alias termux-adb="HOME=$ANDROID_HOME termux-adb"
