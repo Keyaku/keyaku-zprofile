@@ -42,7 +42,7 @@ function first_init {
 	# Setup ZSH and SSH
 	if whatami Android; then
 		[[ -f "$HOME/../usr/etc/zshenv" ]] && touch "$HOME/../usr/etc/zshenv"
-		if [[ -z "$(sed -En '/ZDOTDIR/{p;q;}')" ]]; then
+		if ! \grep -qw 'ZDOTDIR=' "$HOME/../usr/etc/zshenv"; then
 			echo 'export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh"' >> "$HOME/../usr/etc/zshenv"
 		fi
 		# TODO: setup SSH config
