@@ -1,48 +1,7 @@
-### Binary tester
-function command_has {
-	local usage=(
-		"Usage: ${funcstack[2]:-$FUNCNAME[2]} [OPTION...] FILENAME"
-		"\t[-h|--help]"
-	)
-
-	## Setup zparseopts
-	## FIXME: add flag for ignoring if command is alias
-	local f_help logical=or # default
-	zparseopts -D -F -K -- \
-		{h,-help}=f_help \
-		{o,-or}=logical \
-		{a,-and}=logical \
-		|| return 1
-
-	## Help/usage message
-	if (( ! $# )) || [[ "$f_help" ]]; then
-		>&2 print -l $usage
-		[[ "$f_help" ]]; return $?
-	fi
-
-	## Arg parsing
-	logical=${logical##*-}
-
-	## function logic
-	local retval=0
-	while (( $# )); do
-		command -v "$1" &>/dev/null
-		retval=$?
-		## If logical operator is AND, fail in case previous command returned non-zero
-		if { (( $retval )) && [[ "$logical" =~ a(nd)? ]] } || \
-			{ (( ! $retval )) && [[ "$logical" =~ o(r)? ]] }
-		then break
-		fi
-		shift
-	done
-
-	return $retval
-}
-
 ### Network tools
-if command_has netstat; then
+if command-has netstat; then
 	alias listen_ports="netstat -ltpn"
-elif command_has lsof; then
+elif command-has lsof; then
 	alias listen_ports="sudo lsof -P 2>/dev/null | sed '1p;/LISTEN/!d'"
 else
 	alias listen_ports="echo 'netstat or lsof required but not installed'"
@@ -60,7 +19,7 @@ function gpu-list {
 	# Check which commands are installed
 	local cmd_name cmd_args
 	for cmd_name in ${(@k)all_cmds}; do
-		if ! command_has $cmd_name; then
+		if ! command-has $cmd_name; then
 			unset all_cmds[$cmd_name]
 		fi
 	done
@@ -220,51 +179,6 @@ function disk_speedtest {
 	done
 
 	rm -f /tmp/test*.img
-}
-
-### Set machine identifiers (Linux, WSL, etc.)
-function whatami {
-	local tmpname LIST_machines=()
-
-	# Checking by OSTYPE
-	if [[ -n "${OSTYPE}" ]]; then
-		case "${OSTYPE}" in
-		solaris*)        tmpname="Solaris" ;;
-		darwin*)         tmpname="macOS" ;;
-		*android)        tmpname="Android" ;;
-		linux*)          tmpname="Linux" ;;
-		bsd*)            tmpname="BSD" ;;
-		msys* | cygwin*) tmpname="Windows" ;;
-		*microsoft*)     tmpname="WSL" ;;
-		*)               tmpname="${OSTYPE}" ;;
-		esac
-		LIST_machines+=("${tmpname}")
-	fi
-
-	# Checking by uname
-	tmpname="$(uname -s)"
-	[[ " ${LIST_machines[*]} " =~ " ${tmpname} " ]] || LIST_machines+=("${tmpname}")
-
-	# Checking by lsb_release
-	if command_has lsb_release; then
-		tmpname="$(lsb_release -si)"
-		[[ " ${LIST_machines[*]} " =~ " ${tmpname} " ]] || LIST_machines+=("${tmpname}")
-	fi
-
-	# Checking if RPi
-	if \grep -Eq "BCM(283(5|6|7)|270(8|9)|2711)" /proc/cpuinfo; then
-		tmpname=pi
-		[[ " ${LIST_machines[*]} " =~ " ${tmpname} " ]] || LIST_machines+=("${tmpname}")
-	fi
-
-	if (( $# )); then
-		local retval=0
-		local sorted=($(printf '%s\n' "${@:l}"|sort))
-		[[ " ${${LIST_machines//,/ }:l} " =~ " (${sorted[*]:s/ /|}) " ]]; retval=$?
-		return $retval
-	fi
-
-	echo "${LIST_machines//,/ }"
 }
 
 # Package Managers

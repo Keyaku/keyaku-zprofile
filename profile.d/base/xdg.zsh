@@ -8,7 +8,7 @@ function xdg-set-default-browser {
 	local appinfo appname appid
 
 	# Print caveat when using this function
-	if ! command_has flatpak; then
+	if ! command-has flatpak; then
 		echo "Error: This function requires flatpak."
 		return 1
 	elif (( $# == 0 )); then

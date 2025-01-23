@@ -2,12 +2,12 @@
 
 emulate -L zsh
 
-readonly usage=(
+local usage=(
 	"Usage: $(get_funcname) [OPTION...]"
-	"\t[-h|--help]"
-	"\t[-i|--ignore-case] : Sets case-sensitivity to none"
+	"\t[-h|--help] : Prints this help message"
 	"\t[-v] : Increases verbosity"
 	"\t[-q] : Dereases verbosity"
+	"\t[-i|--ignore-case] : Sets case-sensitivity to none"
 )
 
 ## Setup zparseopts

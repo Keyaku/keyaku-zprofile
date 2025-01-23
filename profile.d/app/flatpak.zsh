@@ -1,4 +1,4 @@
-if command_has flatpak; then
+if command-has flatpak; then
 
 ### Generic
 

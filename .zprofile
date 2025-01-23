@@ -9,6 +9,15 @@
 # and to set session-wide environment variables.
 #####################################################################
 
+# Add all non-empty subdirectories of .zfunc to fpath
+if ! [[ " $fpath " =~ "${ZDOTDIR}/.zfunc" ]]; then
+	fpath=("${ZDOTDIR}"/.zfunc/**/*~*/(CVS)#(/N) ${fpath})
+fi
+# Load core custom functions (directories that begin with .)
+autoload -Uz "${ZDOTDIR}"/.zfunc/.**/*(-.D)
+# Load ALL custom functions
+autoload -Uz "${ZDOTDIR}"/.zfunc/**/*(-.N^/)
+
 ### Check for zprofile git repo changes
 if [[ -d "${ZDOTDIR}/.git" ]]; then
 	# FIXME: Something wrong with rev-parse; not detecting changes at the moment
@@ -64,7 +73,7 @@ fi
 
 ### Load login environment via env_update (and load it in case it isn't)
 if ! command -v env_update &>/dev/null; then
-	grep -rEl "\s*(function\s+)(get_funcname|env_update|command_has)(\s*\(\))?" "${ZDOTDIR}/profile.d" | while IFS= read; do
+	grep -rEl "\s*(function\s+)(get_funcname|env_update)(\s*\(\))?" "${ZDOTDIR}/profile.d" | while IFS= read; do
 		source "$REPLY"
 	done
 fi
@@ -79,17 +88,17 @@ env_update
 ##############################################################################
 
 ### Android development
-if command_has adb; then
+if command-has adb; then
 	if [[ -d "${ANDROID_HOME}/sdk/platform-tools" ]]; then
 		addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
 	fi
 fi
-command_has termux-adb && alias termux-adb="HOME=$ANDROID_HOME termux-adb"
+command-has termux-adb && alias termux-adb="HOME=$ANDROID_HOME termux-adb"
 
 
 ### Microsoft
 export DOTNET_CLI_TELEMETRY_OPTOUT=true
-if (( 1000 <= $UID )) && command_has brew && [[ -d "$HOMEBREW_CELLAR/dotnet" ]]; then
+if (( 1000 <= $UID )) && command-has brew && [[ -d "$HOMEBREW_CELLAR/dotnet" ]]; then
 	export DOTNET_ROOT="${HOMEBREW_PREFIX}/opt/dotnet/libexec"
 else
 	export DOTNET_ROOT="${XDG_DATA_HOME}/dotnet"
@@ -109,7 +118,7 @@ fi
 export SONARLINT_USER_HOME="$XDG_DATA_HOME/sonarlint"
 
 ### Subversion (SVN)
-if command_has svn && ! alias svn &>/dev/null; then
+if command-has svn && ! alias svn &>/dev/null; then
 	alias svn='svn --config-dir ${XDG_CONFIG_HOME}/subversion'
 fi
 

@@ -1,0 +1,52 @@
+# Checks argument list for installed commands.
+# Can make use of operators AND and OR.
+
+emulate -L zsh
+
+local usage=(
+	"Usage: $(get_funcname) [OPTION...] COMMAND..."
+	"\t[-h|--help] : Prints this help message"
+	"\t[-v] : Increases verbosity"
+	"\t[-q] : Dereases verbosity"
+	"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."
+	"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
+)
+
+## Setup zparseopts
+## FIXME: add flag for ignoring if command is alias
+local f_help f_verbose f_quiet logical=or # default
+zparseopts -D -F -K -- \
+	{h,-help}=f_help \
+	v+=f_verbose \
+	q+=f_quiet \
+	{o,-or}=logical \
+	{a,-and}=logical \
+	|| return 1
+
+## Help/usage message
+if (( ! $# )) || [[ "$f_help" ]]; then
+	>&2 print -l $usage
+	[[ "$f_help" ]]; return $?
+fi
+
+## Arg parsing
+local verbosity=0
+(( verbosity += ($#f_verbose - $#f_quiet) ))
+logical=${logical##*-}
+
+## function logic
+local retval=0
+while (( $# )); do
+	command -v "$1" &>/dev/null
+	retval=$?
+	## If logical operator is AND, fail in case previous command returned non-zero
+	if { (( $retval )) && [[ "$logical" =~ a(nd)? ]] } || \
+		{ (( ! $retval )) && [[ "$logical" =~ o(r)? ]] }
+	then
+		(( 0 < $verbosity )) && echo "'$1' is not installed"
+		break
+	fi
+	shift
+done
+
+return $retval

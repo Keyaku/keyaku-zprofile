@@ -1,7 +1,7 @@
 if whatami Debian Ubuntu; then
 
 ### APT
-if command_has apt; then
+if command-has apt; then
 
 	### APT-related aliases
 	alias apt-update='sudo apt update'

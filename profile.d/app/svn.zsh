@@ -1,7 +1,7 @@
 #######################################
 ### Subversion
 #######################################
-if command_has svn; then
+if command-has svn; then
 
 export SVN_STASH="$XDG_CONFIG_HOME/subversion/stash"
 

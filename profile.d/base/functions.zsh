@@ -54,18 +54,9 @@ function check_argc {
 	}
 }
 
-# Get function name relative to current function. Accepts int to reach higher levels if necessary
-function get_funcname {
-	local idx=2
-	if is_int $1 && (( 0 < $1 )); then
-		idx=$((idx + $1))
-	fi
-	echo "${funcstack[$idx]:-$FUNCNAME[$idx]}"
-}
-
 # Check if argument is an integer
 function is_int {
-	[[ $1 =~ ^[0-9]+$ ]]
+	[[ "$1" =~ ^-?[0-9]+$ ]]
 }
 
 # Check if argument is a number
@@ -684,7 +675,7 @@ function env_find {
 	local env_dirs=("${ZDOTDIR}/profile.d")
 	local pdir
 	for pdir in $env_dirs; do
-		find "$pdir" -type f -regextype posix-extended -regex ".*/$regex_pattern\.(env|\w*sh)" -not -path '*/.stversions/*' | \grep .
+		find "$pdir" -type f -regextype posix-extended -regex ".*/$regex_pattern\.(env|\w*sh)" -not -path '*/.st*/*' | \grep .
 		(( $? && 0 == $retval )) && retval=1
 	done
 

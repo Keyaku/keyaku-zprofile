@@ -3,12 +3,12 @@
 ###################
 
 # Caddy
-if command_has caddy; then
+if command-has caddy; then
 	alias caddy-reload='caddy reload --config /etc/caddy/Caddyfile'
 fi
 
 # Cloudflare
-if command_has cloudflared; then
+if command-has cloudflared; then
 	# If this computer is a cloudflared server, load extra functions
 	if [[ -d "/usr/local/etc/cloudflare/data" ]]; then
 		export CF_CONF_HOME="/usr/local/etc/cloudflare/data"
@@ -57,7 +57,7 @@ fi
 
 
 # MEGA
-if command_has megacli; then
+if command-has megacli; then
 	if [[ ${SHELL##*/} == bash ]]; then
 		. /usr/local/etc/bash_completion.d/megacmd_completion.sh
 	fi
@@ -83,6 +83,6 @@ fi
 ###################
 ### Web development
 ###################
-if command_has sass; then
+if command-has sass; then
 	alias sass-watch='sass --watch resources/sass/main.scss:public/css/main.min.css --style compressed > /var/log/sass/watch.log 2>&1 &'
 fi

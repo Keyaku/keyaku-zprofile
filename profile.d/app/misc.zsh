@@ -1,7 +1,7 @@
 #######################################
 # Backup systems
 #######################################
-if command_has borg; then
+if command-has borg; then
 
 if [[ -f "$(whereis borg-backup.sh | awk '{ print $2 }')" ]]; then
 	alias borg-backup="$(whereis borg-backup.sh | awk '{ print $2 }')"
@@ -15,7 +15,7 @@ fi
 # ds4drv
 #######################################
 
-if command_has ds4drv; then
+if command-has ds4drv; then
 
 function ds4drv-check {
 	local FILE_pid="$XDG_CACHE_HOME/ds4drv/ds4drv.pid"

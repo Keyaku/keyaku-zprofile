@@ -2,7 +2,7 @@
 ### Docker
 #######################################
 
-if command_has docker && ! command_has podman; then
+if command-has docker && ! command-has podman; then
 
 # Officially supported Docker environment variables
 typeset -A DOCKER_ENV_VARS=(
@@ -121,7 +121,7 @@ function docker-set-host {
 
 # Helper to install Docker rootless via URL
 function docker-rootless-install {
-	if ! command_has curl; then
+	if ! command-has curl; then
 		print_error "curl not installed"
 		return 1
 	fi
@@ -193,7 +193,7 @@ function docker-rootless-uninstall {
 	elif [[ -z "${f_full}" ]] && ! haspath "${DOCKER_BIN}"; then
 		echo "Docker rootless not in \$PATH, but binaries found (a.k.a. soft uninstalled). Use -f to force remove"
 		return 0
-	elif [[ -z "${f_full}" ]] && ! command_has dockerd-rootless-setuptool.sh; then
+	elif [[ -z "${f_full}" ]] && ! command-has dockerd-rootless-setuptool.sh; then
 		print_error "Uninstall script not found, but binaries found. Use -f to force remove"
 		return 1
 	fi
@@ -206,7 +206,7 @@ function docker-rootless-uninstall {
 		echo "Deleting docker daemon..."
 		rm -f "${DOCKER_BIN}"/dockerd
 	else
-		command_has dockerd-rootless-setuptool.sh && dockerd-rootless-setuptool.sh uninstall
+		command-has dockerd-rootless-setuptool.sh && dockerd-rootless-setuptool.sh uninstall
 		rmpath "${DOCKER_BIN}"
 		[[ "$f_full" ]] && rm -rf "${DOCKER_BIN}"
 	fi

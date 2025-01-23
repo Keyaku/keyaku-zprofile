@@ -1,4 +1,4 @@
-if command_has steam com.valvesoftware.Steam; then
+if command-has steam com.valvesoftware.Steam; then
 
 ### WeMod launcher
 WEMOD_HOME="${GIT_HOME:-$HOME/.local/git}/_games/wemod-launcher"
@@ -20,7 +20,7 @@ function steam-set-paths {
 
 			# Check if flatpak (only if default is not available)
 			if [[ ! -d "${(P)env_var}" ]]; then
-				command_has com.valvesoftware.Steam && : ${(P)env_var::="$HOME/.var/app/com.valvesoftware.Steam/$env_path"}
+				command-has com.valvesoftware.Steam && : ${(P)env_var::="$HOME/.var/app/com.valvesoftware.Steam/$env_path"}
 			fi
 
 			# Force search Steam home in case it was not found (for custom setups)
@@ -35,7 +35,7 @@ function steam-set-paths {
 
 	### Check which variables were not set
 	for env_var env_path in ${(kv)steam_paths}; do
-		if command_has steam && ! env | \grep -qw "$env_var" && [[ -z "${(P)env_var}" || ! -d "${(P)env_var}" ]]; then
+		if command-has steam && ! env | \grep -qw "$env_var" && [[ -z "${(P)env_var}" || ! -d "${(P)env_var}" ]]; then
 			print_error "Could not set '$env_var' environment variable"
 		fi
 	done
@@ -180,6 +180,8 @@ function steam-app-proton {
 }
 
 ### Flatpak version
-
+if command-has com.valvesoftware.Steam && ! alias steam &>/dev/null && ! command-has steam steam-native; then
+	alias steam='flatpak run com.valvesoftware.Steam'
+fi
 
 fi
