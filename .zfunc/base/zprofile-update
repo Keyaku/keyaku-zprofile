@@ -11,17 +11,15 @@ fi
 
 local usage=(
 	"Usage: $(get_funcname) [OPTION...]"
-	"\t[-h|--help] : Prints this help message"
-	"\t[-v] : Increases verbosity"
-	"\t[-q] : Dereases verbosity"
+	"\t[-h|--help] : Print this help message"
+	"\t[-v] / [-q] : Increase / Decrease verbosity"
 )
 
 ## Setup parseopts
 local f_help f_verbose f_quiet
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
-	v+=f_verbose \
-	q+=f_quiet \
+	v+=f_verbose q+=f_quiet \
 	|| return 1
 
 ## Help/usage message

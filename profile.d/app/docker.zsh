@@ -81,16 +81,14 @@ function docker-set-host {
 	local usage=(
 		"Usage: $(get_funcname) [OPTION...]"
 		"\t[-h|--help]"
-		"\t[-v] : Increases verbosity"
-		"\t[-q] : Dereases verbosity"
+		"\t[-v] / [-q] : Increase / Decrease verbosity"
 	)
 
 	## Setup func opts
 	local f_help f_verbose f_quiet
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
-		v+=f_verbose \
-		q+=f_quiet \
+		v+=f_verbose q+=f_quiet \
 		|| return 1
 
 	## Help/usage message

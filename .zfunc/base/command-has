@@ -5,9 +5,8 @@ emulate -L zsh
 
 local usage=(
 	"Usage: $(get_funcname) [OPTION...] COMMAND..."
-	"\t[-h|--help] : Prints this help message"
-	"\t[-v] : Increases verbosity"
-	"\t[-q] : Dereases verbosity"
+	"\t[-h|--help] : Print this help message"
+	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."
 	"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
 	"\t[-e|--exit] : Stops on the first non-installed command found. Behavior depends on the logical operator."
@@ -18,8 +17,7 @@ local usage=(
 local f_help f_verbose f_quiet f_exit logical=or # default
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
-	v+=f_verbose \
-	q+=f_quiet \
+	v+=f_verbose q+=f_quiet \
 	{o,-or}=logical \
 	{a,-and}=logical \
 	|| return 1

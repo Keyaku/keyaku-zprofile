@@ -4,9 +4,8 @@ emulate -L zsh
 
 local usage=(
 	"Usage: $(get_funcname) [OPTION...]"
-	"\t[-h|--help] : Prints this help message"
-	"\t[-v] : Increases verbosity"
-	"\t[-q] : Dereases verbosity"
+	"\t[-h|--help] : Print this help message"
+	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	"\t[-i|--ignore-case] : Sets case-sensitivity to none"
 )
 
@@ -14,8 +13,7 @@ local usage=(
 local f_help f_verbose f_quiet f_icase
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
-	v+=f_verbose \
-	q+=f_quiet \
+	v+=f_verbose q+=f_quiet \
 	{i,-ignore-case}=f_icase \
 	|| return 1
 

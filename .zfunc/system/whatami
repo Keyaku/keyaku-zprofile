@@ -4,7 +4,7 @@ emulate -L zsh
 
 local usage=(
 	"Usage: $(get_funcname) [OPTION...] COMMAND..."
-	"\t[-h|--help] : Prints this help message"
+	"\t[-h|--help] : Print this help message"
 	"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."
 	"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
 )
