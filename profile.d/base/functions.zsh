@@ -382,7 +382,6 @@ function array_key {
 	[[ " ${array[*]} " =~ " ${value} " ]]
 }
 
-
 # Compares two dotted versions
 function vercmp {
 	check_argc 2 2 $# || return $?
@@ -410,16 +409,6 @@ function vercmp {
 	done
 
 	return 0
-}
-
-# Transform arguments to lowercase
-function to_lower {
-	[[ ${SHELL##*/} == zsh ]] && echo "${@:l}" || echo "${@,,}"
-}
-
-# Transform arguments to uppercase
-function to_upper {
-	[[ ${SHELL##*/} == zsh ]] && echo "${@:u}" || echo "${@^^}"
 }
 
 # Print callstack
@@ -623,65 +612,6 @@ function rmvar {
 ##############################################
 ### Environment control
 ##############################################
-### Updates all current user's environment variables from profile.d
-function env_update {
-	local env_list=()
-	env_list=($(env_find ${@:-'.*'}))
-	local retval=$?
-
-	set -- ${env_list}
-	while (( $# )); do
-		source "$1" || return $?
-		shift
-	done
-
-	return $retval
-}
-
-# Find env files in under profile.d
-function env_find {
-	local usage=(
-		"Usage: $(get_funcname) [OPTION...] FILENAME"
-		"\t[-h|--help]"
-	)
-
-	## Setup parseopts
-	local f_help f_dir f_file
-	zparseopts -D -F -K -- \
-		{h,-help}=f_help \
-		{d,-dir}=f_dir \
-		{f,-file}=f_file \
-		|| return $?
-
-	## Help/usage message
-	if (( ! $# )) || [[ "$f_help" ]]; then
-		>&2 print -l $usage
-		[[ "$f_help" ]]; return $?
-	fi
-
-	# Join all arguments into one regex-able pattern as $1|$2|..|$N
-	local args="${(j:|:)@}"
-
-	local regex_pattern="($args)(/.+)?"
-	if [[ "$f_dir" ]]; then
-		regex_pattern="($args)/.+"
-	elif [[ "$f_file" ]]; then
-		regex_pattern="($args)"
-	fi
-
-	local retval=0
-
-	# Search within all defined paths in env dirs
-	local env_dirs=("${ZDOTDIR}/profile.d")
-	local pdir
-	for pdir in $env_dirs; do
-		find "$pdir" -type f -regextype posix-extended -regex ".*/$regex_pattern\.(env|\w*sh)" -not -path '*/.st*/*' | \grep .
-		(( $? && 0 == $retval )) && retval=1
-	done
-
-	return $retval
-}
-
 ### PATH variable environment control
 
 # Checks if argument exists in $path

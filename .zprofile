@@ -9,11 +9,7 @@
 # and to set session-wide environment variables.
 #####################################################################
 
-# Add all non-empty subdirectories of .zfunc to fpath
-if ! [[ " $fpath " =~ "${ZDOTDIR}/.zfunc" ]]; then
-	fpath=("${ZDOTDIR}"/.zfunc/**/*~*/(CVS)#(/N) ${fpath})
-fi
-function load_functions {
+function load_zfunc {
 	## Setup func opts
 	local f_help f_reload
 	zparseopts -D -F -K -- \
@@ -30,19 +26,14 @@ function load_functions {
 	# Load ALL other custom functions
 	autoload -Uz "${ZDOTDIR}"/.zfunc/**/*(-.N^/)
 }
-load_functions
+load_zfunc
 
 ### Check for zprofile git repo changes
-zprofile-update -q
+# XXX: This adds delay to shell startup
+# zprofile-update -q
 
-### Load login environment via env_update (and load it in case it isn't)
-if ! command -v env_update &>/dev/null; then
-	grep -rEl "\s*(function\s+)(env_update)(\s*\(\))?" "${ZDOTDIR}/profile.d" | while IFS= read; do
-		source "$REPLY"
-	done
-fi
-
-env_update
+### Load login environment variables
+zprofile-reload
 
 
 ##############################################################################

@@ -154,6 +154,11 @@ command -v pkgfile &>/dev/null && {
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.
 # For a full list of active aliases, run `alias`.
 
+# Add all non-empty subdirectories of .zfunc to fpath
+if ! [[ " $fpath " =~ "${ZDOTDIR}"/.zfunc ]]; then
+	fpath=("${ZDOTDIR}"/.zfunc/**/*~*/(CVS)#(/N) ${fpath})
+fi
+
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
 [[ -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
 
