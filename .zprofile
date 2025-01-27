@@ -13,67 +13,31 @@
 if ! [[ " $fpath " =~ "${ZDOTDIR}/.zfunc" ]]; then
 	fpath=("${ZDOTDIR}"/.zfunc/**/*~*/(CVS)#(/N) ${fpath})
 fi
-# Load core custom functions (directories that begin with .)
-autoload -Uz "${ZDOTDIR}"/.zfunc/.**/*(-.D)
-# Load ALL custom functions
-autoload -Uz "${ZDOTDIR}"/.zfunc/**/*(-.N^/)
+function load_functions {
+	## Setup func opts
+	local f_help f_reload
+	zparseopts -D -F -K -- \
+		{r,-reload}=f_reload \
+		|| return 1
+
+	if [[ "$f_reload" ]]; then
+		# Reload all functions
+		unfunction "${ZDOTDIR}"/.zfunc/**/*(-.DN:t^/)
+	fi
+
+	# Load core custom functions (directories that begin with .)
+	autoload -Uz "${ZDOTDIR}"/.zfunc/.**/*(-.D)
+	# Load ALL other custom functions
+	autoload -Uz "${ZDOTDIR}"/.zfunc/**/*(-.N^/)
+}
+load_functions
 
 ### Check for zprofile git repo changes
-if [[ -d "${ZDOTDIR}/.git" ]]; then
-	# FIXME: Something wrong with rev-parse; not detecting changes at the moment
-	function zprofile-update {
-		# FIXME: use get_funcname as soon as it's available globally
-		local usage=(
-			"Usage: ${funcstack[1]:-$FUNCNAME[1]} [OPTION...]"
-			"\t[-h|--help]"
-			"\t[-q|--quiet]"
-			"\t[-v|--verbose]"
-		)
-
-		## Setup parseopts
-		local f_help f_verbose f_quiet
-		zparseopts -D -F -K -- \
-			{h,-help}=f_help \
-			v+=f_verbose \
-			q+=f_quiet \
-			|| return 1
-
-		## Help/usage message
-		if [[ "$f_help" ]]; then
-			>&2 print -l $usage
-			[[ "$f_help" ]]; return $?
-		fi
-
-		# Set verbosity
-		local verbosity=1 # defaults to some verbosity
-		(( verbosity += ($#f_verbose - $#f_quiet) ))
-
-		# Check for updates
-		(cd "${ZDOTDIR}" || return 1
-			local UPSTREAM='@{u}'
-			local LOCAL=$(git rev-parse @)
-			local REMOTE=$(git rev-parse "$UPSTREAM")
-			local BASE=$(git merge-base @ "$UPSTREAM")
-
-			if [[ $LOCAL = $REMOTE ]]; then
-				(( 0 < $verbosity )) && echo "Up-to-date"
-			elif [[ $LOCAL = $BASE ]]; then
-				(( 0 < $verbosity )) && echo "Need to pull"
-				git pull
-			elif [[ $REMOTE = $BASE ]]; then
-				(( 0 < $verbosity )) && echo "Need to push"
-			else
-				(( 0 < $verbosity )) && echo "Diverged"
-			fi
-		)
-	}
-
-	zprofile-update -q
-fi
+zprofile-update -q
 
 ### Load login environment via env_update (and load it in case it isn't)
 if ! command -v env_update &>/dev/null; then
-	grep -rEl "\s*(function\s+)(get_funcname|env_update)(\s*\(\))?" "${ZDOTDIR}/profile.d" | while IFS= read; do
+	grep -rEl "\s*(function\s+)(env_update)(\s*\(\))?" "${ZDOTDIR}/profile.d" | while IFS= read; do
 		source "$REPLY"
 	done
 fi

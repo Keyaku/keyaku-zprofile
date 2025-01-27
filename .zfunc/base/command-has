@@ -10,11 +10,12 @@ local usage=(
 	"\t[-q] : Dereases verbosity"
 	"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."
 	"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
+	"\t[-e|--exit] : Stops on the first non-installed command found. Behavior depends on the logical operator."
 )
 
-## Setup zparseopts
+## Setup func opts
 ## FIXME: add flag for ignoring if command is alias
-local f_help f_verbose f_quiet logical=or # default
+local f_help f_verbose f_quiet f_exit logical=or # default
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
 	v+=f_verbose \
@@ -35,18 +36,23 @@ local verbosity=0
 logical=${logical##*-}
 
 ## function logic
-local retval=0
+local non_installed=()
 while (( $# )); do
-	command -v "$1" &>/dev/null
-	retval=$?
-	## If logical operator is AND, fail in case previous command returned non-zero
-	if { (( $retval )) && [[ "$logical" =~ a(nd)? ]] } || \
+	command -v "$1" &>/dev/null || non_installed+=("$1")
+	## Depending on the logical operator, stop for the first non-installed command
+	if (( $verbosity )) && {
+		{ (( $retval )) && [[ "$logical" =~ a(nd)? ]] } ||
 		{ (( ! $retval )) && [[ "$logical" =~ o(r)? ]] }
-	then
-		(( 0 < $verbosity )) && echo "'$1' is not installed"
+	}; then
 		break
 	fi
 	shift
 done
 
-return $retval
+## Print non-installed commands
+if (( $verbosity )) && (( ${#non_installed} )); then
+	>&2 echo "Non-installed commands:"
+	>&2 echo "${non_installed}"
+fi
+
+(( ! ${#non_installed} ))

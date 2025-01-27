@@ -10,7 +10,7 @@ local usage=(
 	"\t[-i|--ignore-case] : Sets case-sensitivity to none"
 )
 
-## Setup zparseopts
+## Setup func opts
 local f_help f_verbose f_quiet f_icase
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \

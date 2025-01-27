@@ -96,7 +96,7 @@ function meminfo {
 		"\t[-t|--total] : Prints Total memory"
 	)
 
-	## Setup zparseopts
+	## Setup func opts
 	local f_all f_free f_total
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \

@@ -9,7 +9,7 @@ local usage=(
 	"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
 )
 
-## Setup zparseopts
+## Setup func opts
 local f_help f_verbose f_quiet logical=or # default
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \

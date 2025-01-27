@@ -60,7 +60,7 @@ function xdg-home-check {
 		"\t[-h|--help]"
 	)
 
-	## Setup zparseopts
+	## Setup func opts
 	local f_help f_simple f_all
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \

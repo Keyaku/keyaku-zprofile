@@ -85,7 +85,7 @@ function docker-set-host {
 		"\t[-q] : Dereases verbosity"
 	)
 
-	## Setup zparseopts
+	## Setup func opts
 	local f_help f_verbose f_quiet
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
@@ -165,7 +165,7 @@ function docker-rootless-uninstall {
 		"\t[-d|--daemon] : Removes only the daemon. Useful for updating"
 	)
 
-	## Setup zparseopts
+	## Setup func opts
 	local f_help f_full f_quiet
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
@@ -422,7 +422,7 @@ function docker-alias {
 		"\t[-h|--help]"
 	)
 
-	## Setup zparseopts
+	## Setup func opts
 	local f_help f_safe
 	local container_name container_alias container_cmd
 	zparseopts -D -F -K -- \

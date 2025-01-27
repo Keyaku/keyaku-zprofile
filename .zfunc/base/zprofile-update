@@ -1,0 +1,64 @@
+# Check for zprofile git repo changes
+
+emulate -L zsh
+
+if [[ -d "${ZDOTDIR}/.git" ]]; then
+	command -v git &>/dev/null || return 1
+else
+	echo "No git repo found in ZDOTDIR (${ZDOTDIR}). This function does nothing."
+	return 1
+fi
+
+local usage=(
+	"Usage: $(get_funcname) [OPTION...]"
+	"\t[-h|--help] : Prints this help message"
+	"\t[-v] : Increases verbosity"
+	"\t[-q] : Dereases verbosity"
+)
+
+## Setup parseopts
+local f_help f_verbose f_quiet
+zparseopts -D -F -K -- \
+	{h,-help}=f_help \
+	v+=f_verbose \
+	q+=f_quiet \
+	|| return 1
+
+## Help/usage message
+if [[ "$f_help" ]]; then
+	>&2 print -l $usage
+	[[ "$f_help" ]]; return $?
+fi
+
+# Set verbosity
+local verbosity=1 # defaults to some verbosity
+(( verbosity += ($#f_verbose - $#f_quiet) ))
+
+function print_msg {
+	(( $verbosity )) && echo "$@"
+}
+
+# Check for updates
+local retval=0
+(cd "${ZDOTDIR}" || return 1
+	git fetch -q
+	local UPSTREAM='@{u}'
+	local LOCAL=$(git rev-parse @)
+	local REMOTE=$(git rev-parse "$UPSTREAM")
+	local BASE=$(git merge-base @ "$UPSTREAM")
+
+	if [[ $LOCAL == $REMOTE ]]; then
+		print_msg "Up-to-date"
+	elif [[ $LOCAL == $BASE ]]; then
+		print_msg "Updating..."
+		git pull ${f_quiet} ${f_verbose}
+	elif [[ $REMOTE == $BASE ]]; then
+		print_msg "There are unpushed changes"
+		retval=1
+	else
+		print_msg "Current branch has diverged from remote"
+		retval=2
+	fi
+)
+
+return $retval
