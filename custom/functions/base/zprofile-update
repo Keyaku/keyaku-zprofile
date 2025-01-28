@@ -68,7 +68,7 @@ git -C "${ZDOTDIR}" submodule -q foreach --recursive 'git fetch -q'
 local OUTDATED_SUBMODULES=$(git -C "${ZDOTDIR}" submodule foreach --recursive 'git rev-list HEAD...@{u}' | \grep -v '^Entering')
 if [[ "${OUTDATED_SUBMODULES}" ]]; then
 	print_msg "Updating submodules..."
-	git -C "${ZDOTDIR}" submodule update --remote --merge
+	git -C "${ZDOTDIR}" submodule update --remote --recursive
 	retval=$?
 else
 	print_msg "All submodules are up-to-date."
