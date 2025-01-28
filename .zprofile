@@ -10,6 +10,8 @@
 #####################################################################
 
 function load_zfunc {
+	setopt extendedglob
+
 	## Setup func opts
 	local f_help f_reload
 	zparseopts -D -F -K -- \
@@ -18,13 +20,11 @@ function load_zfunc {
 
 	if [[ "$f_reload" ]]; then
 		# Reload all functions
-		unfunction "${ZDOTDIR}"/.zfunc/**/*(-.DN:t^/)
+		unfunction "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-.DN^/:t)
 	fi
 
-	# Load core custom functions (directories that begin with .)
-	autoload -Uz "${ZDOTDIR}"/.zfunc/.**/*(-.D)
-	# Load ALL other custom functions
-	autoload -Uz "${ZDOTDIR}"/.zfunc/**/*(-.N^/)
+	# Load custom functions, sorted dotdirectories first
+	autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-.DN^/)
 }
 load_zfunc
 
