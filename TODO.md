@@ -9,7 +9,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] Reorganize `.zshenv`, `.zprofile`, `.zshrc`, `.zlogin` to have their intended profiling (and not the currently existing spaghetti).
 * [x] Reference to ohmyzsh, either as submodule or cloning it externally. 
 * [x] Add external themes and plugins into this repo.
-* [ ] Avoid oh-my-zsh's automatic renaming of the current `.zshrc`, or rename it after its installation.
+* [x] Avoid oh-my-zsh's automatic renaming of the current `.zshrc`, or rename it after its installation.
 * [ ] Remove redundant checks for `[[ -o login ]]` and/or `[[ -o interactive ]]` in files that are already loaded for that intended purpose.
 * [ ] Load configuration for each app from a `profile.d` .zsh script, and streamline which scripts to load on each profile file.
 * [ ] Prepare auto-creation of `.dir_colors`.
