@@ -96,6 +96,11 @@ export LESS=' -R '
 export GIT_HOME=~$USER/.local/git
 [[ ! -d "$GIT_HOME" ]] && mkdir -p "$GIT_HOME"
 
+### Golang
+if command -v go &>/dev/null; then
+	export GOPATH="${XDG_DATA_HOME}/go"
+fi
+
 ### GNUPG & security tools
 export GNUPGHOME="${XDG_DATA_HOME}/gnupg"
 export PASSWORD_STORE_DIR="${XDG_DATA_HOME}/password-store"
