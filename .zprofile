@@ -12,7 +12,7 @@
 # Initialize submodules if ohmyzsh is not present or empty
 [[ "${ZPROFILE_MODULES}" ]] || ZPROFILE_MODULES=($(git -C "$ZDOTDIR" config --file .gitmodules --get-regexp path | awk '{ print $2 }'))
 if [[ "$(echo "$ZDOTDIR"/$^ZPROFILE_MODULES/(N^F))" ]]; then
-	git submodule update --init --recursive
+	git -C "$ZDOTDIR" submodule update --init --recursive
 fi
 
 function load_zfunc {
