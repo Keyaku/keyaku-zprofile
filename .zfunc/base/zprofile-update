@@ -2,6 +2,8 @@
 
 emulate -L zsh
 
+set -o err_return
+
 if [[ -d "${ZDOTDIR}/.git" ]]; then
 	command -v git &>/dev/null || return 1
 else
@@ -37,26 +39,37 @@ function print_msg {
 }
 
 # Check for updates
-local retval=0
-(cd "${ZDOTDIR}" || return 1
-	git fetch -q
-	local UPSTREAM='@{u}'
-	local LOCAL=$(git rev-parse @)
-	local REMOTE=$(git rev-parse "$UPSTREAM")
-	local BASE=$(git merge-base @ "$UPSTREAM")
+[[ -d "${ZDOTDIR}/.git" ]] || return 1
 
-	if [[ $LOCAL == $REMOTE ]]; then
-		print_msg "Up-to-date"
-	elif [[ $LOCAL == $BASE ]]; then
-		print_msg "Updating..."
-		git pull ${f_quiet} ${f_verbose}
-	elif [[ $REMOTE == $BASE ]]; then
-		print_msg "There are unpushed changes"
-		retval=1
-	else
-		print_msg "Current branch has diverged from remote"
-		retval=2
-	fi
-)
+# Update main repo
+git -C "${ZDOTDIR}" fetch -q
+local UPSTREAM='@{u}'
+local LOCAL=$(git -C "${ZDOTDIR}" rev-parse @)
+local REMOTE=$(git -C "${ZDOTDIR}" rev-parse "$UPSTREAM")
+local BASE=$(git -C "${ZDOTDIR}" merge-base @ "$UPSTREAM")
 
-return $retval
+if [[ $LOCAL == $REMOTE ]]; then
+	print_msg "Up-to-date"
+elif [[ $LOCAL == $BASE ]]; then
+	print_msg "Updating..."
+	git -C "${ZDOTDIR}" pull ${f_quiet} ${f_verbose}
+elif [[ $REMOTE == $BASE ]]; then
+	print_msg "There are unpushed changes"
+	return 2
+else
+	print_msg "Current branch has diverged from remote"
+	return 3
+fi
+
+# Update submodules
+git -C "${ZDOTDIR}" submodule -q update --init --recursive
+git -C "${ZDOTDIR}" submodule -q foreach --recursive 'git fetch -q'
+
+local OUTDATED_SUBMODULES=$(git -C "${ZDOTDIR}" submodule foreach --recursive 'git rev-list HEAD...@{u}' | \grep -v '^Entering')
+if [[ "${OUTDATED_SUBMODULES}" ]]; then
+	print_msg "Updating submodules..."
+	git -C "${ZDOTDIR}" submodule update --remote --merge
+	retval=$?
+else
+	print_msg "All submodules are up-to-date."
+fi

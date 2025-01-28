@@ -26,19 +26,6 @@ function first_init {
 		whatami Android && pkg install -y ${pkgs_needed[@]}
 	fi
 
-	# Get ohmyzsh
-	[[ -d ~/.local/git ]] || mkdir -p ~/.local/git
-	[[ -d ~/.local/git/ohmyzsh ]] || ZSH=~/.local/git/ohmyzsh sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-	# Get ohmyzsh themes
-	local zsh_themes="${ZSH_CUSTOM:-$HOME/.local/git/ohmyzsh/custom}/themes"
-	[[ -d $zsh_themes/powerlevel10k ]] || git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $zsh_themes/powerlevel10k
-	[[ -L $zsh_themes/powerlevel10k.zsh-theme ]] || (cd $zsh_themes
-		ln -s powerlevel10k/powerlevel10k.zsh-theme powerlevel10k.zsh-theme
-	)
-	# Get ohmyzsh plugins
-	local zsh_plugins="${ZSH_CUSTOM:-$HOME/.local/git/ohmyzsh/custom}/plugins"
-	[[ -d $zsh_plugins/zsh-syntax-highlighting ]] || git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $zsh_plugins/zsh-syntax-highlighting
-
 	# Setup ZSH and SSH
 	if whatami Android; then
 		[[ -f "$HOME/../usr/etc/zshenv" ]] && touch "$HOME/../usr/etc/zshenv"

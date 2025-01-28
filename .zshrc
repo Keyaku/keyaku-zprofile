@@ -26,18 +26,21 @@ fi
 # Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-	source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${XDG_CACHE_HOME:-$HOME/.local/cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+	source "${XDG_CACHE_HOME:-$HOME/.local/cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
 # Path to your oh-my-zsh installation.
-export ZSH="$HOME/.local/git/ohmyzsh"
+export ZSH="$ZDOTDIR/ohmyzsh"
+
+# Would you like to use another custom folder than $ZSH/custom?
+ZSH_CUSTOM="$ZDOTDIR/custom"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-if find -L "${ZSH_CUSTOM:-$ZSH/custom}/themes" -type f -name "powerlevel10k.zsh-theme" -print -quit | \grep -q .; then
+if [[ -L "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
 	ZSH_THEME="powerlevel10k"
 else
 	ZSH_THEME="robbyrussell"
@@ -95,18 +98,18 @@ COMPLETION_WAITING_DOTS="true"
 # see 'man strftime' for details.
 HIST_STAMPS="dd/mm/yyyy"
 
-# Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM=/path/to/new-custom-folder
-
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
+	# ohmyzsh plugins
 	git pip nmap
-    zsh-syntax-highlighting
+	# Custom plugins (load them all by default)
+    "$ZSH_CUSTOM"/plugins/(*~example)(-FN:t)
 )
+# Add OS-specific plugins
 whatami Arch && plugins+=(archlinux)
 
 source $ZSH/oh-my-zsh.sh
