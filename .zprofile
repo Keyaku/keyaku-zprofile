@@ -9,6 +9,12 @@
 # and to set session-wide environment variables.
 #####################################################################
 
+# Initialize submodules if ohmyzsh is not present or empty
+[[ "${ZPROFILE_MODULES}" ]] || ZPROFILE_MODULES=($(git config --file .gitmodules --get-regexp path | awk '{ print $2 }'))
+if [ "$ZDOTDIR"/$^ZPROFILE_MODULES/(N^F) ]; then
+	git submodule update --init --recursive
+fi
+
 function load_zfunc {
 	setopt extendedglob
 
@@ -23,7 +29,7 @@ function load_zfunc {
 		unfunction "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-.DN^/:t)
 	fi
 
-	# Load custom functions, sorted dotdirectories first
+	# Load custom functions, sorted alphabetically, dotdirectories first
 	autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-.DN^/)
 }
 load_zfunc
