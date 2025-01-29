@@ -1,0 +1,28 @@
+# Loads all custom functions
+
+emulate -L zsh
+setopt extendedglob
+
+## Setup func opts
+local f_help f_reload
+zparseopts -D -F -K -- \
+	{r,-reload}=f_reload \
+	|| return 1
+
+# Add all non-empty subdirectories of custom functions to fpath after $ZSH_CUSTOM/functions, or at the beginning
+if ! [[ " $fpath " =~ "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/.\* ]]; then
+	local -i idx=${fpath[(i)${ZSH_CUSTOM:-$ZDOTDIR/custom}/functions]}
+	(( ${#fpath} < idx )) && idx=0
+	fpath[$idx+1,0]=("${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-/FDN))
+fi
+
+local -a custom_funcs=( "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-.DN^/:t) )
+
+# Reload all functions
+if [[ "$f_reload" ]]; then
+	# Unload functions first
+	unfunction ${custom_funcs}
+fi
+
+# Load custom functions, sorted alphabetically, dotdirectories first
+autoload -Uz ${custom_funcs}

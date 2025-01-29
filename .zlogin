@@ -11,7 +11,13 @@
 # meant only for an interactive shell.
 #####################################################################
 
-
+### SSH configuration
+if (( ${+SSH_HOME} )) && [[ -d ~$USER/.ssh ]]; then
+	[[ ! -d "$SSH_HOME" ]] && mkdir -p "$SSH_HOME"
+	rsync -Praz ~$USER/.ssh/ "${SSH_HOME}" &>/dev/null
+	[[ ! -d "$SSH_HOME/known_hosts.d" ]] && mkdir -p "$SSH_HOME/known_hosts.d"
+	echo "~/.ssh copied to $SSH_HOME. You may now delete it."
+fi
 # ssh-agent-start
 
 # Function to setup environment after Linux (or Termux) installation

@@ -19,27 +19,12 @@ if [[ "$(echo "$ZDOTDIR"/$^ZPROFILE_MODULES/(N^F))" ]]; then
 	git -C "$ZDOTDIR" submodule foreach 'defb=$(git remote show origin | sed -n "/HEAD branch/s/.*: //p"); git checkout -q $defb && git pull -q origin $defb'
 fi
 
-function load_zfunc {
-	setopt extendedglob
-
-	## Setup func opts
-	local f_help f_reload
-	zparseopts -D -F -K -- \
-		{r,-reload}=f_reload \
-		|| return 1
-
-	if [[ "$f_reload" ]]; then
-		# Reload all functions
-		unfunction "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-.DN^/:t)
-	fi
-
-	# Load custom functions, sorted alphabetically, dotdirectories first
-	autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**{,/**}(-.DN^/)
-}
-load_zfunc
+# Load function that loads all custom functions
+# FIXME: In theory, this should not be present in .zprofile. Modify .zprofile to avoid this.
+autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/load_zfunc(N) && load_zfunc
 
 ### Check for zprofile git repo changes
-# XXX: This adds delay to shell startup
+# FIXME: This adds delay to shell startup. Find solution to run this in background, or with timestamp check.
 # zprofile-update -q
 
 ### Load login environment variables
@@ -53,10 +38,8 @@ zprofile-reload
 ##############################################################################
 
 ### Android development
-if command-has adb; then
-	if [[ -d "${ANDROID_HOME}/sdk/platform-tools" ]]; then
-		addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
-	fi
+if [[ -d "${ANDROID_HOME}/sdk/platform-tools" ]]; then
+	addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
 fi
 command-has termux-adb && alias termux-adb="HOME=$ANDROID_HOME termux-adb"
 

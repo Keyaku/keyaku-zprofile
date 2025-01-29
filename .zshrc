@@ -8,6 +8,12 @@
 # as an *interactive shell*.
 #####################################################################
 
+# Path to your oh-my-zsh installation.
+export ZSH="$ZDOTDIR/ohmyzsh"
+
+# Changing custom folder from $ZSH/custom to $ZDOTDIR/custom
+ZSH_CUSTOM="$ZDOTDIR/custom"
+
 # Performance profile: Uncomment this first
 # zmodload zsh/zprof
 
@@ -27,18 +33,15 @@ fi
 setopt extendedglob
 setopt re_match_pcre
 
+# Load function that loads all custom functions
+autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/load_zfunc(N) && load_zfunc
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
 if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${XDG_CACHE_HOME:-$HOME/.local/cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
 	source "${XDG_CACHE_HOME:-$HOME/.local/cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
-
-# Path to your oh-my-zsh installation.
-export ZSH="$ZDOTDIR/ohmyzsh"
-
-# Would you like to use another custom folder than $ZSH/custom?
-ZSH_CUSTOM="$ZDOTDIR/custom"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -156,11 +159,6 @@ command -v pkgfile &>/dev/null && {
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.
 # For a full list of active aliases, run `alias`.
-
-# Add all non-empty subdirectories of custom functions to fpath after $ZSH_CUSTOM/functions
-if ! [[ " $fpath " =~ "$ZSH_CUSTOM"/functions/.\* ]]; then
-	fpath[${fpath[(i)$ZSH_CUSTOM/functions]}+1,0]=("$ZSH_CUSTOM"/functions/{.,^.}**{,/**}(-/FDN))
-fi
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
 [[ -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh

@@ -136,12 +136,6 @@ fi
 
 ### SSH
 export SSH_HOME=${XDG_CONFIG_HOME}/ssh
-if [[ -d ~$USER/.ssh ]]; then
-	[[ ! -d "$SSH_HOME" ]] && mkdir -p "$SSH_HOME"
-	rsync -Praz ~$USER/.ssh/ "${SSH_HOME}" &>/dev/null
-	[[ ! -d "$SSH_HOME/known_hosts.d" ]] && mkdir -p "$SSH_HOME/known_hosts.d"
-	echo "~/.ssh copied to $SSH_HOME. You may now delete it."
-fi
 
 
 ### SSL
@@ -160,7 +154,9 @@ if command -v wget &>/dev/null; then
 	export WGETRC="${XDG_CONFIG_HOME}/wgetrc"
 	[[ ! -d "${XDG_DATA_HOME}"/wget ]] && mkdir -p "${XDG_DATA_HOME}"/wget
 	# ! alias wget &>/dev/null && alias wget='wget --hsts-file=${XDG_DATA_HOME}/wget/hsts'
-	! \grep -Eqw 'hsts-file=~/.local/share/wget/hst' $XDG_CONFIG_HOME/wgetrc && echo "hsts-file=~/.local/share/wget/hsts" >> $XDG_CONFIG_HOME/wgetrc
+	if [[ ! -f $XDG_CONFIG_HOME/wgetrc ]] || ! \grep -Eqw "hsts-file=${XDG_DATA_HOME}/wget/hsts" $XDG_CONFIG_HOME/wgetrc; then
+		echo "hsts-file=${XDG_DATA_HOME}/wget/hsts" >> $XDG_CONFIG_HOME/wgetrc
+	fi
 fi
 
 ### X11
