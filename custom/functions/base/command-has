@@ -34,15 +34,18 @@ local verbosity=0
 logical=${logical##*-}
 
 ## function logic
+local -i retval=0
 local non_installed=()
 while (( $# )); do
-	command -v "$1" &>/dev/null || non_installed+=("$1")
+	command -v "$1" &>/dev/null
+	retval=$?
+	(( ! $retval )) || non_installed+=( "$1" )
 	## Depending on the logical operator, stop for the first non-installed command
-	if (( $verbosity )) && {
+	if {
 		{ (( $retval )) && [[ "$logical" =~ a(nd)? ]] } ||
 		{ (( ! $retval )) && [[ "$logical" =~ o(r)? ]] }
 	}; then
-		break
+		(( $verbosity )) || break
 	fi
 	shift
 done
@@ -53,4 +56,4 @@ if (( $verbosity )) && (( ${#non_installed} )); then
 	>&2 echo "${non_installed}"
 fi
 
-(( ! ${#non_installed} ))
+(( ! $retval ))
