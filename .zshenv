@@ -40,8 +40,6 @@ export ZSH_COMPDUMP="${ZSH_CACHE_HOME}/zcompdump"
 export HISTFILE="${ZSH_CACHE_HOME}/zsh_history"
 export HISTCONTROL=ignoredups:erasedups
 
-[[ "$(uname -o)" == Android ]] && setopt re_match_pcre
-
 
 ##############################################################################
 ### Custom packages locations
@@ -74,10 +72,12 @@ if command -v adb &>/dev/null; then
 fi
 
 
-### Bundle
-export BUNDLE_USER_CACHE="${XDG_CACHE_HOME}"/bundle
-export BUNDLE_USER_CONFIG="${XDG_CONFIG_HOME}"/bundle
-export BUNDLE_USER_PLUGIN="${XDG_DATA_HOME}"/bundle
+### Bundle (Ruby gems)
+if command -v bundle &>/dev/null; then
+	export BUNDLE_USER_CACHE="${XDG_CACHE_HOME}"/bundle
+	export BUNDLE_USER_CONFIG="${XDG_CONFIG_HOME}"/bundle
+	export BUNDLE_USER_PLUGIN="${XDG_DATA_HOME}"/bundle
+fi
 
 ### Cargo
 if command -v cargo &>/dev/null; then
