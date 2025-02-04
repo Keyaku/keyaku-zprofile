@@ -11,6 +11,19 @@
 # meant only for an interactive shell.
 #####################################################################
 
+### Android development
+if (( ${+ANDROID_HOME} )) && [[ -d "$ANDROID_HOME/sdk" ]]; then
+	# Contrary to search results, do NOT set ANDROID_SDK_ROOT
+	# Pick the latest NDK version found (tests non-empty directories)
+	ANDROID_NDK_HOME="$ANDROID_HOME/sdk/ndk"/*(OnF/[1])
+	[[ "$ANDROID_NDK_HOME" ]] && export ANDROID_NDK_HOME || unset ANDROID_NDK_HOME
+
+	export GRADLE_USER_HOME="$XDG_DATA_HOME"/gradle
+	#export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
+
+	addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
+fi
+
 ### SSH configuration
 if (( ${+SSH_HOME} )) && [[ -d ~$USER/.ssh ]]; then
 	[[ ! -d "$SSH_HOME" ]] && mkdir -p "$SSH_HOME"

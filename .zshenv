@@ -55,21 +55,14 @@ if command -v appman &>/dev/null; then
 	export SANDBOXDIR=~$USER/.local/app/appman/sandboxes
 fi
 
-### Android development
+### Android debugging
 if command -v adb &>/dev/null; then
 	export ANDROID_HOME="${XDG_DATA_HOME}/android"
+	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
 	export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
-	# Contrary to search results, do NOT set ANDROID_SDK_ROOT
-	export ANDROID_NDK_HOME="$ANDROID_HOME/sdk/ndk"
-
-	export GRADLE_USER_HOME="$XDG_DATA_HOME"/gradle
-	#export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
 
 	# Avoid adb from using user's home directory
 	alias adb="HOME=$ANDROID_HOME adb"
-
-	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
-	[[ -d "$ANDROID_NDK_HOME" ]] || mkdir -p "$ANDROID_NDK_HOME"
 fi
 
 

@@ -37,13 +37,6 @@ zprofile-reload
 ### These can be reloaded without requiring a reboot.
 ##############################################################################
 
-### Android development
-if [[ -d "${ANDROID_HOME}/sdk/platform-tools" ]]; then
-	addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
-fi
-command-has termux-adb && alias termux-adb="HOME=$ANDROID_HOME termux-adb"
-
-
 ### Microsoft
 export DOTNET_CLI_TELEMETRY_OPTOUT=true
 if (( 1000 <= $UID )) && command-has brew && [[ -d "$HOMEBREW_CELLAR/dotnet" ]]; then
