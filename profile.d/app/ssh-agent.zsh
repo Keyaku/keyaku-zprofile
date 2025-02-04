@@ -1,11 +1,11 @@
 function ssh-agent-start {
 	# Check for a currently running instance of the agent
 	local RUNNING_AGENT="`ssh-agent-pids | wc -l | tr -d '[:space:]'`"
-	if [[ $RUNNING_AGENT -eq 0 ]]; then
+	if (( ! $RUNNING_AGENT )); then
 		# Launch a new instance of the agent
 		ssh-agent -s | sed 's/echo.*//' &> ${SSH_HOME:-$HOME/.ssh}/ssh-agent
 	fi
-	. `cat ${SSH_HOME:-$HOME/.ssh}/ssh-agent`
+	eval `cat ${SSH_HOME:-$HOME/.ssh}/ssh-agent`
 }
 
 function ssh-agent-stop {
@@ -13,5 +13,5 @@ function ssh-agent-stop {
 }
 
 function ssh-agent-pids {
-	ps -ax | grep 'ssh-agent -s' | grep -v grep
+	ps -ax | grep -E '[s]sh-agent -s'
 }

@@ -40,9 +40,18 @@ if [[ "$f_dirs" ]]; then
 	profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)~f_dirs})/**/*.zsh(-DN.) )
 fi
 
+# Load any potential match from arguments, file or directory
+if (( $# )); then
+	profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
 # Load all profiles if none specified
-if (( ! ${#profiles} )); then
+elif (( ! ${#profiles} )); then
 	profiles=( "$ZDOTDIR"/profile.d/**/*.zsh(-DN.) )
+fi
+
+# Final check for valid profiles
+if (( ! ${#profiles} )); then
+	>&2 echo "No valid files or directories specified"
+	return 1
 fi
 
 # Source resulting profiles
