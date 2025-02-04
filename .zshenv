@@ -60,11 +60,12 @@ if command -v adb &>/dev/null; then
 	export ANDROID_HOME="${XDG_DATA_HOME}/android"
 	export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
 	# Contrary to search results, do NOT set ANDROID_SDK_ROOT
-	export ANDROID_NDK_HOME="$ANDROID_HOME/ndk"
+	export ANDROID_NDK_HOME="$ANDROID_HOME/sdk/ndk"
 
 	export GRADLE_USER_HOME="$XDG_DATA_HOME"/gradle
 	#export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
 
+	# Avoid adb from using user's home directory
 	alias adb="HOME=$ANDROID_HOME adb"
 
 	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
@@ -129,7 +130,7 @@ export PERL5LIB="${PERL_CPANM_HOME}:${PERL_LOCAL_LIB_ROOT}/lib/perl5"
 export PERL_MB_OPT="--install_base '${PERL_LOCAL_LIB_ROOT}'"
 export PERL_MM_OPT="  INSTALL_BASE='${PERL_LOCAL_LIB_ROOT}'"
 
-if command -v cpan &>/dev/null && ! alias cpan &>/dev/null; then
+if command -v cpan &>/dev/null; then
 	alias cpan='cpan -j ${PERL_CPANM_HOME}/CPAN/MyConfig.pm'
 fi
 
@@ -153,7 +154,6 @@ export TK_LIBRARY=/usr/lib/tk8.6
 if command -v wget &>/dev/null; then
 	export WGETRC="${XDG_CONFIG_HOME}/wgetrc"
 	[[ ! -d "${XDG_DATA_HOME}"/wget ]] && mkdir -p "${XDG_DATA_HOME}"/wget
-	# ! alias wget &>/dev/null && alias wget='wget --hsts-file=${XDG_DATA_HOME}/wget/hsts'
 	if [[ ! -f $XDG_CONFIG_HOME/wgetrc ]] || ! \grep -Eqw "hsts-file=${XDG_DATA_HOME}/wget/hsts" $XDG_CONFIG_HOME/wgetrc; then
 		echo "hsts-file=${XDG_DATA_HOME}/wget/hsts" >> $XDG_CONFIG_HOME/wgetrc
 	fi

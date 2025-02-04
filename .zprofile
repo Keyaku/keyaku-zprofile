@@ -66,7 +66,7 @@ fi
 export SONARLINT_USER_HOME="$XDG_DATA_HOME/sonarlint"
 
 ### Subversion (SVN)
-if command-has svn && ! alias svn &>/dev/null; then
+if command-has svn; then
 	alias svn='svn --config-dir ${XDG_CONFIG_HOME}/subversion'
 fi
 

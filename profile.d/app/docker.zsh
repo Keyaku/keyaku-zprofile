@@ -454,8 +454,9 @@ function docker-alias {
 	[[ "${(t)container_alias}" =~ array-* ]] && container_alias="${(q+)container_alias[-1]}" || container_alias="${container_alias:-$container_name}"
 	[[ "${(t)container_cmd}" =~ array-* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
 
-	if alias $container_name &>/dev/null && [[ "$f_safe" ]]; then
-		echo "'$container_name' alias already defined. Remove -s|--safe flag to override it."
+	local current_alias="$(alias $container_alias 2>/dev/null)"
+	if [[ "$current_alias" == "$container_alias=docker exec $container_name $container_cmd" ]] && [[ "$f_safe" ]]; then
+		echo "'$container_name' alias already defined as "$current_alias". Remove -s|--safe flag to override it."
 		retval=1
 	else
 		alias $container_alias="docker exec $container_name $container_cmd"

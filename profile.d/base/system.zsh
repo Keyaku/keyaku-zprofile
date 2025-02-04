@@ -1,4 +1,5 @@
 ### Network tools
+# Define listen_ports as one of these, in order of preference
 if command-has netstat; then
 	alias listen_ports="netstat -ltpn"
 elif command-has lsof; then

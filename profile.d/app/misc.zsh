@@ -3,18 +3,28 @@
 #######################################
 if command-has borg; then
 
-if [[ -f "$(whereis borg-backup.sh | awk '{ print $2 }')" ]]; then
-	alias borg-backup="$(whereis borg-backup.sh | awk '{ print $2 }')"
+BORG_SCRIPT="$(whereis borg-backup.sh | awk '{ print $2 }')"
+
+if [[ -f "$BORG_SCRIPT" ]]; then
+	alias borg-backup="$BORG_SCRIPT"
 	alias borg-backup-edit="vim borg-backup"
 fi
 
+unset BORG_SCRIPT
+
 fi
 
 
 #######################################
-# ds4drv
+# ds4drv [DEPRECATED]
+#
+# DEPRECATION NOTE:
+# This should no longer be necessary
+# with Steam's improved controller
+# support.
 #######################################
 
+# Check if ds4drv is installed
 if command-has ds4drv; then
 
 function ds4drv-check {
