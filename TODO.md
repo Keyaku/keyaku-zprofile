@@ -18,6 +18,17 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] Load configuration for each app from a `profile.d` .zsh script, and streamline which scripts to load on each profile file.
 * [ ] Prepare auto-creation of `.dir_colors`.
 * [ ] Prepare auto-creation of `.p10k.zsh`, or ask user to set it up.
+* [ ] `zprofile-update`: Improve performance when detecting changes from remote git repo.
+* [ ] Fix `print_invalidarg`'s erroneous argument format. E.g.: `Invalid argument: ''path' is not an array'` should be something like `parent_funcname: 'path' is not an array`.
+* [ ] Change `print_invalidarg`'s format to: `funcname:lineno: `. Apply the same in other printing cases.
+
+
+### Bug fixes
+
+* [ ] Fix `haspath: command not found...` occurring in certain cases.
+* [ ] **Termux**: Find solution for Termux to avoid `rsync` changes between Termux and device storage; or at the very least avoid p10k's instant prompt warning for printing output while it loads.
+* [ ] **Termux**: Fix error at start of `Invalid argument: ''path' is not an array'`.
+
 
 ### `.zfunc/`
 
