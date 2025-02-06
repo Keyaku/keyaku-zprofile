@@ -12,10 +12,10 @@
 #####################################################################
 
 ### Android development
-if (( ${+ANDROID_HOME} )) && [[ -d "$ANDROID_HOME/sdk" ]]; then
+if [[ -d "$ANDROID_HOME/sdk" ]]; then
 	# Contrary to search results, do NOT set ANDROID_SDK_ROOT
 	# Pick the latest NDK version found (tests non-empty directories)
-	ANDROID_NDK_HOME="$ANDROID_HOME/sdk/ndk"/*(OnF/[1])
+	ANDROID_NDK_HOME="$(echo "$ANDROID_HOME/sdk/ndk"/*(OnF/[1]))"
 	[[ "$ANDROID_NDK_HOME" ]] && export ANDROID_NDK_HOME || unset ANDROID_NDK_HOME
 
 	export GRADLE_USER_HOME="$XDG_DATA_HOME"/gradle
