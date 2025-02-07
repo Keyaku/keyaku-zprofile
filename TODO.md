@@ -27,7 +27,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 
 * [ ] Fix `haspath: command not found...` occurring in certain cases.
 * [ ] **Termux**: Find solution for Termux to avoid `rsync` changes between Termux and device storage; or at the very least avoid p10k's instant prompt warning for printing output while it loads.
-* [ ] **Termux**: Fix error at start of `Invalid argument: ''path' is not an array'`.
+* [x] **Termux**: Fix error at start of `Invalid argument: ''path' is not an array'`.
 
 
 ### `.zfunc/`

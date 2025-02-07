@@ -66,11 +66,13 @@ function is_num {
 
 # Check if argument is any type of array (including associative/dictionary)
 function is_array {
+	setopt re_match_pcre
 	[[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-[Aa]" ]]
 }
 
 # Check if argument is exclusively an associative array
 function is_dict {
+	setopt re_match_pcre
     [[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-A" ]]
 }
 
