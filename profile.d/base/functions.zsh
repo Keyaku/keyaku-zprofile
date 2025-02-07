@@ -424,13 +424,26 @@ function print_callstack {
 }
 
 # Prints formatted error message
-function print_error {
-	# Print function name in green, or nothing if not in a function
-	local fn_name="$(get_funcname 1)"
-	[[ "$fn_name" ]] && fn_name="${fg_no_bold[green]}[$fn_name]${reset_color} "
+function _print_color {
+	local src=(${(s[:])funcfiletrace[2]})
+	local fn_name="$(get_funcname 2)"
+	local fn_file="${src[1]:t}"
+	local fn_line=${src[2]}
+	[[ "$fn_name" == "$fn_file" ]] && fn_name="$fn_file" || fn_name+="($fn_file)"
+
+	local color="$1"
+	shift
 
 	# Print message via stderr as well
-	>&2 printf "%s${fg_bold[red]}ERROR${fg_no_bold[red]}:${reset_color} %s\n" "$fn_name" "$(printf "$1" ${@:2})"
+	>&2 printf "${fg_bold[$color]}%s${fg_no_bold[$color]}:%d:${reset_color} %s\n" "$fn_name" $fn_line "$(printf "$1" ${@:2})"
+}
+
+# Leveled printing functions, using colors
+function print_error {
+	_print_color red $@
+}
+function print_warn {
+	_print_color yellow $@
 }
 
 # Print formatted error message about invalid argument
@@ -448,14 +461,7 @@ function print_noenv {
 }
 
 # Prints formatted warning message
-function print_warn {
-	# Print function name in green, or nothing if not in a function
-	local fn_name="$(get_funcname 1)"
-	[[ "$fn_name" ]] && fn_name="${fg_no_bold[green]}[$fn_name]${reset_color} "
 
-	# Print message via stderr as well
-	>&2 printf "%s${fg_bold[yellow]}WARN${fg_no_bold[yellow]}:${reset_color} %s\n" "$fn_name" "$*"
-}
 
 ##############################################
 ### Script functions
