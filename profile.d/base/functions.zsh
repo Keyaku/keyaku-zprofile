@@ -449,14 +449,14 @@ function print_warn {
 # Print formatted error message about invalid argument
 function print_invalidarg {
 	local msg="${2:-"Invalid argument"}"
-	print_error "$msg: '%s'" "$1"
+	_print_color red "$msg: '%s'" "$1"
 	# print_callstack
 }
 
 # Print formatted error message on variables (given as arguments) not being set
 function print_noenv {
 	if (( 1 <= $# )); then
-		print_error "Environment variable(s) not set:" "${(j:, :)@}"
+		_print_color red "Environment variable(s) not set:" "${(j:, :)@}"
 	fi
 }
 
