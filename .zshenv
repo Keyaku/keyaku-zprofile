@@ -56,12 +56,12 @@ if command -v appman &>/dev/null; then
 fi
 
 ### Android debugging
-if command -v adb &>/dev/null; then
+if command -v adb &>/dev/null || [[ -d "${XDG_DATA_HOME}/android" ]]; then
 	export ANDROID_HOME="${XDG_DATA_HOME}/android"
 	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
 	export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
 
-	# Avoid adb from using user's home directory
+	# Prevent adb from using user's home directory
 	alias adb="HOME=$ANDROID_HOME adb"
 fi
 

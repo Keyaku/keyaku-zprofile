@@ -12,7 +12,7 @@
 #####################################################################
 
 ### Android development
-if [[ -d "$ANDROID_HOME/sdk" ]]; then
+if (( ${+ANDROID_HOME} )) && [[ -d "$ANDROID_HOME/sdk" ]]; then
 	# Contrary to search results, do NOT set ANDROID_SDK_ROOT
 	# Pick the latest NDK version found (tests non-empty directories)
 	ANDROID_NDK_HOME="$(echo "$ANDROID_HOME/sdk/ndk"/*(OnFN/[1]))"
