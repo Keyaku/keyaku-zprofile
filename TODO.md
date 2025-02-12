@@ -21,6 +21,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] `zprofile-update`: Improve performance when detecting changes from remote git repo.
 * [ ] Fix `print_invalidarg`'s erroneous argument format. E.g.: `Invalid argument: ''path' is not an array'` should be something like `parent_funcname: 'path' is not an array`.
 * [x] Change `print_invalidarg`'s format to: `funcname:lineno: `. Apply the same in other printing cases.
+* [ ] Add first setup code to point `ZDOTDIR` to this directory in the system's `zshenv`.
 
 
 ### Bug fixes

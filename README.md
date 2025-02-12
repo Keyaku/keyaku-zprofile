@@ -56,7 +56,7 @@ Essentially, add the line `export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh
 4. Reboot your system.
 
 I really don't recommend cloning the repo if you want to have these for yourself; you'll have a storage wasting `.git` directory in your `$ZDOTDIR`, and in case you accidentally pull any remote changes, they'll be overwriting any of your own.
-The best you can do is fork it, then rename your your setup so it reflects _your_ configuration.
+The best you can do is fork it, then rename your setup so it reflects _your_ configuration.
 
 However, it would very nice and helpful if you'd fork this with the intent of making fixes or improvements to push via Pull Requests; I'd be extremely thankful, especially if those modifications end up being useful for everyone.
 

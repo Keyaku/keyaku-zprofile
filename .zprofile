@@ -51,7 +51,7 @@ export NUGET_PACKAGES="${XDG_CACHE_HOME}/NuGetPackages"
 
 
 ### Python
-if [[ -d "${XDG_DATA_HOME}"/pyvenv && -f "${XDG_DATA_HOME}"/pyvenv/pyvenv.cfg ]] && ! array_has path "${XDG_DATA_HOME}"/pyvenv/bin; then
+if [[ -d "${XDG_DATA_HOME}"/pyvenv && -f "${XDG_DATA_HOME}"/pyvenv/pyvenv.cfg ]] && (( ! ${+VIRTUAL_ENV} )); then
 	source "${XDG_DATA_HOME}"/pyvenv/bin/activate
 fi
 
