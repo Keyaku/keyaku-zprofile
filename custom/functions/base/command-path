@@ -1,0 +1,40 @@
+# Obtains the path to the program behind the command or alias
+
+emulate -L zsh
+
+local usage=(
+	"Usage: $(get_funcname) [OPTION]... COMMAND..."
+)
+local help_msg=(
+	${usage}
+	"Obtains the path to the underlying program of a command or recursive alias."
+	""
+	"Possible options:"
+	"\t-h, --help : Print this help message"
+	"\t-l, --line : Print results line by line"
+)
+
+## Setup func opts
+local f_help f_line
+zparseopts -D -F -K -- \
+	{h,-help}=f_help \
+	{l,-line}=f_line \
+	|| return 1
+
+## Help/usage message
+if [[ -z "$f_help" ]] && (( ! $# )); then
+	>&2 print -l $usage
+	return 1
+elif [[ "$f_help" ]]; then
+	>&2 print -l $help_msg
+	return 0
+fi
+
+# This pattern implies that the path is absolute (i.e. begins with /)
+local result=($(type -a ${(u)@} | sed -En '/.+? is '"'"'?\//s/.+? is //p'))
+[[ "${result}" ]] && {
+	local flags="Q"
+	[[ "$f_line" ]] && flags+="F"
+	# FIXME: Find way to do this without eval
+	eval "print -r -- \${($flags)result}"
+}
