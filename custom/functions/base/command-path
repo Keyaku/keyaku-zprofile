@@ -36,5 +36,5 @@ local result=($(type -a ${(u)@} | sed -En '/.+? is '"'"'?\//s/.+? is //p'))
 	local flags="Q"
 	[[ "$f_line" ]] && flags+="F"
 	# FIXME: Find way to do this without eval
-	eval "print -r -- \${($flags)result}"
+	eval "echo \${($flags)result}"
 }
