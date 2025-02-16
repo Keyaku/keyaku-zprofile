@@ -108,7 +108,7 @@ function docker-set-host {
 		# Only set DOCKER_HOST if current context is not default
 
 		if [[ "$(docker context show)" != "default" ]]; then
-			print_error "Current Docker context is not default. This is most likely unintended behavior."
+			print_fn -e "Current Docker context is not default. This is most likely unintended behavior."
 			return 1
 		elif [[ "$DOCKER_HOST" != "$docker_host" ]]; then
 			export DOCKER_HOST="$docker_host"
@@ -120,7 +120,7 @@ function docker-set-host {
 # Helper to install Docker rootless via URL
 function docker-rootless-install {
 	if ! command-has curl; then
-		print_error "curl not installed"
+		print_fn -e "curl not installed"
 		return 1
 	fi
 
@@ -178,7 +178,7 @@ function docker-rootless-uninstall {
 	fi
 
 	if [[ -n "$f_full" && -n "$f_daemon" ]]; then
-		print_error "-d and -f flags are mutually exclusive"
+		print_fn -e "-d and -f flags are mutually exclusive"
 		return 2
 	fi
 
@@ -192,7 +192,7 @@ function docker-rootless-uninstall {
 		echo "Docker rootless not in \$PATH, but binaries found (a.k.a. soft uninstalled). Use -f to force remove"
 		return 0
 	elif [[ -z "${f_full}" ]] && ! command-has dockerd-rootless-setuptool.sh; then
-		print_error "Uninstall script not found, but binaries found. Use -f to force remove"
+		print_fn -e "Uninstall script not found, but binaries found. Use -f to force remove"
 		return 1
 	fi
 
@@ -260,7 +260,7 @@ function docker-ls {
 # Updates Docker binaries. Only works for rootless; for system-wise, best to use package managers
 function docker-update {
 	if [[ "$(docker context show 2>/dev/null)" != rootless ]]; then
-		print_error "Current context isn't rootless, so it most likely doesn't need manual updating."
+		print_fn -e "Current context isn't rootless, so it most likely doesn't need manual updating."
 		return 1
 	fi
 
@@ -270,7 +270,7 @@ function docker-update {
 
 function docker-upgrade {
 	if (( ! $# )); then
-		print_error "Docker stack name required as argument"
+		print_fn -e "Docker stack name required as argument"
 		return 1
 	fi
 

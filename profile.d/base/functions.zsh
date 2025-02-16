@@ -12,7 +12,7 @@ function assign {
 		return 1
 	# FIXME: doesn't work with arrays
 	elif is_array $1 || is_array $2; then
-		print_error "This function does not work with arrays!"
+		print_fn -e "This function does not work with arrays!"
 		return 2
 	fi
 
@@ -48,7 +48,7 @@ function check_argc {
 
 	# Check if the number of arguments is correct
 	(( $minargs <= $argc && $argc <= $maxargs )) || {
-		print_error "Argument mismatch: [$minargs-$maxargs] required, $argc given."
+		print_fn -e "Argument mismatch: [$minargs-$maxargs] required, $argc given."
 		print_callstack
 		return 2
 	}
@@ -425,40 +425,18 @@ function print_callstack {
 	done
 }
 
-# Prints formatted error message
-function _print_color {
-	local src=(${(s[:])funcfiletrace[2]})
-	local fn_name="$(get_funcname 2)"
-	local fn_file="${src[1]:t}"
-	local fn_line=${src[2]}
-	[[ "$fn_name" == "$fn_file" ]] && fn_name="$fn_file" || fn_name+="($fn_file)"
-
-	local color="$1"
-	shift
-
-	# Print message via stderr as well
-	>&2 printf "${fg_bold[$color]}%s${fg_no_bold[$color]}:%d:${reset_color} %s\n" "$fn_name" $fn_line "$(printf "$1" ${@:2})"
-}
-
-# Leveled printing functions, using colors
-function print_error {
-	_print_color red $@
-}
-function print_warn {
-	_print_color yellow $@
-}
 
 # Print formatted error message about invalid argument
 function print_invalidarg {
 	local msg="${2:-"Invalid argument"}"
-	_print_color red "$msg: '%s'" "$1"
+	print_fn -e "$msg: '%s'" "$1"
 	# print_callstack
 }
 
 # Print formatted error message on variables (given as arguments) not being set
 function print_noenv {
 	if (( 1 <= $# )); then
-		_print_color red "Environment variable(s) not set:" "${(j:, :)@}"
+		print_fn -w "Environment variable(s) not set:" "${(j:, :)@}"
 	fi
 }
 

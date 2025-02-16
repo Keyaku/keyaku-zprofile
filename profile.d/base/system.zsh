@@ -52,7 +52,7 @@ function gpu-list {
 	# Set from args
 	while (( $# )); do
 		if [[ "$cmd_name" ]]; then
-			print_error "Arguments discarded: You may pick just 1 tool"
+			print_fn -e "Arguments discarded: You may pick just 1 tool"
 			return 1
 		elif array_key all_cmds "$1"; then
 			cmd_name="$1"
@@ -66,7 +66,7 @@ function gpu-list {
 
 	# Error checking
 	if [[ -z "$cmd_name" ]]; then
-		print_error "No tool provided"
+		print_fn -e "No tool provided"
 		return 1
 	elif ! array_key all_cmds "$cmd_name"; then
 		print_invalidarg "$cmd_name" "Invalid or unsupported tool"
@@ -213,7 +213,7 @@ function pkgmgr-binpath {
 	)
 
 	if ! array_key pkg_cmds "$pkgmgr"; then
-		print_error "Case for '$pkgmgr' not implemented yet"
+		print_fn -e "Case for '$pkgmgr' not implemented yet"
 		return 1
 	fi
 

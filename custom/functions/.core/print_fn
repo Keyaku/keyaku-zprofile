@@ -1,0 +1,64 @@
+# Base function to print text formatted as "func:lineno: fmt [args]"
+
+emulate -L zsh
+autoload -U colors && colors
+
+_usage_color_aux() {
+	printf "%s\n" "Uses ${fg_bold[$1]}$1${reset_color} ${fg_no_bold[$1]}color${reset_color}"
+}
+
+local -A lvl_color=(
+	[e]="red"
+	[w]="yellow"
+)
+
+local usage=(
+	"Usage: $(get_funcname) LEVEL [OPTION...] FMT [ARGS...]"
+	"\t[-h|--help] : Print this help message"
+	"\t-e|--error : $(_usage_color_aux red), suited for errors"
+	"\t-w|--warning : $(_usage_color_aux yellow), suited for warnings"
+)
+
+## Setup func opts
+local f_help f_level
+zparseopts -D -F -K -- \
+	{h,-help}=f_help \
+	{e,-error}=f_level \
+	{w,-warning}=f_level \
+	|| return 1
+
+# Get the first char from the very first f_level argument (any other is discarded)
+f_level=${${f_level[1]//-/}[1]}
+
+## Help/usage message
+if (( ! $# )) || [[ -z "$f_level" ]] || [[ "$f_help" ]]; then
+	[[ -z "$f_level" ]] && echo "Missing level argument"
+	>&2 print -l $usage
+	[[ "$f_help" ]]; return $?
+fi
+
+local -i idx=1
+if (( ${#funcstack} <= 1 )); then
+	idx=0
+	set -- "should not be called directly"
+fi
+
+local src=(${(s[:])funcfiletrace[$idx]})
+local fn_name="$(get_funcname $idx)"
+local fn_file="${src[1]:t}"
+local -i fn_line=${src[2]}
+
+if [[ "$fn_name" == "$fn_file" ]]; then
+	fn_name="$fn_file"
+elif [[ "$fn_file" ]]; then
+	fn_name+="($fn_file)"
+fi
+
+# If fn_file is empty, this function is being called directly, so there's no line
+[[ -z "$fn_file" ]] && unset fn_line
+
+local color="${lvl_color[$f_level]}"
+
+# Print message via stderr as well
+>&2 printf "${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s\n" "$fn_name" $fn_line "$(printf "$1" ${@:2})"
+(( $idx ))

@@ -40,7 +40,7 @@ function xdg-set-default-browser {
 	appid="$(echo "$appinfo" | awk '{print $NF}')"
 
 	if [[ -z "$appid" ]]; then
-		print_error "No Flatpak Application ID set. Aborting"
+		print_fn -e "No Flatpak Application ID set. Aborting"
 	fi
 
 	echo "Setting $appname (ID: $appid) as the default browser"

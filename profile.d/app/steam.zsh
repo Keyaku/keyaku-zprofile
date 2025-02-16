@@ -25,7 +25,7 @@ function steam-set-paths {
 
 			# Force search Steam home in case it was not found (for custom setups)
 			if [[ "$env_var" == "STEAM_HOME" && ! -d "${(P)env_var}" ]]; then
-				STEAM_HOME="$(find "$HOME" -maxdepth 4 -type d -name ".steam" -not -regex '.*\.?cache.*' -print -quit)"
+				STEAM_HOME="$(find "$HOME" -maxdepth 6 -type d -name ".steam" -not -regex '.*\.?cache.*' -print -quit)"
 			fi
 
 			# Export variable or unset it depending on its validity
@@ -36,7 +36,7 @@ function steam-set-paths {
 	### Check which variables were not set
 	for env_var env_path in ${(kv)steam_paths}; do
 		if command-has steam && ! env | \grep -qw "$env_var" && [[ -z "${(P)env_var}" || ! -d "${(P)env_var}" ]]; then
-			print_error "Could not set '$env_var' environment variable"
+			print_fn -e "Could not set '$env_var' environment variable"
 		fi
 	done
 }
@@ -47,11 +47,11 @@ function steam-app-id {
 
 	local library="${STEAM_LIBRARY:-"${XDG_DATA_HOME}"/Steam}"
 	[[ -z "$STEAM_LIBRARY" ]] && {
-		print_error "STEAM_LIBRARY environment variable not set. Assuming default: ${XDG_DATA_HOME}/Steam"
+		print_fn -e "STEAM_LIBRARY environment variable not set. Assuming default: ${XDG_DATA_HOME}/Steam"
 	}
 
 	(( ! $# )) && {
-		print_error "Missing App name(s)"
+		print_fn -e "Missing App name(s)"
 		return 1
 	}
 
@@ -71,11 +71,11 @@ function steam-app-library {
 
 	local library="${STEAM_LIBRARY:-"${XDG_DATA_HOME}"/Steam}"
 	[[ -z "$STEAM_LIBRARY" ]] && {
-		print_error "STEAM_LIBRARY environment variable not set. Assuming default: ${XDG_DATA_HOME}/Steam"
+		print_fn -e "STEAM_LIBRARY environment variable not set. Assuming default: ${XDG_DATA_HOME}/Steam"
 	}
 
 	if (( ! $# )); then
-		print_error "Missing App ID(s)"
+		print_fn -e "Missing App ID(s)"
 		return 1
 	fi
 
@@ -120,7 +120,7 @@ function steam-app-data {
 	local retval=0
 
 	if (( ! $# )); then
-		print_error "Missing App ID(s)"
+		print_fn -e "Missing App ID(s)"
 		return 1
 	fi
 
@@ -148,7 +148,7 @@ function steam-app-proton {
 	local retval=0
 
 	if (( ! $# )); then
-		print_error "Missing App ID(s)"
+		print_fn -e "Missing App ID(s)"
 		return 1
 	fi
 
@@ -167,7 +167,7 @@ function steam-app-proton {
 
 		# Print Proton version, or error if not found
 		if [[ -z "$proton_version" ]]; then
-			print_error "Couldn't determine Proton version for '$1'"
+			print_fn -e "Couldn't determine Proton version for '$1'"
 			((retval++))
 			continue
 		fi

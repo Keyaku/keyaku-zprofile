@@ -17,7 +17,7 @@ if command-has cloudflared; then
 		function cloudflared_add_service {
 			echo "CAREFUL! Use this tool only if you know what you're doing!"
 			if [[ -z "$SERVER_NAME" ]]; then
-				print_error "SERVER_NAME environment variable not set"
+				print_noenv "SERVER_NAME"
 			fi
 
 			local hostname=""
