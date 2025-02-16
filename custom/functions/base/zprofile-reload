@@ -2,18 +2,22 @@
 
 emulate -L zsh
 
+setopt extendedglob
+
 local usage=(
 	"Usage: $(get_funcname) [OPTION...] [FILE...] [DIR...]"
 	"\t[-h|--help] : Print this help message"
+	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	"\t[-f|--file] FILE : Reloads the specified file(s) under profile.d"
 	"\t[-d|--dir] DIR : Reloads all files under the specified directory(ies) under profile.d"
 )
 
-## Setup parseopts
-local void f_help
+## Setup parseopts (with no extra arguments)
+local void f_help f_verbose f_quiet
 local -aU f_dirs f_files
 zparseopts -a void -D -F -K -- \
 	{h,-help}=f_help \
+	v+=f_verbose q+=f_quiet \
 	{d,-dir}+:=f_dirs \
 	{f,-file}+:=f_files \
 	|| return 1
@@ -23,6 +27,11 @@ if [[ "$f_help" ]]; then
 	>&2 print -l $usage
 	[[ "$f_help" ]]; return $?
 fi
+
+## Arg parsing
+local verbosity=0
+(( verbosity += ($#f_verbose - $#f_quiet) ))
+logical=${logical##*-}
 
 # Prepare profiles to load
 local -a flags_to_unset=(-f --file -d --dir)
@@ -34,7 +43,7 @@ local -aU profiles=()
 
 # Load specified files/dirs from arguments
 if [[ "$f_files" ]]; then
-	profiles+=( "$ZDOTDIR"/profile.d/**/((${(j:|:)~f_files}).zsh)(-DN.) )
+	profiles+=( "$ZDOTDIR"/profile.d/{.*,^.}/**/((${(j:|:)~f_files}).zsh)(-DN.) )
 fi
 if [[ "$f_dirs" ]]; then
 	profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)~f_dirs})/**/*.zsh(-DN.) )
@@ -44,14 +53,26 @@ fi
 if (( $# )); then
 	profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
 # Load all profiles if none specified
-elif (( ! ${#profiles} )); then
-	profiles=( "$ZDOTDIR"/profile.d/**/*.zsh(-DN.) )
+elif [[ -z "${f_files}${f_dirs}" ]] && (( ! ${#profiles} )); then
+	profiles=( "$ZDOTDIR"/profile.d/{.*,^.}/**/*.zsh(-DN.) )
 fi
 
 # Final check for valid profiles
 if (( ! ${#profiles} )); then
 	>&2 echo "No valid files or directories specified"
 	return 1
+fi
+
+# Shorten lines
+
+if (( $verbosity )); then
+	local s_profiles=(${profiles//"${ZDOTDIR}"/\$ZDOTDIR})
+	echo "Sourcing the following profiles:"
+	if (( ${#s_profiles} )); then
+		printf "  %s\n" ${s_profiles}
+	else
+		printf "  %s\n" ${(j:, :)s_profiles}
+	fi
 fi
 
 # Source resulting profiles

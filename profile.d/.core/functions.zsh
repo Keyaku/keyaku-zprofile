@@ -607,11 +607,11 @@ function haspath {
 
 # Adds argument(s) to $path if not set and if they're existing directories. Returns false if no path was set
 function addpath {
-	local retval=1
+	local -i retval=1
 
 	# The index will help keep the order of the arguments set when prepending
-	local idx=1
-	local prepend=0
+	local -i idx=1
+	local -i prepend=0
 	while (( $# )); do
 		## Define prepending flag if arg is an int
 		if is_int $1; then
@@ -636,9 +636,9 @@ function addpath {
 
 # Remove argument from $path. Returns false if no value was removed
 function rmpath {
-	local retval=1
+	local -i retval=1
 
-	local idx
+	local -i idx
 	while (( $# )); do
 		idx=${path[(i)$1]}
 		(( 0 < $idx && $idx <= ${#path[@]} )) && {

@@ -3,6 +3,7 @@
 #######################################
 if command-has svn; then
 
+alias svn='svn --config-dir ${XDG_CONFIG_HOME}/subversion'
 export SVN_STASH="$XDG_CONFIG_HOME/subversion/stash"
 
 function svn_root {
@@ -36,7 +37,7 @@ function svn_ls_stash {
 	local BOOL_all=false
 	local BOOL_pretty=false
 
-	while [[ $# -gt 0 ]]; do
+	while (( $# )); do
 		case $1 in
 		-a | --all ) BOOL_all=true ;;
 		-p | --pretty-print ) BOOL_pretty=true ;;
@@ -96,8 +97,8 @@ function svn_stash {
 
 	# Format patch filename
 	local filename="stash-$(date +%g%m%d-%H%M%S)"
-	local loop=0
-	while [[ loop -eq 0 ]]; do
+	local -i loop=0
+	while (( ! $loop )); do
 		ask -k -q "Name for stash?" -d "$filename.patch"
 
 		if [[ -e "$DIR_stash/$REPLY.patch" ]]; then
@@ -138,7 +139,7 @@ function svn_unstash {
 	local BOOL_keep=false
 	local stash_patch
 	local to_unstash=()
-	while [[ $# -gt 0 ]]; do
+	while (( $# )); do
 		case $1 in
 		-k | --keep ) BOOL_keep=true ;;
 		* )
@@ -153,11 +154,11 @@ function svn_unstash {
 		shift
 	done
 
-	if [[ ${#to_unstash[@]} -eq 0 ]]; then
+	if (( 0 == ${#to_unstash[@]}; then
 		# Fetch list of stashes, sorted by creation/modification date
 		local stash_list=($(ls -tc $DIR_stash/*.patch | xargs -n 1 basename | sed 's/.patch$//'))
 
-		if [[ ${#stash_list[@]} -gt 1 ]]; then
+		if (( 1 < ${#stash_list[@]} )); then
 			# Let user pick which stash to apply
 			echo "Which one would you like to apply?"
 			for ((idx=1; idx <= ${#stash_list[@]}; idx++)); do
@@ -224,7 +225,7 @@ function svn_changes {
 	done
 	set -- ${args[@]}
 
-	while [[ $# -gt 0 ]]; do
+	while (( $# )); do
 		case $1 in
 		--all ) gexp="" ;;
 		--diff ) BOOL_diff=true ;;
