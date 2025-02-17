@@ -154,7 +154,7 @@ function svn_unstash {
 		shift
 	done
 
-	if (( 0 == ${#to_unstash[@]}; then
+	if (( 0 == ${#to_unstash[@]} )); then
 		# Fetch list of stashes, sorted by creation/modification date
 		local stash_list=($(ls -tc $DIR_stash/*.patch | xargs -n 1 basename | sed 's/.patch$//'))
 

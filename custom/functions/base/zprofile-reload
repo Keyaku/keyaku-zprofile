@@ -13,7 +13,7 @@ local usage=(
 )
 
 ## Setup parseopts (with no extra arguments)
-local void f_help f_verbose f_quiet
+local void f_help f_verbose f_quiet f_login f_interactive
 local -aU f_dirs f_files
 zparseopts -a void -D -F -K -- \
 	{h,-help}=f_help \
@@ -63,9 +63,8 @@ if (( ! ${#profiles} )); then
 	return 1
 fi
 
-# Shorten lines
-
-if (( $verbosity )); then
+# Shorten paths just for output
+if (( 2 <= $verbosity )); then
 	local s_profiles=(${profiles//"${ZDOTDIR}"/\$ZDOTDIR})
 	echo "Sourcing the following profiles:"
 	if (( ${#s_profiles} )); then
@@ -78,6 +77,9 @@ fi
 # Source resulting profiles
 set -- $profiles
 while (( $# )); do
-	source "$1" || return $?
+	if ! source "$1"; then
+		(( 1 <= $verbosity )) && print_fn -e "error when sourcing '${1//"${ZDOTDIR}"/\$ZDOTDIR}'"
+		return 1
+	fi
 	shift
 done
