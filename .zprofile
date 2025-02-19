@@ -31,4 +31,4 @@ autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/load_zfunc(N) &
 zprofile-reload
 
 ### Local bin
-addpath 1 "$HOME/.local/bin"
+[[ -d "$HOME/.local/bin" ]] && addpath 1 "$HOME/.local/bin"

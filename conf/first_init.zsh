@@ -2,23 +2,30 @@
 
 # Script to setup environment after Linux (or Termux) installation
 
+readonly SCRIPT_NAME=${0##*/}
+readonly SCRIPT_DIR=${0:a:h}
+
 # Prevent running as root or any privileged user
 if (( $UID < 1000 )); then
-	echo "Current UID=$UID, and this should not be run by any privileged user!"
+	echo "${SCRIPT_NAME}: Current UID=$UID, and this should not be run by any privileged user!"
 	return 1
+# Prevent infinite recursion since this script is sourced in .zshrc
+elif [[ -o login ]] || [[ -o interactive ]]; then
+	echo "${SCRIPT_NAME}: This script should not be run in a login or interactive shell!"
+	return 2
 fi
 
 ####################
 # Initialization
 ####################
 
-ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh"
+(( ${+ZDOTDIR} )) || ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh"
 
 # Source ZSH files just to be sure. Sourcing .zshrc will autoload all custom functions
 local zfile zfiles=(.zshenv .zprofile .zshrc .zlogin)
 for zfile in ${zfiles}; do
-	source $ZDOTDIR/$zfile || {
-		echo "${funcname[1]}: Error sourcing $zfile"
+	source "$ZDOTDIR/$zfile" || {
+		echo "${SCRIPT_NAME}: Error sourcing $zfile"
 		return 1
 	}
 done
@@ -144,10 +151,10 @@ function main {
 
 	# Mini report
 	if (( $fn_completed/$fn_total )); then
-		echo "First-time initialization completed successfully."
+		echo "${SCRIPT_NAME}: First-time initialization completed successfully."
 	else
 		print_fn -w "$fn_completed/$fn_total functions completed."
-		echo "The following functions failed: ${fn_failed}"
+		echo "${SCRIPT_NAME}: The following functions failed: ${fn_failed}"
 		return 1
 	fi
 }
