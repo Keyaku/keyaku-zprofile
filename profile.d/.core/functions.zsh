@@ -352,13 +352,7 @@ function array_has {
 	fi
 
 	# Default is zsh, but contain bash alternative just in case
-	local array
-	if [[ ${SHELL##*/} == zsh ]]; then
-		array=($(echo ${(P)1} | sed 's/^(//g;s/)$//g'))
-	else
-		array=($(echo ${!array_name} | sed 's/^(//g;s/)$//g'))
-	fi
-
+	local array=($(echo ${(P)1} | sed 's/^(//g;s/)$//g'))
 	[[ " ${array[*]} " =~ " ${value} " ]]
 }
 
@@ -375,12 +369,7 @@ function array_key {
 	fi
 
 	# Default is zsh, but contain bash alternative just in case
-	local array
-	if [[ ${SHELL##*/} == zsh ]]; then
-		array=(${(P@k)1})
-	else
-		array=(${!1})
-	fi
+	local array=(${(P@k)1})
 	[[ " ${array[*]} " =~ " ${value} " ]]
 }
 
