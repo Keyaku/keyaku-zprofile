@@ -19,6 +19,11 @@ ZSH_CUSTOM="$ZDOTDIR/custom"
 
 ### Detect if this is an interactive shell login
 if [[ -o login ]] && [[ -o interactive ]]; then
+	### First-time initialization
+	if [[ ! -f "$ZDOTDIR/.first_init" ]] || (( 1 != $(cat "$ZDOTDIR/.first_init") )); then
+		zsh "$ZDOTDIR"/conf/first_init.zsh
+	fi
+
 	### Print fetch
 	(fetch=fastfetch
 		if command -v $fetch &>/dev/null; then

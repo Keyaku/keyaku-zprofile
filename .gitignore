@@ -1,6 +1,16 @@
+# Personal shell files
 .*history
-.p10k*
-.st*
 .dir_colors
+.p10k*
+
+# Sync app files
+.st*
+
+# DE files (KDE, GNOME, etc.)
 .directory
+
+# VS Code
 .vscode
+
+# zprofile settings
+.first_init
