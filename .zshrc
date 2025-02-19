@@ -24,6 +24,37 @@ if [[ -o login ]] && [[ -o interactive ]]; then
 		zsh "$ZDOTDIR"/conf/first_init.zsh
 	fi
 
+	### If on Android, sync with local storage Syncthing directory
+	if whatami Android; then
+		## Setup function to sync between Termux and local storage. Useful when synchronizing storage files (e.g. with SyncThing)
+		TERMUX_SYNC_DIR=~/storage/shared/Documents/Workspaces/Termux
+		if [[ -d "$TERMUX_SYNC_DIR" ]]; then
+			export TERMUX_SYNC_DIR
+			function termux-rsync {
+				local direction="${1:-both}"
+				local path_termux=~ path_ext="$TERMUX_SYNC_DIR"
+				local path_lists=$HOME/.local/src/android/Termux
+
+				[[ -d "$path_lists" ]] || path_lists=${path_ext}/.local/src/android/Termux
+				if [[ ! -d "$path_lists" ]]; then
+					print_fn -e "Could not find path lists directory."
+					return 1
+				fi
+
+				if [[ "$direction" == "in" || "$direction" == "both" ]]; then
+					rsync -Przc --no-t --exclude-from=$path_lists/android.exclude.in.txt ${path_ext}/. ${path_termux} || return 1
+				fi
+				if [[ "$direction" == "out" || "$direction" == "both" ]]; then
+					rsync -Przc --files-from=$path_lists/android.include.out.txt --exclude-from=$path_lists/android.exclude.out.txt ${path_termux} ${path_ext} || return 1
+				fi
+			}
+			## Sync changes
+			termux-rsync
+		else
+			unset TERMUX_SYNC_DIR
+		fi
+	fi
+
 	### Print fetch
 	(fetch=fastfetch
 		if command -v $fetch &>/dev/null; then
