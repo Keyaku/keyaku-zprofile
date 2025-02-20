@@ -28,7 +28,6 @@ typeset -A DOCKER_USER_VARS=(
 	[DOCKER_BIN]="Path to Docker binaries. Defaults to system installation"
 	[DOCKER_HOME]="Path to general non-configuration Docker files. Defaults to /usr/local/docker for root, and \$HOME/.local/docker for non-root."
 	[DOCKER_USER]="Current non-root user for Docker. Useful for containers where root is not necessary."
-
 )
 
 ### Non-root operations
@@ -74,7 +73,7 @@ function docker-set-env {
 	done
 }
 
-# docker-set-env
+docker-set-env
 
 # If docker is running, set DOCKER_HOST variable. Run this only if necessary.
 function docker-set-host {
