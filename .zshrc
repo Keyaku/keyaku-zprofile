@@ -167,6 +167,7 @@ autoload bashcompinit && bashcompinit
 for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-.); do
 	source "$f_bashcomp"
 done
+unset f_bashcomp
 
 # ZSH modules
 zmodload zsh/zutil # zparseopts
