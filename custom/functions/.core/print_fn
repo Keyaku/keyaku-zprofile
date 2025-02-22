@@ -3,28 +3,51 @@
 emulate -L zsh
 autoload -U colors && colors
 
-_usage_color_aux() {
-	printf "%s\n" "Uses ${fg_bold[$1]}$1${reset_color} ${fg_no_bold[$1]}color${reset_color}"
+function _usage_color_aux {
+	echo "Uses ${fg_bold[$1]}$1${reset_color} ${fg_no_bold[$1]}color${reset_color}"
+}
+
+function print_callstack {
+	local color="$1"
+	local count idx_stack idx_trace
+
+	>&2 printf "%s\n" "Call stack:"
+	for ((count=1, idx_stack=2, idx_trace=1; idx_stack <= ${#funcstack[@]}; count++, idx_stack++, idx_trace++)); do
+		local src=(${(s[:])funcfiletrace[$idx_trace]})
+		local caller="${funcstack[$idx_stack]}"
+		>&2 printf "\t%d. ${fg_bold[$color]}%s${reset_color} > %s:%d\n" $count "$caller" "${src[1]:t}" ${src[2]}
+	done
 }
 
 local -A lvl_color=(
-	[e]="red"
-	[w]="yellow"
+	[e]="red"    # error = red
+	[w]="yellow" # warning = yellow
+	[i]="green"  # info = green
+	[d]="white"  # debug = white
 )
 
 local usage=(
 	"Usage: $(get_funcname) LEVEL [OPTION...] FMT [ARGS...]"
 	"\t[-h|--help] : Print this help message"
-	"\t-e|--error : $(_usage_color_aux red), suited for errors"
-	"\t-w|--warning : $(_usage_color_aux yellow), suited for warnings"
+	"\t[-c|--callstack] : Print the callstack"
+	"\t[-T|--timestamp] : Prepend timestamp to the message based on current locale"
+	"\tLEVEL : One of the following levels:"
+	"\t\t-e|--error : $(_usage_color_aux ${lvl_color[e]}), suited for errors"
+	"\t\t-w|--warn[ing] : $(_usage_color_aux ${lvl_color[w]}), suited for warnings"
+	"\t\t-i|--info : $(_usage_color_aux ${lvl_color[i]}), suited for information"
+	"\t\t-d|--debug : $(_usage_color_aux ${lvl_color[d]}), suited for debug"
 )
 
 ## Setup func opts
-local f_help f_level
+local f_help f_level f_callstack f_timestamp
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
+	{c,-callstack}=f_callstack \
+	{T,-timestamp}=f_timestamp \
 	{e,-error}=f_level \
-	{w,-warning}=f_level \
+	{w,-warn{,ing}}=f_level \
+	{i,-info}=f_level \
+	{d,-debug}=f_level \
 	|| return 1
 
 # Get the first char from the very first f_level argument (any other is discarded)
@@ -40,8 +63,15 @@ fi
 local -i idx=1
 if (( ${#funcstack} <= 1 )); then
 	idx=0
+	f_level="e"
+	unset f_callstack
 	set -- "should not be called directly"
 fi
+
+# Avoid getting other print functions
+while [[ "${funcstack[$idx+1]}" =~ "^print_\w+$" ]]; do
+	(( idx++ ))
+done
 
 local src=(${(s[:])funcfiletrace[$idx]})
 local fn_name="$(get_funcname $idx)"
@@ -51,14 +81,23 @@ local -i fn_line=${src[2]}
 if [[ "$fn_name" == "$fn_file" ]]; then
 	fn_name="$fn_file"
 elif [[ "$fn_file" ]]; then
-	fn_name+="($fn_file)"
+	fn_name="$fn_file:$fn_name"
 fi
 
 # If fn_file is empty, this function is being called directly, so there's no line
 [[ -z "$fn_file" ]] && unset fn_line
 
+# Set color based on level
 local color="${lvl_color[$f_level]}"
 
+# Add timestamp if requested
+local -a timestamp
+if [[ "$f_timestamp" ]]; then
+	timestamp[2]="${fg_no_bold[$color]}$(date +'%c'):${reset_color}"
+	timestamp[1]=${#timestamp[2]}+1
+fi
+
 # Print message via stderr as well
->&2 printf "${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s\n" "$fn_name" $fn_line "$(printf "$1" ${@:2})"
+>&2 printf "${timestamp:+%-*s}${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s\n" ${timestamp} "$fn_name" $fn_line "$(printf "$1" ${@:2})"
+[[ "$f_callstack" ]] && print_callstack $color
 (( $idx ))
