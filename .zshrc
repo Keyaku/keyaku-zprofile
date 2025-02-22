@@ -164,7 +164,9 @@ source $ZSH/oh-my-zsh.sh
 
 # Bash modules & autocompletion (for programs which contain only bash completions)
 autoload bashcompinit && bashcompinit
-[[ -e "$XDG_DATA_HOME/bash-completion/completions/appman" ]] && source "$XDG_DATA_HOME/bash-completion/completions/appman"
+for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-.); do
+	source "$f_bashcomp"
+done
 
 # ZSH modules
 zmodload zsh/zutil # zparseopts
