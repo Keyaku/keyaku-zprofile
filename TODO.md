@@ -39,7 +39,8 @@ This tasklist contains all ideas or improvements for this environment setup.
 	* [x] Rewrite core functions: `command-has`, `env_update`/`env_find`, `get_funcname`.
 	* [ ] Rewrite argument tester functions: `is_int`, `is_num`, `is_array`, `is_dict`.
 	* [x] Rewrite print functions: `print_callstack`, `print_error`, `print_warn`, `print_noenv`.
-* Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
+* [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
+* [ ] Create autocomplete for main functions.
 
 
 ### `profile.d/`

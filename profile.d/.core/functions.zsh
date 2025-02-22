@@ -146,130 +146,6 @@ function is_valid_date {
 	[[ "$(date --date="$argdate 00:00:00" "+$fmt" 2>/dev/null)" == "$1" ]]
 }
 
-# Prompt via read. Incorporates question and looping until non-empty REPLY
-function ask {
-	local usage=(
-		"Usage: $(get_funcname) [OPTION...] [(-p|--prompt) message]"
-		"\t[-h|--help]"
-		"\t[-k|--non-empty] : Prohibit empty answers"
-		"\t[-p|--prompt] : Defines question for the prompt"
-		"\t[-o|--opts] : Add possible answer(s)"
-		"\t[-d|--default] : Make argument the default answer if empty"
-		"\t[-s|--strict] : Paired with (-o|--options), will not allow any answer outside the available ones"
-	)
-
-	## Setup parseopts
-	local f_help f_nonEmpty f_prompt f_options f_default f_strict
-	zparseopts -D -F -K -- \
-		{h,-help}=f_help \
-		{k,-non-empty}=f_nonEmpty \
-		{p,-prompt}:=f_prompt \
-		{o,-opts}+:=f_options \
-		{d,-default}:=f_default \
-		{s,-strict}=f_strict
-
-	## Help/usage message
-	if [[ "$f_help" ]]; then
-		>&2 print -l $usage
-		[[ "$f_help" ]]; return $?
-	fi
-
-	## Parse arguments
-	local v_prompt v_default v_options=()
-	[[ "${f_prompt}" ]] && v_prompt="${f_prompt[-1]}"
-	[[ "${f_options}" ]] && {
-		v_options=(${f_options/(-o|--opts)/})
-	}
-	[[ "${f_default}" ]] && {
-		v_default="${f_default[-1]:l}"
-		## Uppercase default option
-		if array_has v_options "${v_default:l}"; then
-			local idx=${v_options[(i)${v_default:l}]}
-			v_options[$idx]=("${v_default:u}")
-		else
-			v_options=("${v_default:u}" ${v_options})
-		fi
-	}
-	# If strict was requested but there are no options, clear this flag
-	if [[ "$f_strict" ]] && (( ! ${#v_options} )); then
-		f_strict=""
-	fi
-
-	while (( $# )); do
-		case $1 in
-		-* ) print_invalidarg "$1"
-		;;
-		* )
-			# if a number, consider it a time amount
-			if [[ -z "$v_prompt" ]]; then
-				v_prompt="${1}"
-			else
-				printf "[$(get_funcname)] Discarded argument: '%s'\n\t%s\n" "$1" "Prompt message already defined"
-			fi
-		;;
-		esac
-		shift
-	done
-
-	## Prepare prompt message
-	v_prompt="${v_prompt:+$v_prompt }${v_options:+[${v_options// //}]}"
-	[[ "${v_prompt}" ]] && v_prompt="${v_prompt}\n"
-
-	## Begin prompting
-	local v_answer
-	REPLY=""
-	while [[ -z "${v_answer}" ]]; do
-		printf "${v_prompt}> "
-		read
-
-		if [[ "$f_nonEmpty" ]] && [[ -z "${REPLY}" ]]; then
-			echo "Answer cannot be empty."
-		elif [[ "$f_strict" ]] && ! array_has v_options "${REPLY:l}"; then
-			printf "Invalid answer: '%s'\n" "${REPLY}"
-		elif [[ "${v_default}" ]]; then
-			v_answer="${v_default}"
-		else
-			v_answer="$REPLY"
-			break
-		fi
-	done
-	REPLY="$v_answer"
-}
-
-function ask_yn {
-	local valid_y=(yes ye y)
-	local valid_n=(no n)
-	local valid_answers=(${valid_y[@]} ${valid_n[@]})
-
-	## Setup parseopts
-	local f_default
-	zparseopts -D -F -K -- \
-		{d,-default}:=f_default \
-		|| return $?
-
-	## Parse arguments
-	local v_default
-	if [[ "${f_default}" ]]; then
-		v_default="${f_default[-1]:l}"
-		if [[ "${v_default}" ]] && ! array_has valid_answers "$v_default"; then
-			print_invalidarg "$v_default" "Invalid default value"
-			return 1
-		fi
-		f_default[-1]="$v_default[1]"
-	fi
-
-	## Begin prompting
-	REPLY=""
-	while :; do
-		ask -o y -o n ${f_default} $@
-		REPLY="${REPLY:l}"
-
-		array_has valid_answers "${REPLY}" && break
-		printf "Invalid answer: '%s'\n" "${REPLY}"
-	done
-
-	array_has valid_y "$REPLY"
-}
 
 ##############################################
 ### String functions
@@ -351,13 +227,12 @@ function array_has {
 		return 1
 	fi
 
-	# Default is zsh, but contain bash alternative just in case
-	local array=($(echo ${(P)1} | sed 's/^(//g;s/)$//g'))
+	local array=(${(P)1})
 	[[ " ${array[*]} " =~ " ${value} " ]]
 }
 
 # Check if defined associative array $1 contains key $2
-function array_key {
+function dict_has {
 	check_argc 2 2 $# || return $?
 
 	local array_name=$1
@@ -368,7 +243,6 @@ function array_key {
 		return 1
 	fi
 
-	# Default is zsh, but contain bash alternative just in case
 	local array=(${(P@k)1})
 	[[ " ${array[*]} " =~ " ${value} " ]]
 }
@@ -402,23 +276,11 @@ function vercmp {
 	return 0
 }
 
-# Print callstack
-function print_callstack {
-	local count idx_stack idx_trace
-
-	echo "Call stack:"
-	for ((count=1, idx_stack=2, idx_trace=1; idx_stack <= ${#funcstack[@]}; count++, idx_stack++, idx_trace++)); do
-		local src=(${(s[:])funcfiletrace[$idx_trace]})
-		local caller="${funcstack[$idx_stack]}"
-		printf "\t%d. ${fg_no_bold[yellow]}%s${reset_color} > %s:%d\n" $count "$caller" "${src[1]:t}" ${src[2]}
-	done
-}
-
 
 # Print formatted error message about invalid argument
 function print_invalidarg {
 	local msg="${2:-"Invalid argument"}"
-	print_fn -e "$msg: '%s'" "$1"
+	print_fn -e $@ "$msg: '%s'" "$1"
 	# print_callstack
 }
 
@@ -428,8 +290,6 @@ function print_noenv {
 		print_fn -w "Environment variable(s) not set:" "${(j:, :)@}"
 	fi
 }
-
-# Prints formatted warning message
 
 
 ##############################################

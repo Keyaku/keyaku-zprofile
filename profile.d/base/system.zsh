@@ -54,7 +54,7 @@ function gpu-list {
 		if [[ "$cmd_name" ]]; then
 			print_fn -e "Arguments discarded: You may pick just 1 tool"
 			return 1
-		elif array_key all_cmds "$1"; then
+		elif dict_has all_cmds "$1"; then
 			cmd_name="$1"
 		else
 			print_invalidarg "$1" "Invalid or unsupported tool"
@@ -68,7 +68,7 @@ function gpu-list {
 	if [[ -z "$cmd_name" ]]; then
 		print_fn -e "No tool provided"
 		return 1
-	elif ! array_key all_cmds "$cmd_name"; then
+	elif ! dict_has all_cmds "$cmd_name"; then
 		print_invalidarg "$cmd_name" "Invalid or unsupported tool"
 		return 2
 	fi
@@ -212,7 +212,7 @@ function pkgmgr-binpath {
 		[pacman]="Ql"
 	)
 
-	if ! array_key pkg_cmds "$pkgmgr"; then
+	if ! dict_has pkg_cmds "$pkgmgr"; then
 		print_fn -e "Case for '$pkgmgr' not implemented yet"
 		return 1
 	fi
