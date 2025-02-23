@@ -164,7 +164,7 @@ source $ZSH/oh-my-zsh.sh
 
 # Bash modules & autocompletion (for programs which contain only bash completions)
 autoload bashcompinit && bashcompinit
-for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-.); do
+for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-N.); do
 	source "$f_bashcomp"
 done
 unset f_bashcomp
