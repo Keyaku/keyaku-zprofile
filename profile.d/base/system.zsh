@@ -183,7 +183,7 @@ function disk_speedtest {
 }
 
 # Package Managers
-declare -Ag OS_PKGMGR=(
+typeset -Ag PKGMGR_OS=(
 	[yum]=redhat-release
 	[pacman]=arch-release
 	[emerge]=gentoo-release
@@ -192,9 +192,15 @@ declare -Ag OS_PKGMGR=(
 	[apk]=alpine-release
 )
 
+# Package Manager list commands
+typeset -Ag PKGMGR_LIST=(
+	[pacman]="Ql"
+)
+
+# Obtains the package manager depending on the release file
 function pkgmgr-get {
 	local pkgmgr release_file
-	for pkgmgr release_file in ${(@kv)OS_PKGMGR}; do
+	for pkgmgr release_file in ${(@kv)PKGMGR_OS}; do
 		if [[ -f "/etc/$release_file" ]] && command -v "$pkgmgr" &>/dev/null; then
 			echo "${pkgmgr}"
 			return 0
@@ -208,18 +214,15 @@ function pkgmgr-binpath {
 
 	local retval=0
 	local pkgmgr="$(pkgmgr-get)"
-	declare -Al pkg_cmds=(
-		[pacman]="Ql"
-	)
 
-	if ! dict_has pkg_cmds "$pkgmgr"; then
+	if ! dict_has PKGMGR_LIST "$pkgmgr"; then
 		print_fn -e "Case for '$pkgmgr' not implemented yet"
 		return 1
 	fi
 
 	local result
 	while (( $# )); do
-		$pkgmgr -${pkg_cmds[$pkgmgr]} "$1" | \grep -Eo -m1 '/usr(/.+)?/bin/[^/]+'
+		$pkgmgr -${PKGMGR_LIST[$pkgmgr]} "$1" | \grep -Eo -m1 '/usr(/.+)?/bin/[^/]+'
 		(( $? && ! $retval )) && retval=1
 		shift
 	done

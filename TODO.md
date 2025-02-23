@@ -49,5 +49,6 @@ This tasklist contains all ideas or improvements for this environment setup.
 
 * [ ] Consider rewriting basic functions (e.g. `is_int`) in pure ZSH; this will break compatibility with POSIX and other shells, at the cost of more elegant and scoped code.
 This is a repo dedicated to ZSH profiles, not a catch-all solution.
+* [ ] Make core functions stop execution if an error occurred.
 * [ ] Create skeleton for a synchronization software (e.g. SyncThing) to do its thing for multi-platform configuration (SSH, vimrc, etc.).
 * [ ] (KDE Plasma) Write function that sets up Window rules (e.g. change the VSCode Flatpak title bar icon from Wayland to VScode).
