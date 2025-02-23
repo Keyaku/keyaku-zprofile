@@ -3,19 +3,39 @@
 emulate -L zsh
 autoload -U colors && colors
 
+# auxiliary function to print color examples
 function _usage_color_aux {
 	echo "Uses ${fg_bold[$1]}$1${reset_color} ${fg_no_bold[$1]}color${reset_color}"
 }
 
+# If caller is part of the print functions or check_argc, skip it
+function _can_skip {
+	[[ "$1" =~ "^(print_\w+|check_argc)$" ]]
+}
+
 function print_callstack {
 	local color="$1"
-	local count idx_stack idx_trace
+	local -i is_printing=0
+	local -i count idx_stack idx_trace
 
-	>&2 printf "%s\n" "Call stack:"
-	for ((count=1, idx_stack=2, idx_trace=1; idx_stack <= ${#funcstack[@]}; count++, idx_stack++, idx_trace++)); do
+	for ((count=1, idx_stack=2, idx_trace=1; idx_stack <= ${#funcstack}; idx_stack++, idx_trace++)); do
 		local src=(${(s[:])funcfiletrace[$idx_trace]})
 		local caller="${funcstack[$idx_stack]}"
+
+		# Only begin printing after certain conditions were met
+		if (( ! $is_printing )); then
+			# If caller is part of the print functions or check_argc, skip it
+			_can_skip "$caller" && continue
+			# If callstack contains single function, skip it
+			(( ${#funcstack} < $idx_stack+$count )) && break
+
+			# Conditions met; print header
+			>&2 printf "%s\n" "Call stack:"
+			is_printing=1
+		fi
+
 		>&2 printf "\t%d. ${fg_bold[$color]}%s${reset_color} > %s:%d\n" $count "$caller" "${src[1]:t}" ${src[2]}
+		(( count++ ))
 	done
 }
 
@@ -69,7 +89,7 @@ if (( ${#funcstack} <= 1 )); then
 fi
 
 # Avoid getting other print functions
-while [[ "${funcstack[$idx+1]}" =~ "^print_\w+$" ]]; do
+while _can_skip "${funcstack[$idx+1]}"; do
 	(( idx++ ))
 done
 
@@ -77,11 +97,12 @@ local src=(${(s[:])funcfiletrace[$idx]})
 local fn_name="$(get_funcname $idx)"
 local fn_file="${src[1]:t}"
 local -i fn_line=${src[2]}
+local fn_fullname="${fn_name}"
 
 if [[ "$fn_name" == "$fn_file" ]]; then
-	fn_name="$fn_file"
+	fn_fullname="$fn_file"
 elif [[ "$fn_file" ]]; then
-	fn_name="$fn_file:$fn_name"
+	fn_fullname="$fn_file:$fn_name"
 fi
 
 # If fn_file is empty, this function is being called directly, so there's no line
@@ -98,6 +119,6 @@ if [[ "$f_timestamp" ]]; then
 fi
 
 # Print message via stderr as well
->&2 printf "${timestamp:+%-*s}${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s\n" ${timestamp} "$fn_name" $fn_line "$(printf "$1" ${@:2})"
+>&2 printf "${timestamp:+%-*s}${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s\n" ${timestamp} "$fn_fullname" $fn_line "$(printf "$1" ${@:2})"
 [[ "$f_callstack" ]] && print_callstack $color
 (( $idx ))

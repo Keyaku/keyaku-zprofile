@@ -48,8 +48,7 @@ function check_argc {
 
 	# Check if the number of arguments is correct
 	(( $minargs <= $argc && $argc <= $maxargs )) || {
-		print_fn -e "Argument mismatch: [$minargs-$maxargs] required, $argc given."
-		print_callstack
+		print_fn -ec "Argument mismatch: [$minargs-$maxargs] required, $argc given."
 		return 2
 	}
 }
