@@ -29,6 +29,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [x] Fix `haspath: command not found...` occurring in certain cases.
 * [x] **Termux**: Find solution for Termux to avoid `rsync` changes between Termux and device storage; or at the very least avoid p10k's instant prompt warning for printing output while it loads.
 * [x] **Termux**: Fix error at start of `Invalid argument: ''path' is not an array'`.
+* [ ] `zsource`: Allow sending parameters with `/` as if indicating relative paths.
 
 
 ### `.zfunc/`
@@ -41,6 +42,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 	* [x] Rewrite print functions: `print_callstack`, `print_error`, `print_warn`, `print_noenv`.
 * [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
 * [ ] Create autocomplete for main functions.
+* [ ] `zsource`: Add flags for sourcing login (-l|--login) and interactive (-i|--interactive) files.
 
 
 ### `profile.d/`

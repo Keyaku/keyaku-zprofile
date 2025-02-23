@@ -4,22 +4,32 @@ emulate -L zsh
 
 setopt extendedglob
 
+function printf_v {
+	local -i min_verbosity=$1
+	local fmt="${(p)2}"
+	shift 2
+	(( $min_verbosity <= $verbosity )) && printf "$fmt" "$@"
+}
+
 local usage=(
 	"Usage: $(get_funcname) [OPTION...] [FILE...] [DIR...]"
+	"\tReloads files under profile.d. Presumes \$ZDOTDIR/profile.d as root directory, meaning it can't load files outside of it (including local)"
 	"\t[-h|--help] : Print this help message"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
+	"\t[-a|--all] : Reload all files under profile.d"
 	"\t[-f|--file] FILE : Reloads the specified file(s) under profile.d"
 	"\t[-d|--dir] DIR : Reloads all files under the specified directory(ies) under profile.d"
 )
 
 ## Setup parseopts (with no extra arguments)
-local void f_help f_verbose f_quiet f_login f_interactive
+local void f_help f_verbose f_quiet f_all
 local -aU f_dirs f_files
 zparseopts -a void -D -F -K -- \
 	{h,-help}=f_help \
 	v+=f_verbose q+=f_quiet \
 	{d,-dir}+:=f_dirs \
 	{f,-file}+:=f_files \
+	{a,-all}=f_all \
 	|| return 1
 
 ## Help/usage message
@@ -41,36 +51,40 @@ f_dirs=(${f_dirs:|flags_to_unset})
 
 local -aU profiles=()
 
-# Load specified files/dirs from arguments
-if [[ "$f_files" ]]; then
-	profiles+=( "$ZDOTDIR"/profile.d/{.*,^.}/**/((${(j:|:)~f_files}).zsh)(-DN.) )
-fi
-if [[ "$f_dirs" ]]; then
-	profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)~f_dirs})/**/*.zsh(-DN.) )
-fi
-
-# Load any potential match from arguments, file or directory
-if (( $# )); then
-	profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
-# Load all profiles if none specified
-elif [[ -z "${f_files}${f_dirs}" ]] && (( ! ${#profiles} )); then
+# Load all profiles if specified
+if [[ "$f_all" ]]; then
 	profiles=( "$ZDOTDIR"/profile.d/{.*,^.}/**/*.zsh(-DN.) )
+else
+	# Load specified files/dirs from arguments
+	if [[ "$f_files" ]]; then
+		profiles+=( "$ZDOTDIR"/profile.d/{.*,^.}/**/((${(j:|:)~f_files}).zsh)(-DN.) )
+	fi
+	if [[ "$f_dirs" ]]; then
+		profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)~f_dirs})/**/*.zsh(-DN.) )
+	fi
+
+	# Load any potential match from arguments, file or directory
+	if (( $# )); then
+		profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
+	# Load all profiles if none specified
+	elif [[ -z "${f_files}${f_dirs}" ]] && (( ! ${#profiles} )); then
+		profiles=( "$ZDOTDIR"/profile.d/{.*,^.}/**/*.zsh(-DN.) )
+	fi
 fi
 
-# Final check for valid profiles
-if (( ! ${#profiles} )); then
-	>&2 echo "No valid files or directories specified"
-	return 1
-fi
+
+# If no profiles were set, do nothing
+(( ! ${#profiles} )) && return 0
 
 # Shorten paths just for output
-if (( 2 <= $verbosity )); then
+if (( 1 <= $verbosity )); then
 	local s_profiles=(${profiles//"${ZDOTDIR}"/\$ZDOTDIR})
-	echo "Sourcing the following profiles:"
+	(( 1 == $verbosity )) && s_profiles=(${s_profiles//"\$ZDOTDIR\/profile.d\/"})
+	printf_v 2 "%s\n" "Sourcing the following profiles:"
 	if (( ${#s_profiles} )); then
-		printf "  %s\n" ${s_profiles}
+		printf_v 1 "%s\n" ${s_profiles}
 	else
-		printf "  %s\n" ${(j:, :)s_profiles}
+		printf_v 1 "%s\n" ${(j:, :)s_profiles}
 	fi
 fi
 

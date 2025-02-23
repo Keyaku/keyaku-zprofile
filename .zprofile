@@ -28,7 +28,8 @@ autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/load_zfunc(N) &
 # zprofile-update -q
 
 ### Load login environment variables
-zprofile-reload
+# FIXME: Currently loads all files; implement loading login ones
+zsource -a
 
 ### Local bin
 [[ -d "$HOME/.local/bin" ]] || mkdir -p "$HOME/.local/bin"
