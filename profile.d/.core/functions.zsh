@@ -24,35 +24,6 @@ function assign {
 ### Argument functions
 ##############################################
 
-# Checker for argument counting in a function
-function check_argc {
-	local usage=(
-		"usage: $(get_funcname) minargs maxargs numargs"
-		"\tminargs  - (0 <= int)            : minimum number of arguments"
-		"\tmaxargs  - (0 <= minargs <= int) : maximum number of arguments"
-		"\tnumargs  - (int)                 : \$# of the running function"
-	)
-
-	# $1 - minimum number of args
-	# $2 - maximum number of args
-	# $3 - arg count
-	local retval=0 minargs=${1:-0} maxargs=${2:-0} argc=${3}
-	local funcname="$(get_funcname 1)"
-	(( 0 == $maxargs )) && maxargs=$(getconf ARG_MAX)
-
-	# Check if args of this function are correct
-	(( 2 <= $# && 0 <= $minargs && $minargs <= $maxargs )) || {
-		>&2 print -l $usage
-		return 1
-	}
-
-	# Check if the number of arguments is correct
-	(( $minargs <= $argc && $argc <= $maxargs )) || {
-		print_fn -ec "Argument mismatch: [$minargs-$maxargs] required, $argc given."
-		return 2
-	}
-}
-
 # Check if argument is an integer
 function is_int {
 	[[ "$1" =~ ^-?[0-9]+$ ]]
