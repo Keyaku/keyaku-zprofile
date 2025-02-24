@@ -42,7 +42,7 @@ ROOT=$(whatami Android && echo /data/data/com.termux/files/usr)
 
 # Checks if file1's contents are in file2
 function file_contents_in {
-	check_argc 2 2 $# || return $?
+	check_argc 2 2 $#
 	local file1="${1:a}"
 	local file2="${2:a}"
 	local differences="$(diff -r "$file1" "$file2" | sed -En '/^</p')"

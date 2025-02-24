@@ -45,7 +45,7 @@ function is_dict {
 
 # Compares two dotted versions
 function vercmp {
-	check_argc 2 2 $# || return $?
+	check_argc 2 2 $#
 
 	## If both arguments are equal
 	[[ $1 == $2 ]] && return 0
@@ -116,7 +116,7 @@ function is_ip_address {
 
 # Check if argument is IPv4 address or a hostname stored in /etc/hosts
 function is_hostname {
-	check_argc 1 1 $# || return $?
+	check_argc 1 1 $#
 	is_ip_address "$1" && return 0
 
 	local ip="${1%:*}"
@@ -128,7 +128,7 @@ function is_hostname {
 
 # Check if argument is a valid date
 function is_valid_date {
-	check_argc 1 2 $# || return $?
+	check_argc 1 2 $#
 	local argdate="$1" fmt="${2:-%Y-%m}"
 
 	case $(count_occurrences $fmt '-') in
@@ -145,7 +145,7 @@ function is_valid_date {
 
 # Check if defined array $1 contains value(s) ${@:2}
 function array_has {
-	check_argc 2 0 $# || return $?
+	check_argc 2 0 $#
 
 	if ! is_array "$1"; then
 		print_fn -e "not an array: '$1'"
@@ -162,7 +162,7 @@ function array_has {
 
 # Check if defined associative array $1 contains key(s) ${@:2}
 function dict_has {
-	check_argc 2 0 $# || return $?
+	check_argc 2 0 $#
 
 	if ! is_dict "$1"; then
 		print_fn -e "not an associative array: '$1'"

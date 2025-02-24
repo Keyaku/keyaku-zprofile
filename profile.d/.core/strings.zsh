@@ -4,7 +4,7 @@
 
 # Check if string $1 contains any substring from arguments (case-sensitive)
 function str_contains {
-	check_argc 2 0 $# || return $?
+	check_argc 2 0 $#
 	local haystack="$1"
 	shift
 
@@ -16,7 +16,7 @@ function str_contains {
 
 # Check if string $1 starts with substring $2
 function str_starts_with {
-	check_argc 2 2 $# || return $?
+	check_argc 2 2 $#
 	[[ "$1" =~ ^"$2"* ]]
 }
 
@@ -49,7 +49,7 @@ function str_join {
 
 # Count number of occurrences of any substring in string $1
 function count_occurrences {
-	check_argc 2 0 $# || return $?
+	check_argc 2 0 $#
 	# $1  - Haystack
 	# $2+ - Needle(s)
 	local haystack="$1"

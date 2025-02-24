@@ -4,7 +4,7 @@
 
 # Assign a value to a named variable
 function assign {
-	check_argc 2 2 $# || return $?
+	check_argc 2 2 $#
 	if [[ ! -v "$1" ]]; then
 		print_fn -e "Argument is not a variable" "$1"
 		return 1
@@ -26,7 +26,7 @@ function assign {
 function hasvar {
 	# If parent function is addvar or rmvar, impose argument restrictions
 	if ! [[ "$(get_funcname 1)" =~ (add|rm)var ]]; then
-		check_argc 2 2 $# || return $?
+		check_argc 2 2 $#
 	fi
 
 	# $1: name of the variable to check
@@ -42,7 +42,7 @@ function addvar {
 	# $1 : name of variable
 	# $2 : 0 to prepend, 1 to append to variable
 	# $2+: vars to add
-	check_argc 2 0 $# || return $?
+	check_argc 2 0 $#
 
 	local retval=1
 	local varname="$1"
@@ -71,7 +71,7 @@ function addvar {
 # Removes value(s) from defined variable 1 if in there. If no removal took place, return false
 function rmvar {
 	# $1+: vars to remove
-	check_argc 2 0 $# || return $?
+	check_argc 2 0 $#
 
 	local retval=1
 	local varname="$1"

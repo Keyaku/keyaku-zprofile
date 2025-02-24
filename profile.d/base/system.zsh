@@ -210,7 +210,7 @@ function pkgmgr-get {
 }
 
 function pkgmgr-binpath {
-	check_argc 1 0 $# || return $?
+	check_argc 1 0 $#
 
 	local retval=0
 	local pkgmgr="$(pkgmgr-get)"
@@ -238,7 +238,7 @@ function has_systemd {
 if has_systemd; then
 	### Systemd specific
 	function systemctl-service-path {
-		check_argc 1 0 $# || return 1
+		check_argc 1 0 $#
 		systemctl cat $@ 2>/dev/null | sed -En 's~# (.+?\.service)~\1~p'
 	}
 

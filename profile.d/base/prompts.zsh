@@ -16,7 +16,7 @@ function get-prompt {
 }
 
 function prompt-user {
-	check_argc 1 1 $# || return 1
+	check_argc 1 1 $#
 	local message="$1"
 
 	case $(get-prompt) in
@@ -30,7 +30,7 @@ function prompt-user {
 }
 
 function prompt-radio {
-	check_argc 1 0 $# || return 1
+	check_argc 1 0 $#
 	local title="$1"
 	shift
 	local arglist_off=() arglist=()
@@ -54,7 +54,7 @@ function prompt-radio {
 }
 
 function prompt-yesno {
-	check_argc 1 1 $# || return 1
+	check_argc 1 1 $#
 	local message="$1"
 
 	case $(get-prompt) in
@@ -68,7 +68,7 @@ function prompt-yesno {
 }
 
 function prompt-dir {
-	check_argc 1 2 $# || return 1
+	check_argc 1 2 $#
 	local title="$1"
 	local startdir="${2:-$HOME}"
 
