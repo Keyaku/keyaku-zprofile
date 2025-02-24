@@ -57,7 +57,7 @@ function gpu-list {
 		elif dict_has all_cmds "$1"; then
 			cmd_name="$1"
 		else
-			print_invalidarg "$1" "Invalid or unsupported tool"
+			print_fn -w "Invalid or unsupported tool: '$1'"
 		fi
 		shift
 	done
@@ -69,7 +69,7 @@ function gpu-list {
 		print_fn -e "No tool provided"
 		return 1
 	elif ! dict_has all_cmds "$cmd_name"; then
-		print_invalidarg "$cmd_name" "Invalid or unsupported tool"
+		print_fn -e "Invalid or unsupported tool: '$cmd_name'"
 		return 2
 	fi
 

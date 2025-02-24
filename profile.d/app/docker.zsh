@@ -283,7 +283,7 @@ function docker-upgrade {
 				docker compose up -d
 			)
 		else
-			print_invalidarg "$1" "Stack not found under '$DOCKER_HOME/stacks'"
+			print_fn -e "Stack not found under $DOCKER_HOME/stacks: '$1'"
 		fi
 		shift
 	done

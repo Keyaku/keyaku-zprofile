@@ -52,13 +52,13 @@ local -a printed_opts=(${v_options})
 [[ "${f_default}" ]] && {
 	# If default was defined but nonEmpty is set to true, throw error
 	if [[ "$f_nonEmpty" ]]; then
-		print_invalidarg "'-k' and '-d' are mutually exclusive"
+		print_fn -e "'-k' and '-d' are mutually exclusive"
 		return 1
 	fi
 	v_default="${f_default[-1]:l}"
 	# If going for yes/no, make sure the default is valid
 	if [[ "${f_yesno}" ]] && ! array_has valid_yn "$v_default"; then
-		print_invalidarg "$v_default" "Invalid default value"
+		print_fn -e "Invalid default value: '$v_default'"
 		return 1
 	fi
 
@@ -78,14 +78,14 @@ fi
 ## Read extra arguments
 while (( $# )); do
 	case $1 in
-	-* ) print_invalidarg "$1"
+	-* ) print_fn -w "Invalid argument: '$1'"
 	;;
 	* )
 		# if a number, consider it a time amount
 		if [[ -z "$v_prompt" ]]; then
 			v_prompt="${1}"
 		else
-			printf "[$(get_funcname)] Discarded argument: '%s'\n\t%s\n" "$1" "Prompt message already defined"
+			print_fn -w "Discarded argument: '%s'\n\t%s\n" "$1" "Prompt message already defined"
 		fi
 	;;
 	esac
