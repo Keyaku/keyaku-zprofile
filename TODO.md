@@ -7,10 +7,10 @@ This tasklist contains all ideas or improvements for this environment setup.
 ### Main profiles (`.zshenv`, `.zprofile`, `.zshrc`, `.zlogin`)
 
 * [ ] Reorganize `.zshenv`, `.zprofile`, `.zshrc`, `.zlogin` to have their intended profiling (and not the currently existing spaghetti). In other words, ensure each file respects their intended `[[ -o login ]]` and/or `[[ -o interactive ]]` behaviors.
-	* [ ] `.zshenv` should NOT output, nor modify anything. Just set user environment variables.
+	* [x] `.zshenv` should NOT output, nor modify anything. Just set user environment variables.
 	* [ ] `.zprofile` should contain session-wide environment variables and execution.
-	* [ ] `.zshrc` should load plugins, functions, aliases, completions and all interactive elements. It should NOT set any environment variable other than for ZSH loading purposes.
-	* [ ] `.zlogin` should be restricted to configuration for a login interactive shell. It should NOT run or make any session-wide changes (read: move `first_init` elsewhere).
+	* [x] `.zshrc` should load plugins, functions, aliases, completions and all interactive elements. It should NOT set any environment variable other than for ZSH loading purposes.
+	* [x] `.zlogin` should be restricted to configuration for a login interactive shell. It should NOT run or make any session-wide changes (read: move `first_init` elsewhere).
 * [x] Reference to ohmyzsh, either as submodule or cloning it externally. 
 * [x] Add external themes and plugins into this repo.
 * [x] Avoid oh-my-zsh's automatic renaming of the current `.zshrc`, or rename it after its installation.
@@ -33,10 +33,10 @@ This tasklist contains all ideas or improvements for this environment setup.
 ### `.zfunc/`
 
 * [x] Write function to initialize this entire environment without manual setup.
-* [ ] Rewrite some of the functions from `functions.zsh` as loadable `fpath` functions, and load them in `.zshrc`.
+* [x] Rewrite some of the functions from `functions.zsh` as loadable `fpath` functions, and load them in `.zshrc`.
 	* [x] Load from `.zfunc` in `.zshrc`.
 	* [x] Rewrite core functions: `command-has`, `env_update`/`env_find`, `get_funcname`.
-	* [x] Rewrite print functions: `print_callstack`, `print_error`, `print_warn`, `print_noenv`.
+	* [x] Rewrite print functions: `print_callstack`, `print_error`, `print_warn`.
 * [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
 * [ ] Create autocomplete for main functions.
 * [ ] `zsource`: Add flags for sourcing login (-l|--login) and interactive (-i|--interactive) files.
