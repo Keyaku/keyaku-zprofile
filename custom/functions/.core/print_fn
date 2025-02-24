@@ -9,10 +9,9 @@ function _usage_color_aux {
 }
 
 # If caller is part of the print functions or check_argc, skip it
-function _can_skip {
-	[[ "$1" =~ "^(print_\w+|check_argc)$" ]]
-}
+local -r can_skip="^(print_\w+|check_argc)$"
 
+# Function to print the callstack
 function print_callstack {
 	local color="$1"
 	local -i is_printing=0
@@ -25,7 +24,7 @@ function print_callstack {
 		# Only begin printing after certain conditions were met
 		if (( ! $is_printing )); then
 			# If caller is part of the print functions or check_argc, skip it
-			_can_skip "$caller" && continue
+			[[ "$caller" =~ "$can_skip" ]] && continue
 			# If callstack contains single function, skip it
 			(( ${#funcstack} < $idx_stack+$count )) && break
 
@@ -57,6 +56,7 @@ local -r usage=(
 	"\t\t-i|--info : $(_usage_color_aux ${lvl_color[i]}), suited for information"
 	"\t\t-d|--debug : $(_usage_color_aux ${lvl_color[d]}), suited for debug"
 )
+unfunction _usage_color_aux
 
 ## Setup func opts
 local f_help f_level f_callstack f_timestamp
@@ -89,7 +89,7 @@ if (( ${#funcstack} <= 1 )); then
 fi
 
 # Avoid getting other print functions
-while _can_skip "${funcstack[$idx+1]}" && (( ${#funcstack} < $idx+1 )); do
+while [[ "${funcstack[$idx+1]}" =~ "$can_skip" ]] && (( ${#funcstack} < $idx+1 )); do
 	(( idx++ ))
 done
 

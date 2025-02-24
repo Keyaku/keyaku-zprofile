@@ -4,13 +4,6 @@ emulate -L zsh
 
 setopt extendedglob
 
-function printf_v {
-	local -i min_verbosity=$1
-	local fmt="${(p)2}"
-	shift 2
-	(( $min_verbosity <= $verbosity )) && printf "$fmt" "$@"
-}
-
 local -r usage=(
 	"Usage: $(get_funcname) [OPTION...] [FILE...] [DIR...]"
 	"\tReloads files under profile.d. Presumes \$ZDOTDIR/profile.d as root directory, meaning it can't load files outside of it (including local)"
@@ -74,17 +67,20 @@ fi
 
 
 # If no profiles were set, do nothing
-(( ! ${#profiles} )) && return 0
+if (( ! ${#profiles} )); then
+	(( 1 <= $verbosity )) && print_fn -i "No profiles to source"
+	return 0
+fi
 
 # Shorten paths just for output
 if (( 1 <= $verbosity )); then
 	local s_profiles=(${profiles//"${ZDOTDIR}"/\$ZDOTDIR})
 	(( 1 == $verbosity )) && s_profiles=(${s_profiles//"\$ZDOTDIR\/profile.d\/"})
-	printf_v 2 "%s\n" "Sourcing the following profiles:"
+	(( 2 <= $verbosity )) && printf "%s\n" "Sourcing the following profiles:"
 	if (( ${#s_profiles} )); then
-		printf_v 1 "%s\n" ${s_profiles}
+		(( 1 <= $verbosity )) && printf "%s\n" ${s_profiles}
 	else
-		printf_v 1 "%s\n" ${(j:, :)s_profiles}
+		(( 1 <= $verbosity )) && printf "%s\n" ${(j:, :)s_profiles}
 	fi
 fi
 

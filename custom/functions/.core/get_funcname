@@ -2,7 +2,7 @@
 
 emulate -L zsh
 
-local idx=2
+local -i idx=2
 # Test if argument is an integer and within bounds
 if [[ $1 == <-> ]] && (( 0 < $1 <= ($#funcstack - $idx + 1) )); then
 	idx=$((idx + $1))
