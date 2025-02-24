@@ -4,24 +4,38 @@
 
 # Check if argument is an integer
 function is_int {
-	[[ "$1" =~ ^-?[0-9]+$ ]]
+	while (( $# )); do
+		[[ "$1" =~ ^-?[0-9]+$ ]] || return $?
+		shift
+	done
 }
 
 # Check if argument is a number
 function is_num {
-	[[ $1 =~ ^[+-]?[0-9]+([.][0-9]+)?$ ]]
+	while (( $# )); do
+		[[ $1 =~ ^[+-]?[0-9]+([.][0-9]+)?$ ]] || return $?
+		shift
+	done
 }
 
 # Check if argument is any type of array (including associative/dictionary)
 function is_array {
 	setopt re_match_pcre
-	[[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-[Aa]" ]]
+	while (( $# )); do
+		[[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-[Aa]" ]] \
+			|| return $?
+		shift
+	done
 }
 
 # Check if argument is exclusively an associative array
 function is_dict {
 	setopt re_match_pcre
-    [[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-A" ]]
+	while (( $# )); do
+   		[[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-A" ]] \
+			|| return $?
+		shift
+	done
 }
 
 
@@ -129,34 +143,36 @@ function is_valid_date {
 ### Array functions
 ##############################################
 
-# Check if defined array $1 contains element $2
+# Check if defined array $1 contains value(s) ${@:2}
 function array_has {
-	check_argc 2 2 $# || return $?
+	check_argc 2 0 $# || return $?
 
-	local array_name=$1
-	local value=$2
-
-	if ! is_array "$array_name"; then
-		print_fn -e "not an array: '$array_name'"
+	if ! is_array "$1"; then
+		print_fn -e "not an array: '$1'"
 		return 1
 	fi
 
 	local array=(${(P)1})
-	[[ " ${array[*]} " =~ " ${value} " ]]
+	shift
+	while (( $# )); do
+		[[ " ${array} " =~ " $1 " ]] || return $?
+		shift
+	done
 }
 
-# Check if defined associative array $1 contains key $2
+# Check if defined associative array $1 contains key(s) ${@:2}
 function dict_has {
-	check_argc 2 2 $# || return $?
+	check_argc 2 0 $# || return $?
 
-	local array_name=$1
-	local value=$2
-
-	if ! is_dict "$array_name"; then
-		print_fn -e "not an associative array: '$array_name'"
+	if ! is_dict "$1"; then
+		print_fn -e "not an associative array: '$1'"
 		return 1
 	fi
 
 	local array=(${(P@k)1})
-	[[ " ${array[*]} " =~ " ${value} " ]]
+	shift
+	while (( $# )); do
+		[[ " ${array} " =~ " $1 " ]] || return $?
+		shift
+	done
 }
