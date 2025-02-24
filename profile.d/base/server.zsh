@@ -16,9 +16,7 @@ if command-has cloudflared; then
 
 		function cloudflared_add_service {
 			echo "CAREFUL! Use this tool only if you know what you're doing!"
-			if [[ -z "$SERVER_NAME" ]]; then
-				print_noenv "SERVER_NAME"
-			fi
+			check_envvars "SERVER_NAME" || return 1
 
 			local hostname=""
 			local service=""

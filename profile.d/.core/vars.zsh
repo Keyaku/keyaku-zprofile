@@ -89,6 +89,21 @@ function rmvar {
 	return $retval
 }
 
+# Checks if all given environment variables are set or not empty
+function check_envvars {
+	# $@: variable names
+	local -a missing_vars
+	while (( $# )); do
+		[[ ! -v "$1" && ! -z "$1" ]] || missing_vars+=("$1")
+		shift
+	done
+
+	if (( ${#missing_vars} )); then
+		print_fn -e "Environment variable(s) not set:" "${(j:, :)@}"
+		return 1
+	fi
+}
+
 
 ##############################################
 ### Environment control
