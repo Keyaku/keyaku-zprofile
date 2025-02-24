@@ -24,6 +24,11 @@ if (( ${+ANDROID_HOME} )) && [[ -d "$ANDROID_HOME/sdk" ]]; then
 	addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
 fi
 
+### Docker configuration
+if command-has docker && ! command-has podman; then
+	docker-set-env
+fi
+
 ### SSH configuration
 if (( ${+SSH_HOME} )) && [[ -d ~$USER/.ssh ]]; then
 	[[ ! -d "$SSH_HOME" ]] && mkdir -p "$SSH_HOME"
@@ -33,7 +38,7 @@ if (( ${+SSH_HOME} )) && [[ -d ~$USER/.ssh ]]; then
 fi
 
 
-### Detect if this is an interactive shell
+### Last execution to run if in an interactive shell
 if [[ -o interactive ]]; then
 	if ! whatami Android; then
 		### Session type (X11, Wayland) configuration

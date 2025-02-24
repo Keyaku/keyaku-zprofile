@@ -73,8 +73,6 @@ function docker-set-env {
 	done
 }
 
-docker-set-env
-
 # If docker is running, set DOCKER_HOST variable. Run this only if necessary.
 function docker-set-host {
 	local -r usage=(
