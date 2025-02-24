@@ -26,7 +26,7 @@ function gpu-list {
 	done
 	cmd_name=""
 
-	local usage=(
+	local -r usage=(
 		"Usage: $(get_funcname) [OPTION...] [-t|--tool=]<tool name>"
 		"\t[-h|--help]"
 		"\t[-t|--tool]"
@@ -90,7 +90,7 @@ function du_hast {
 
 ### Memory
 function meminfo {
-	local usage=("Usage: $(get_funcname) [OPTION...] IP_ADDRESS"
+	local -r usage=("Usage: $(get_funcname) [OPTION...] IP_ADDRESS"
 		"\t[-h|--help]"
 		"\t[-a|--all]   : Prints Usable memory / Total memory (default)"
 		"\t[-f|--free]  : Prints Usable memory"

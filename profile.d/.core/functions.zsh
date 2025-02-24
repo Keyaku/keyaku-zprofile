@@ -82,7 +82,7 @@ function is_dict {
 
 # Check if argument is an IPv4
 function is_ip_address {
-	local usage=(
+	local -r usage=(
 		"Usage: $(get_funcname) [OPTION...] IP_ADDRESS"
 		"\t[-h|--help]"
 		"\t[-4|--ipv4]"
@@ -170,7 +170,7 @@ function str_starts_with {
 
 # Joins array of strings with delimiter
 function str_join {
-	local usage=(
+	local -r usage=(
 		"Usage: $(get_funcname) [OPTION...] ARRAY"
 		"\t[-h|--help]"
 		"\t-d|--delim|--delimiter EXPRESSION (e.g. -d:)"
@@ -304,7 +304,7 @@ function script_exit_code {
 
 # Sleeps, while displaying a message
 function sleep_for {
-	local usage=(
+	local -r usage=(
 		"Usage: $(get_funcname) [OPTION...] [-t|--time=]<time_amount>"
 		"\t[-h|--help]"
 		"\t[-t|--time]"

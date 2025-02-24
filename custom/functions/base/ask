@@ -2,7 +2,7 @@
 
 emulate -L zsh
 
-local usage=(
+local -r usage=(
 	"Usage: $(get_funcname) [OPTION...] [(-p|--prompt) message]"
 	"\t[-h|--help]"
 	"\t[-B|--yn|--yesno] : Prompt for a binary yes/no answer. This overrides -o|--opts with '-o y -o n'"

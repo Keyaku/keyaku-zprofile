@@ -11,7 +11,7 @@ function printf_v {
 	(( $min_verbosity <= $verbosity )) && printf "$fmt" "$@"
 }
 
-local usage=(
+local -r usage=(
 	"Usage: $(get_funcname) [OPTION...] [FILE...] [DIR...]"
 	"\tReloads files under profile.d. Presumes \$ZDOTDIR/profile.d as root directory, meaning it can't load files outside of it (including local)"
 	"\t[-h|--help] : Print this help message"

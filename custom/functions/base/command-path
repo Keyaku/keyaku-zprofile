@@ -2,7 +2,7 @@
 
 emulate -L zsh
 
-local usage=(
+local -r usage=(
 	"Usage: $(get_funcname) [OPTION]... COMMAND..."
 )
 local help_msg=(

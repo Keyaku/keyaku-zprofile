@@ -77,7 +77,7 @@ docker-set-env
 
 # If docker is running, set DOCKER_HOST variable. Run this only if necessary.
 function docker-set-host {
-	local usage=(
+	local -r usage=(
 		"Usage: $(get_funcname) [OPTION...]"
 		"\t[-h|--help]"
 		"\t[-v] / [-q] : Increase / Decrease verbosity"
@@ -155,7 +155,7 @@ function docker-rootless-install {
 
 # Helper to uninstall Docker rootless
 function docker-rootless-uninstall {
-	local usage=(
+	local -r usage=(
 		"Usage: $(get_funcname) [OPTION...]"
 		"\t[-h|--help] : Prints this message"
 		"\t[-f|--full] : Fully removes all Docker rootless binaries"
@@ -414,7 +414,7 @@ function docker-socket-ssh {
 
 # Function which defines container aliases
 function docker-alias {
-	local usage=(
+	local -r usage=(
 		"Usage: $(get_funcname) [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
 		"\t[-h|--help]"
 	)

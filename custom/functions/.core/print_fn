@@ -46,7 +46,7 @@ local -A lvl_color=(
 	[d]="white"  # debug = white
 )
 
-local usage=(
+local -r usage=(
 	"Usage: $(get_funcname) LEVEL [OPTION...] FMT [ARGS...]"
 	"\t[-h|--help] : Print this help message"
 	"\t[-c|--callstack] : Print the callstack"

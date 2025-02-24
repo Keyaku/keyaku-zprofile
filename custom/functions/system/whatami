@@ -2,7 +2,7 @@
 
 emulate -L zsh
 
-local usage=(
+local -r usage=(
 	"Usage: $(get_funcname) [OPTION...] COMMAND..."
 	"\t[-h|--help] : Print this help message"
 	"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."

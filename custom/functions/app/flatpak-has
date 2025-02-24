@@ -2,7 +2,7 @@
 
 emulate -L zsh
 
-local usage=(
+local -r usage=(
 	"Usage: $(get_funcname) [OPTION...]"
 	"\t[-h|--help] : Print this help message"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
