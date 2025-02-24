@@ -89,7 +89,7 @@ if (( ${#funcstack} <= 1 )); then
 fi
 
 # Avoid getting other print functions
-while _can_skip "${funcstack[$idx+1]}"; do
+while _can_skip "${funcstack[$idx+1]}" && (( ${#funcstack} < $idx+1 )); do
 	(( idx++ ))
 done
 
