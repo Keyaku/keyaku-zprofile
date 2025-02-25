@@ -12,6 +12,6 @@ fi
 addpath 1 "$(npm config get prefix)/bin"
 
 # Add global node_modules to MANPATH
-addvar MANPATH "$(npm config get prefix)/share"
+(( ${+MANPATH} )) && addvar MANPATH "$(npm config get prefix)/share"
 
 fi

@@ -6,7 +6,7 @@
 function assign {
 	check_argc 2 2 $#
 	if [[ ! -v "$1" ]]; then
-		print_fn -e "Argument is not a variable" "$1"
+		print_fn -e "Argument is not a variable: '$1'"
 		return 1
 	# FIXME: doesn't work with arrays
 	elif is_array $1 || is_array $2; then

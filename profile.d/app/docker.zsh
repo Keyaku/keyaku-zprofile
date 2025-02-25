@@ -38,6 +38,9 @@ fi
 
 # Sets environment for Docker
 function docker-set-env {
+	if ! command-has systemctl-service-path; then
+		zsource system # FIXME: specify base/system.zsh
+	fi
 	### If rootless binaries exist, prefer those over rootful
 	if [[ -f "$(systemctl-service-path --user docker)" ]]; then
 		### Set important environment variables
