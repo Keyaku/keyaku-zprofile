@@ -7,15 +7,18 @@ setopt extendedglob
 local -r usage=(
 	"Usage: $(get_funcname) [OPTION...] [FILE...] [DIR...]"
 	"\tReloads files under profile.d. Presumes \$ZDOTDIR/profile.d as root directory, meaning it can't load files outside of it (including local)"
+	""
 	"\t[-h|--help] : Print this help message"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
-	"\t[-a|--all] : Reload all files under profile.d"
-	"\t[-f|--file] FILE : Reloads the specified file(s) under profile.d"
-	"\t[-d|--dir] DIR : Reloads all files under the specified directory(ies) under profile.d"
+	"\t[-a|--all] : Reload all files under profile.d. Supercedes any of the following options"
+	"\t[-l|--login] : Reloads all files containing block for [[ -o login ]]. Stackable option"
+	"\t[-i|--interactive] : Reloads all files containing block for [[ -o interactive ]]. Stackable option"
+	"\t[-f|--file] FILE : Reloads the specified file(s) under profile.d. Stackable option"
+	"\t[-d|--dir] DIR : Reloads all files under the specified directory(ies) under profile.d. Stackable option"
 )
 
 ## Setup parseopts (with no extra arguments)
-local void f_help f_verbose f_quiet f_all
+local void f_help f_verbose f_quiet f_all f_login f_interactive
 local -aU f_dirs f_files
 zparseopts -a void -D -F -K -- \
 	{h,-help}=f_help \
@@ -23,6 +26,8 @@ zparseopts -a void -D -F -K -- \
 	{d,-dir}+:=f_dirs \
 	{f,-file}+:=f_files \
 	{a,-all}=f_all \
+	{l,-login}=f_login \
+	{i,-interactive}=f_interactive \
 	|| return 1
 
 ## Help/usage message
@@ -35,6 +40,8 @@ fi
 local verbosity=0
 (( verbosity += ($#f_verbose - $#f_quiet) ))
 logical=${logical##*-}
+
+local -r flags_set="${f_files[1]}${f_dirs[1]}${f_login}${f_interactive}"
 
 # Prepare profiles to load
 local -a flags_to_unset=(-f --file -d --dir)
@@ -49,27 +56,29 @@ if [[ "$f_all" ]]; then
 	profiles=( "$ZDOTDIR"/profile.d/{.*,^.}/**/*.zsh(-DN.) )
 else
 	# Load specified files/dirs from arguments
-	if [[ "$f_files" ]]; then
-		profiles+=( "$ZDOTDIR"/profile.d/{.*,^.}/**/((${(j:|:)~f_files}).zsh)(-DN.) )
-	fi
-	if [[ "$f_dirs" ]]; then
-		profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)~f_dirs})/**/*.zsh(-DN.) )
-	fi
+	[[ "$f_files" ]] && profiles+=( "$ZDOTDIR"/profile.d/{.*,^.}/**/((${(j:|:)~f_files}).zsh)(-DN.) )
+	[[ "$f_dirs" ]]  && profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)~f_dirs})/**/*.zsh(-DN.) )
+
+	# Load login/interactive profiles if specified
+	[[ "$f_login" ]]       && profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$ZDOTDIR"/profile.d) )
+	[[ "$f_interactive" ]] && profiles+=( $(\grep -rEl '\[?\[ -o interactive \]\]?' "$ZDOTDIR"/profile.d) )
 
 	# Load any potential match from arguments, file or directory
-	if (( $# )); then
-		profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
-	# Load all profiles if none specified
-	elif [[ -z "${f_files}${f_dirs}" ]] && (( ! ${#profiles} )); then
-		profiles=( "$ZDOTDIR"/profile.d/{.*,^.}/**/*.zsh(-DN.) )
-	fi
+	(( $# )) && profiles+=( "$ZDOTDIR"/profile.d/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
 fi
 
 
 # If no profiles were set, do nothing
 if (( ! ${#profiles} )); then
-	(( 1 <= $verbosity )) && print_fn -i "No profiles to source"
-	return 0
+	if (( 1 <= $verbosity )); then
+		if [[ "$flags_set" ]]; then
+			print_fn -e "No valid profiles found with the specified flags"
+		else
+			print_fn -i "No profiles to source"
+		fi
+	fi
+	[[ "$flags_set" ]]
+	return $?
 fi
 
 # Shorten paths just for output

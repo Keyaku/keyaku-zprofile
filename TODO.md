@@ -39,11 +39,12 @@ This tasklist contains all ideas or improvements for this environment setup.
 	* [x] Rewrite print functions: `print_callstack`, `print_error`, `print_warn`.
 * [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
 * [ ] Create autocomplete for main functions.
-* [ ] `zsource`: Add flags for sourcing login (-l|--login) and interactive (-i|--interactive) files.
+* [x] `zsource`: Add flags for sourcing login (-l|--login) and interactive (-i|--interactive) files.
 
 
 ### `profile.d/`
 
-* [ ] Make core functions stop execution if an error occurred.
+* [x] Make core functions stop execution if an error occurred.
+* [ ] Wrap appropriate sections with `[[ -o login ]]`, `[[ -o interactive ]]` and/or `is_sourced_by` so that sourcing one of these files from main profiles sets only the according environment stuff.
 * [ ] Create skeleton for a synchronization software (e.g. SyncThing) to do its thing for multi-platform configuration (SSH, vimrc, etc.).
 * [ ] (KDE Plasma) Write function that sets up Window rules (e.g. change the VSCode Flatpak title bar icon from Wayland to VScode).
