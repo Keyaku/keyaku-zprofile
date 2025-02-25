@@ -40,6 +40,43 @@ export ZSH_COMPDUMP="${ZSH_CACHE_HOME}/zcompdump"
 export HISTFILE="${ZSH_CACHE_HOME}/zsh_history"
 export HISTCONTROL=ignoredups:erasedups
 
+# Function that checks if current file is being sourced by one of the main zsh profiles
+function is_sourced_by {
+	setopt extendedglob
+
+	local -ra zprofiles=(.zshenv .zprofile .zshrc .zlogin .zlogout)
+	local zpatterns
+	local -i argc=$#
+
+	# Specifiy zprofiles if arguments were given
+	if (( $argc )); then
+		while (( $# )); do
+			if [[ -f "$(echo "$ZDOTDIR"/{,.}"${1:t}"(-.N))" ]]; then
+				zpatterns="${zpatterns:+$zpatterns|}${1:t}"
+			fi
+			shift
+		done
+
+		if [[ -z "$zpatterns" ]]; then
+			# No valid zprofile given
+			return 1
+		fi
+	# Otherwise, check for all zprofiles
+	else
+		zpatterns="${(j:|:)zprofiles}"
+	fi
+
+	[[ "${funcstack[-1]:t}" =~ "^\.?("${zpatterns}")$" ]]
+	local retval=$?
+
+	# If no argument given, print the zprofile
+	if (( ! $retval && ! $argc )); then
+		echo "${funcstack[-1]:t}"
+	fi
+
+	return $retval
+}
+
 
 ##############################################################################
 ### Custom packages locations
