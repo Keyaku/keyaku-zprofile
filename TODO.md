@@ -7,7 +7,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 ### Main profiles (`.zshenv`, `.zprofile`, `.zshrc`, `.zlogin`)
 
 * [ ] Reorganize `.zshenv`, `.zprofile`, `.zshrc`, `.zlogin` to have their intended profiling (and not the currently existing spaghetti). In other words, ensure each file respects their intended `[[ -o login ]]` and/or `[[ -o interactive ]]` behaviors.
-	* [x] `.zshenv` should NOT output, nor modify anything. Just set user environment variables.
+	* [ ] `.zshenv` should NOT output, nor modify anything. Just set user environment variables. Also, add all potential paths to `path` array/`PATH` variable (maybe via external file?).
 	* [ ] `.zprofile` should contain session-wide environment variables and execution.
 	* [x] `.zshrc` should load plugins, functions, aliases, completions and all interactive elements. It should NOT set any environment variable other than for ZSH loading purposes.
 	* [x] `.zlogin` should be restricted to configuration for a login interactive shell. It should NOT run or make any session-wide changes (read: move `first_init` elsewhere).

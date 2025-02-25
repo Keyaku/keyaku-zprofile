@@ -107,7 +107,7 @@ export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtkrc-2.0"
 export GTK_USE_PORTAL=1
 
 
-### NPM
+### NPM (Node.js)
 if command -v npm &>/dev/null; then
 	[[ ! -d "${XDG_CONFIG_HOME}"/npm ]] && mkdir -p "${XDG_CONFIG_HOME}"/npm
 	[[ ! -d "${XDG_CACHE_HOME}"/npm ]]  && mkdir -p "${XDG_CACHE_HOME}"/npm

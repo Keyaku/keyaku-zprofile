@@ -109,8 +109,8 @@ function docker-set-host {
 			return 1
 		elif [[ "$DOCKER_HOST" != "$docker_host" ]]; then
 			export DOCKER_HOST="$docker_host"
+			(( 0 < $verbosity )) && printenv DOCKER_HOST
 		fi
-		(( 0 < $verbosity )) && env | \grep "DOCKER_HOST" || env | \grep "DOCKER_HOST" &>/dev/null
 	}
 }
 
@@ -127,17 +127,14 @@ function docker-rootless-install {
 		sudo rm "$(systemctl cat docker.socket | sed -En 's|^ListenStream=||p')"
 	fi
 
-	export DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
+	DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
 	if [[ ! -d "$DOCKER_BIN" ]]; then
 		echo "Creating user directories..."
 		mkdir -p "$DOCKER_BIN"
 	fi
 	echo "Fetching and executing Docker rootless install script..."
 	curl -fsSL https://get.docker.com/rootless | DOCKER_BIN="${DOCKER_BIN}" sh || return $?
-	addpath 1 "$DOCKER_BIN"
-
-	echo "Setting DOCKER_HOST variable..."
-	docker-set-host
+	docker-set-env
 
 	echo "Exposing privileged ports..."
 	sudo setcap cap_net_bind_service=ep $(which rootlesskit)
@@ -174,7 +171,7 @@ function docker-rootless-uninstall {
 		[[ "$f_help" ]]; return $?
 	fi
 
-	if [[ -n "$f_full" && -n "$f_daemon" ]]; then
+	if [[ "$f_full" && "$f_daemon" ]]; then
 		print_fn -e "-d and -f flags are mutually exclusive"
 		return 2
 	fi
@@ -267,7 +264,7 @@ function docker-update {
 
 function docker-upgrade {
 	if (( ! $# )); then
-		print_fn -e "Docker stack name required as argument"
+		print_fn -e "Docker stack name(s) required as argument(s)"
 		return 1
 	fi
 
