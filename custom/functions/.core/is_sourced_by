@@ -1,0 +1,36 @@
+# Function that checks if current file is being sourced by one of the main zsh profiles
+
+emulate -L zsh
+setopt extendedglob
+
+local -ra zprofiles=(.zshenv .zprofile .zshrc .zlogin .zlogout)
+local zpatterns
+local -i argc=$#
+
+# Specifiy zprofiles if arguments were given
+if (( $argc )); then
+	while (( $# )); do
+		if [[ -f "$(echo "$ZDOTDIR"/{,.}"${1:t}"(-.N))" ]]; then
+			zpatterns="${zpatterns:+$zpatterns|}${1:t}"
+		fi
+		shift
+	done
+
+	if [[ -z "$zpatterns" ]]; then
+		# No valid zprofile given
+		return 1
+	fi
+# Otherwise, check for all zprofiles
+else
+	zpatterns="${(j:|:)zprofiles}"
+fi
+
+[[ "${funcstack[-1]:t}" =~ "^\.?("${zpatterns}")$" ]]
+local retval=$?
+
+# If no argument given, print the zprofile
+if (( ! $retval && ! $argc )); then
+	echo "${funcstack[-1]:t}"
+fi
+
+return $retval
