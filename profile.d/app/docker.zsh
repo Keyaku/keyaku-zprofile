@@ -43,7 +43,7 @@ function docker-set-env {
 		### Set important environment variables
 		export DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
 		DOCKER_CONFIG="${XDG_CONFIG_HOME}/docker"
-		DOCKER_HOME="${HOME}/.local/docker"
+		DOCKER_HOME="$HOME/.local/docker"
 
 		# Prepend binary directory to PATH
 		addpath 1 "$DOCKER_BIN"
@@ -352,15 +352,13 @@ function docker-socket-tls {
 	local PATH_svc="$(systemctl --user cat docker 2>/dev/null | head -n1 | awk '{print $NF}')"
 	if [[ ! -f "${PATH_svc}.d/override.conf" ]]; then
 		mkdir -p "${PATH_svc}.d"
-		local ENVDIR_conf="$(env_find docker.zsh).d/$(get_funcname).conf"
-
-		cat "$ENVDIR_conf" > ${PATH_svc}.d/override.conf
+		cp "$ZDOTDIR/conf/docker/$(get_funcname).conf" ${PATH_svc}.d/override.conf
 	else
 		echo "'${PATH_svc}.d/override.conf' already exists. Skipping"
 	fi
 
 	# Setting up context
-	if ! docker context ls | \grep rootless-tls &>/dev/null; then
+	if ! docker context ls | \grep -q rootless-tls; then
 		echo "Creating context..."
 		docker context create rootless-tls \
 			--docker "host=tcp://0.0.0.0:2376,ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/server-cert.pem,key=${DOCKER_CERT_PATH}/server-key.pem" \
@@ -379,23 +377,22 @@ function docker-socket-tls {
 
 # SSH socket
 function docker-socket-ssh {
-	if ! docker context ls | \grep rootless-ssh &>/dev/null; then
+	if ! docker context ls | \grep -q rootless-ssh; then
 		docker context create rootless-ssh \
 			--docker "host=ssh://$USER@$HOST" \
 			--description="Rootless SSH context"
 	fi
 
-	if [[ ! -f "$HOME/.ssh/config.d/docker.conf" ]]; then
+	if [[ ! -f "$SSH_HOME/config.d/docker.conf" ]]; then
 		# Adding configuration
-		mkdir -p "$HOME/.ssh/config.d"
+		[[ -d "$SSH_HOME/config.d" ]] || mkdir -p "$SSH_HOME/config.d"
 
-		local ENVDIR_conf="$(env_find docker.env).d/$(get_funcname).conf"
-		sed "s/\$USER/$USER/g;s/\$HOST/$HOST/g" "$ENVDIR_conf" > $HOME/.ssh/config.d/docker.conf
+		cp "$ZDOTDIR/conf/docker/$(get_funcname).conf" $SSH_HOME/config.d/docker.conf
 
 		# Checking if config file exists and contains an Include directive
-		[[ ! -f "$HOME/.ssh/config" ]] && touch "$HOME/.ssh/config"
-		if ! \grep 'Include ~/.ssh/config.d/*.conf' "$HOME/.ssh/config" &>/dev/null; then
-			sed -i '1s;^;Include ~/.ssh/config.d/*.conf\n\n;' "$HOME/.ssh/config"
+		[[ ! -f "$SSH_HOME/config" ]] && touch "$SSH_HOME/config"
+		if ! \grep -q 'Include /home/%u/.local/config/ssh/config.d/*.conf' "$SSH_HOME/config"; then
+			sed -i '1s;^;Include /home/%u/.local/config/ssh/config.d/*.conf\n\n;' "$SSH_HOME/config"
 		fi
 	fi
 
