@@ -5,10 +5,14 @@
 if [[ -o login ]]; then
 
 ### .NET
-if (( 1000 <= $UID )) && command-has brew && [[ -d "$HOMEBREW_CELLAR/dotnet" ]]; then
+# Use Homebrew's .NET installation
+if (( ${+HOMEBREW_PREFIX} )) && [[ -d "$HOMEBREW_CELLAR/dotnet" ]]; then
 	export DOTNET_ROOT="${HOMEBREW_PREFIX}/opt/dotnet/libexec"
+# Use user installation
 elif [[ "${XDG_DATA_HOME}/dotnet" ]]; then
 	export DOTNET_ROOT="${XDG_DATA_HOME}/dotnet"
+elif [[ -z "$DOTNET_ROOT" ]] && is_sourced; then
+	return 1
 fi
 
 export DOTNET_INSTALL_DIR="${DOTNET_ROOT}"
