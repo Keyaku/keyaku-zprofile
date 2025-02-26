@@ -475,11 +475,13 @@ function docker-alias {
 	## Setup func opts
 	local f_help
 	local container_name container_alias container_cmd
+	local container_user
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{n,-name}:=container_name \
 		{a,-alias}:=container_alias \
 		{c,-cmd}:=container_cmd \
+		{u,-user}:=container_user \
 		|| return 1
 
 	## Help/usage message
@@ -489,10 +491,13 @@ function docker-alias {
 	fi
 
 	# Presume 1st argument is container_name
-	[[ "$1" ]] && {
+	if [[ -z "$container_name" && "$1" ]]; then
 		container_name="$1"
 		shift
-	}
+	else # Otherwise, check if it's a flag
+		[[ "${(t)container_alias}" =~ array-* ]] && container_name="${container_name[-1]}"
+	fi
+
 	# Presume rest of arguments are for container_cmd
 	(( $# )) && container_cmd="$*"
 
@@ -506,7 +511,7 @@ function docker-alias {
 	[[ "${(t)container_cmd}" =~ array-* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
 
 	# Define alias
-	alias $container_alias="docker exec $container_name $container_cmd"
+	alias $container_alias="docker exec ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
 }
 
 # Defining simple container aliases
@@ -519,6 +524,6 @@ done
 unset DOCKER_CONTAINERS_CMD container_name
 
 # Defining more complex aliases
-docker-alias -a occ "--user www-data nextcloud php occ"
+docker-alias -a occ -n nextcloud -u www-data "php occ"
 
 fi
