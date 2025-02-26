@@ -45,6 +45,8 @@ This tasklist contains all ideas or improvements for this environment setup.
 ### `profile.d/`
 
 * [x] Make core functions stop execution if an error occurred.
+* [ ] Implement function that fetches system's package manager and installs packages accordingly.
 * [ ] Wrap appropriate sections with `[[ -o login ]]`, `[[ -o interactive ]]` and/or `is_sourced_by` so that sourcing one of these files from main profiles sets only the according environment stuff.
+* [ ] Initialize password store with existing GPG key (e.g. `pass init GPGKEY`).
 * [ ] Create skeleton for a synchronization software (e.g. SyncThing) to do its thing for multi-platform configuration (SSH, vimrc, etc.).
 * [ ] (KDE Plasma) Write function that sets up Window rules (e.g. change the VSCode Flatpak title bar icon from Wayland to VScode).

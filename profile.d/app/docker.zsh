@@ -40,6 +40,68 @@ fi
 [[ -d "${XDG_CONFIG_HOME}/docker" ]] || mkdir -p "${XDG_CONFIG_HOME}/docker"
 export DOCKER_CONFIG="${XDG_CONFIG_HOME}/docker"
 
+# Checks current credention helper, fetching one if necessary
+function docker-get-credhelper {
+	local -r credhelper_repo="docker/docker-credential-helpers"
+	local -r credhelper_api="api.github.com/repos/${credhelper_repo}/releases"
+	local -r DOCKER_CACHE="${XDG_CACHE_HOME}/docker"
+	[[ -d "${DOCKER_CACHE}" ]] || mkdir -p "${DOCKER_CACHE}"
+	curl -o "${DOCKER_CACHE}/credhelper-releases.json" -s https://${credhelper_api}/latest || return $?
+
+	# 1. Define credential store
+	local -ra credhelper_valid=("pass" "secretservice" "osxkeychain" "wincred")
+	local credstore="pass"
+	if (( $# )); then
+		[[ "${credhelper_valid[(r)$1]}" ]] && credstore="$1"
+	fi
+
+	# 2. If credstore is `pass`, check if it's installed
+	if [[ "$credstore" == "pass" ]] && ! command-has pass; then
+		local pkgmgr="$(pkgmgr-get)"
+		print_fn -e "pass not installed.${pkgmgr:+ Install it via $pkgmgr.}"
+		return 1
+	fi
+
+	# 3. Check if docker-credential-helper is installed and if it's the latest version
+	local latest_version="$(jq -r '.tag_name' "${DOCKER_CACHE}/credhelper-releases.json")"
+	local local_version
+	local -i needs_update=1
+
+	if command-has docker-credential-${credstore}; then
+		local_version="$(docker-credential-${credstore} -v | awk '{print $NF}')"
+		[[ "$local_version" == "$latest_version" ]] && needs_update=0
+	fi
+
+	if (( ! $needs_update )); then
+		echo "docker-credential-${credstore} is up-to-date."
+		return 0
+	fi
+
+	# If not, fetch latest release
+	local arch
+	case "$(uname -m)" in
+		arm* ) arch=arm64 ;;
+		* ) arch=amd64 ;;
+	esac
+	local kernel="$(uname -s | tr '[:upper:]' '[:lower:]')"
+	local asset_name="docker-credential-${credstore}-${latest_version}.${kernel}-${arch}"
+	jq -r '.assets[] | select(.name | contains ("'${asset_name}'"))' "${DOCKER_CACHE}/credhelper-releases.json" > "${DOCKER_CACHE}/credhelper-asset.json"
+	if [[ ! -s "${DOCKER_CACHE}/credhelper-asset.json" ]]; then
+		print_fn -e "Asset '$asset_name' not found"
+		return 1
+	fi
+
+	echo "Downloading latest docker-credential-${credstore}..."
+	local browser_download_url="$(jq -r '.browser_download_url' "${DOCKER_CACHE}/credhelper-asset.json")"
+	curl -L -o "$HOME/.local/bin/docker-credential-${credstore}" "${browser_download_url}"
+	chmod ug+x "$HOME/.local/bin/docker-credential-${credstore}"
+
+	# Cleanup
+	rm -f "${DOCKER_CACHE}"/credhelper-*.json
+
+	echo "Done. Run 'docker-credential-${credstore}' to check if it's working."
+}
+
 # Sets environment for Docker
 function docker-set-env {
 	if ! command-has systemctl-service-path; then
