@@ -473,11 +473,10 @@ function docker-alias {
 	)
 
 	## Setup func opts
-	local f_help f_safe
+	local f_help
 	local container_name container_alias container_cmd
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
-		{s,-safe}=f_safe \
 		{n,-name}:=container_name \
 		{a,-alias}:=container_alias \
 		{c,-cmd}:=container_cmd \
@@ -498,24 +497,16 @@ function docker-alias {
 	(( $# )) && container_cmd="$*"
 
 	## Check required arguments
-	local retval=0
-	if [[ -z "$container_name" ]]; then
-		print -l "$(get_funcname) requires at least container name defined (via -n|--name)"
+	# If everything's empty, let user know at least container name is required
+	if [[ -z "${container_name}${container_alias}${container_cmd}" ]]; then
+		print_fn -e "requires at least a container name"
 		return 1
 	fi
 	[[ "${(t)container_alias}" =~ array-* ]] && container_alias="${(q+)container_alias[-1]}" || container_alias="${container_alias:-$container_name}"
 	[[ "${(t)container_cmd}" =~ array-* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
 
-	local current_alias="$(alias $container_alias 2>/dev/null)"
-	if [[ "$current_alias" == "$container_alias=docker exec $container_name $container_cmd" ]] && [[ "$f_safe" ]]; then
-		echo "'$container_name' alias already defined as "$current_alias". Remove -s|--safe flag to override it."
-		retval=1
-	else
-		alias $container_alias="docker exec $container_name $container_cmd"
-		retval=$?
-	fi
-
-	return $retval
+	# Define alias
+	alias $container_alias="docker exec $container_name $container_cmd"
 }
 
 # Defining simple container aliases
@@ -528,6 +519,6 @@ done
 unset DOCKER_CONTAINERS_CMD container_name
 
 # Defining more complex aliases
-docker-alias -a occ nextcloud "--user www-data nextcloud php occ"
+docker-alias -a occ "--user www-data nextcloud php occ"
 
 fi
