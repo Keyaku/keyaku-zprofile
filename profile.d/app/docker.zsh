@@ -36,16 +36,20 @@ if (( 1000 <= $UID )); then
 	export DOCKER_USER="$(id -u):$(id -g)"
 fi
 
+# Set config directory, regardless of context
+[[ -d "${XDG_CONFIG_HOME}/docker" ]] || mkdir -p "${XDG_CONFIG_HOME}/docker"
+export DOCKER_CONFIG="${XDG_CONFIG_HOME}/docker"
+
 # Sets environment for Docker
 function docker-set-env {
 	if ! command-has systemctl-service-path; then
 		zsource system # FIXME: specify base/system.zsh
 	fi
+
 	### If rootless binaries exist, prefer those over rootful
 	if [[ -f "$(systemctl-service-path --user docker)" ]]; then
 		### Set important environment variables
 		export DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
-		DOCKER_CONFIG="${XDG_CONFIG_HOME}/docker"
 		DOCKER_HOME="$HOME/.local/docker"
 
 		# Prepend binary directory to PATH
@@ -64,16 +68,8 @@ function docker-set-env {
 	else
 		### Set important environment variables
 		DOCKER_BIN="$(pkgmgr-binpath docker 2>/dev/null)"
-		DOCKER_CONFIG="/etc/docker"
 		DOCKER_HOME="/usr/local/docker"
 	fi
-
-	### Create important directories
-	local mydir
-	for mydir in DOCKER_{CONFIG,HOME}; do
-		[[ -d "${(P)mydir}" ]] || sudo -u $(whoami) mkdir -p "${(P)mydir}"
-		export "$mydir"
-	done
 }
 
 # If docker is running, set DOCKER_HOST variable. Run this only if necessary.
