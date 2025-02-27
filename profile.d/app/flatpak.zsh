@@ -4,7 +4,9 @@
 
 if command-has flatpak; then
 
-alias flatpak-remotes="flatpak remotes --columns=priority,options | sort | awk '{print \$NF}'"
+function flatpak-remotes {
+	flatpak remotes --columns=priority,options | sort | awk '{print $NF}'
+}
 
 ### Flatpak environment variables
 typeset -Ag FLATPAK_ENV=(
@@ -13,11 +15,11 @@ typeset -Ag FLATPAK_ENV=(
 )
 
 # Set Flatpak environment variables depending on available remotes
-for flatpak_remote in $(flatpak-remotes); do
-	if [[ "$flatpak_remote" == user ]]; then
+flatpak-remotes | while read -r; do
+	if [[ "$REPLY" == user ]]; then
 		FLATPAK_ENV[USER_DIR]="${XDG_DATA_HOME}/flatpak"
 		FLATPAK_ENV[USER_INSTALL]="${FLATPAK_ENV[USER_DIR]}/app"
-	elif [[ "$flatpak_remote" == system ]]; then
+	elif [[ "$REPLY" == system ]]; then
 		FLATPAK_ENV[SYSTEM_INSTALL]="${FLATPAK_ENV[SYSTEM_DIR]}/app"
 	fi
 done

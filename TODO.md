@@ -49,6 +49,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 	* [ ] Sets up configuration without user prompt (also remove the message to delete `~/.ssh`).
 	* [ ] Autocompletion works in Terminal.
 	* [ ] VScode (at least in Flatpak) finds configured hosts.
+	* [ ] Git config should follow the new SSH path.
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
 * [ ] Wrap appropriate sections with `[[ -o login ]]`, `[[ -o interactive ]]` and/or `is_sourced_by` so that sourcing one of these files from main profiles sets only the according environment stuff.
 * [ ] Initialize password store with existing GPG key (e.g. `pass init GPGKEY`).
