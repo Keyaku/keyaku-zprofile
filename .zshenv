@@ -106,6 +106,8 @@ fi
 export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtkrc-2.0"
 export GTK_USE_PORTAL=1
 
+### Mesa
+export MESA_SHADER_CACHE_DIR="${XDG_CACHE_HOME}/mesa_shader_cache"
 
 ### NPM (Node.js)
 if command -v npm &>/dev/null; then
