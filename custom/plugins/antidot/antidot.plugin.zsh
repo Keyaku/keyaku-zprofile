@@ -10,3 +10,8 @@ if [[ ! -f "$ZSH_CACHE_DIR/completions/_antidot" ]]; then
 fi
 
 antidot completion zsh >| "$ZSH_CACHE_DIR/completions/_antidot" &|
+
+# Source antidot files
+for f_antidot in "${XDG_DATA_HOME}"/antidot/{env,alias}.sh; do
+	[[ -f "${f_antidot}" ]] && source "${f_antidot}"
+done
