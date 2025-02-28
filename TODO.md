@@ -55,3 +55,8 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] Initialize password store with existing GPG key (e.g. `pass init GPGKEY`).
 * [ ] Create skeleton for a synchronization software (e.g. SyncThing) to do its thing for multi-platform configuration (SSH, vimrc, etc.).
 * [ ] (KDE Plasma) Write function that sets up Window rules (e.g. change the VSCode Flatpak title bar icon from Wayland to VScode).
+
+
+### `custom/plugins`
+
+* [ ] Consider porting some of the `.zsh` from `profile.d` over to `custom/plugins`.

@@ -75,8 +75,8 @@ autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/load_zfunc(N) && load_zfunc
 # Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${XDG_CACHE_HOME:-$HOME/.local/cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-	source "${XDG_CACHE_HOME:-$HOME/.local/cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+	source "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
 # Set name of the theme to load --- if set to "random", it will
@@ -148,6 +148,7 @@ HIST_STAMPS="dd/mm/yyyy"
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
 	# ohmyzsh plugins
+	command-not-found
 	git pip nmap
 	# Custom plugins (load them all by default)
     "$ZSH_CUSTOM"/plugins/(*~example)(-FN:t)
@@ -164,32 +165,26 @@ source $ZSH/oh-my-zsh.sh
 
 # Bash modules & autocompletion (for programs which contain only bash completions)
 autoload bashcompinit && bashcompinit
-for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-N.); do
-	source "$f_bashcomp"
+echo "$XDG_DATA_HOME"/bash-completion/completions/*(-N.) | while read -r; do
+	source "$REPLY"
 done
-unset f_bashcomp
 
 # ZSH modules
 zmodload zsh/zutil # zparseopts
 
 # On-demand bin rehash
-zshcache_time="$(date +%s%N)"
+_zshcache_time="$(date +%s%N)"
 autoload -Uz add-zsh-hook
 rehash_precmd() {
 	if [[ -a /var/cache/zsh/pacman ]]; then
 		local paccache_time="$(date -r /var/cache/zsh/pacman +%s%N)"
-		if (( zshcache_time < paccache_time )); then
+		if (( _zshcache_time < paccache_time )); then
 			rehash
-			zshcache_time="$paccache_time"
+			_zshcache_time="$paccache_time"
 		fi
 	fi
 }
 add-zsh-hook -Uz precmd rehash_precmd
-
-# command-not-found handler
-command -v pkgfile &>/dev/null && {
-	source /usr/share/doc/pkgfile/command-not-found.zsh
-}
 
 # Compilation flags
 # export ARCHFLAGS="-arch x86_64"
