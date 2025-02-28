@@ -25,7 +25,7 @@ if (( ${+ANDROID_HOME} )) && [[ -d "$ANDROID_HOME/sdk" ]]; then
 fi
 
 ### Docker configuration
-if command-has docker && ! command-has podman; then
+if (( ${+commands[docker]} )) && (( ! ${+commands[podman]} )); then
 	docker-set-env
 fi
 

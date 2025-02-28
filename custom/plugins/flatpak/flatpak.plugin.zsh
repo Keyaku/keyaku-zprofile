@@ -1,8 +1,45 @@
-#######################################
-### Flatpak
-#######################################
+(( ${+commands[flatpak]} )) || return
 
-if command-has flatpak; then
+function flatpak-has {
+	local -r usage=(
+		"Usage: $(get_funcname) [OPTION...]"
+		"\t[-h|--help] : Print this help message"
+		"\t[-v] / [-q] : Increase / Decrease verbosity"
+		"\t[-i|--ignore-case] : Sets case-sensitivity to none"
+	)
+
+	## Setup func opts
+	local f_help f_verbose f_quiet f_icase
+	zparseopts -D -F -K -- \
+		{h,-help}=f_help \
+		v+=f_verbose q+=f_quiet \
+		{i,-ignore-case}=f_icase \
+		|| return 1
+
+	## Help/usage message
+	if (( ! $# )) && [[ "$f_help" ]]; then
+		>&2 print -l $usage
+		[[ "$f_help" ]]; return $?
+	fi
+
+	# Setup parameters
+	local verbosity=0
+	(( verbosity += ($#f_verbose - $#f_quiet) ))
+	local icase=$(( ${#f_icase} ? 1 : 0 ))
+
+	local retval=1
+
+	while (( $# )); do
+		local result="$(flatpak list --columns=name,application | awk '{IGNORECASE = '${icase}'; for(i=1;i<=NF;i++) if (/\<'$1'\>/) { print; break } }')"
+		if [[ "$result" ]]; then
+			retval=0
+			(( 0 < $verbosity )) && echo "$result"
+		fi
+		shift
+	done
+
+	return $retval
+}
 
 function flatpak-remotes {
 	flatpak remotes --columns=priority,options | sort | awk '{print $NF}'
@@ -47,5 +84,3 @@ function flatpak-update {
 		shift
 	done
 }
-
-fi

@@ -1,4 +1,4 @@
-if command-has steam com.valvesoftware.Steam; then
+command-has steam com.valvesoftware.Steam || return
 
 ### WeMod launcher
 WEMOD_HOME="${GIT_HOME:-$HOME/.local/git}/_games/wemod-launcher"
@@ -182,6 +182,4 @@ function steam-app-proton {
 ### Flatpak version
 if command-has com.valvesoftware.Steam && ! alias steam &>/dev/null && ! command-has steam steam-native; then
 	alias steam='flatpak run com.valvesoftware.Steam'
-fi
-
 fi

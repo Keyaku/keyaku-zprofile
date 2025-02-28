@@ -1,18 +1,14 @@
-#######################################
-### XDG lifesavers
-#######################################
-
 ### Set & get default browser simplified
 function xdg-set-default-browser {
 	local LIST_apps=()
 	local appinfo appname appid
 
 	# Print caveat when using this function
-	if ! command-has flatpak; then
-		echo "Error: This function requires flatpak."
+	if (( ! ${+commands[flatpak]} )); then
+		print_fn -e "Error: This function requires flatpak."
 		return 1
-	elif (( $# == 0 )); then
-		echo "Note: This function only works with Flatpak applications."
+	elif (( ! $#  )); then
+		print_fn -i "Note: This function only works with Flatpak applications."
 	# Search the app from arguments
 	else
 		LIST_apps=($@)

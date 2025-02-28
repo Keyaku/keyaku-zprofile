@@ -52,35 +52,3 @@ if command-has cloudflared; then
 		}
 	fi
 fi
-
-
-# MEGA
-if command-has megacli; then
-	if [[ ${SHELL##*/} == bash ]]; then
-		. /usr/local/etc/bash_completion.d/megacmd_completion.sh
-	fi
-	function mega-update {
-		if [[ -d "$GIT_HOME/MEGAcmd" ]]; then
-			cd "$GIT_HOME/MEGAcmd"
-			git pull && git submodule update --recursive --remote
-			make && make install
-		else
-			echo "Unable to update megacli. How did you install it?"
-			return 1
-		fi
-	}
-fi
-
-# UISP
-if [[ -d /home/unms ]]; then
-	alias unms-start='sudo /home/unms/app/unms-cli start'
-	alias unms-stop='sudo /home/unms/app/unms-cli stop'
-fi
-
-
-###################
-### Web development
-###################
-if command-has sass; then
-	alias sass-watch='sass --watch resources/sass/main.scss:public/css/main.min.css --style compressed > /var/log/sass/watch.log 2>&1 &'
-fi

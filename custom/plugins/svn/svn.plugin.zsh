@@ -1,7 +1,9 @@
-#######################################
-### Subversion
-#######################################
-if command-has svn; then
+(( ${+commands[svn]} )) || return
+
+# Load available stuff from ohmyzsh
+[[ -f "$ZDOTDIR/plugins/svn/svn.plugin.zsh" ]] && _omz_source "$ZDOTDIR/plugins/svn/svn.plugin.zsh"
+
+### Personal configuration
 
 alias svn='svn --config-dir ${XDG_CONFIG_HOME}/subversion'
 export SVN_STASH="$XDG_CONFIG_HOME/subversion/stash"
@@ -266,5 +268,3 @@ function svn_changes {
 
 	return $retval
 }
-
-fi

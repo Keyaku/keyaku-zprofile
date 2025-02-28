@@ -2,7 +2,7 @@
 ### NPM (Node.js)
 #######################################
 
-if command-has npm; then
+(( $+commands[npm] )) || return
 
 if [[ ! -f "$NPM_CONFIG_USERCONFIG" ]] || file_contents_in "$NPM_CONFIG_USERCONFIG" "$ZDOTDIR/conf/npm/.npmrc"; then
 	cat "$ZDOTDIR/conf/npm/.npmrc" >> "$NPM_CONFIG_USERCONFIG"
@@ -13,5 +13,3 @@ addpath 1 "$(npm config get prefix)/bin"
 
 # Add global node_modules to MANPATH
 (( ${+MANPATH} )) && addvar MANPATH "$(npm config get prefix)/share"
-
-fi

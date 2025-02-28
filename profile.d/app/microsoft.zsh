@@ -24,7 +24,7 @@ if (( ${+DOTNET_ROOT} )); then
 fi
 
 ### VScode (Flatpak)
-if flatpak-has com.visualstudio.code; then
+if (( ${+commands[com.visualstudio.code]} )); then
 	# Sets VScode Flatpak's overrides
 	function vscode-flatpak-overrides {
 		local -r flatpak_app="com.visualstudio.code"

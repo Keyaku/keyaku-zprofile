@@ -1,4 +1,4 @@
-if whatami Android; then
+whatami Android || return
 
 alias pkg-all='pkg update && pkg upgrade -y'
 
@@ -16,5 +16,3 @@ alias apt-search='apt-cache search'
 
 ### Android development
 command-has termux-adb && alias termux-adb="HOME=$ANDROID_HOME termux-adb"
-
-fi

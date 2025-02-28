@@ -1,8 +1,28 @@
-#######################################
-### Docker
-#######################################
+if (( ! $+commands[docker] )) || (( $+commands[podman] )); then
+	return
+fi
 
-if command-has docker && ! command-has podman; then
+# Standardized $0 handling
+# https://zdharma-continuum.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+0="${${(M)0:#/*}:-$PWD/$0}"
+
+# If the completion file doesn't exist yet, we need to autoload it and
+# bind it to `docker`. Otherwise, compinit will have already done that.
+if [[ ! -f "$ZSH_CACHE_DIR/completions/_docker" ]]; then
+	typeset -g -A _comps
+	autoload -Uz _docker
+	_comps[docker]=_docker
+fi
+
+{
+	# `docker completion` is only available from 23.0.0 on
+	# docker version returns `Docker version 24.0.2, build cb74dfcd85`
+	# with `s:,:` remove the comma after the version, and select third word of it
+	if is-at-least 23.0.0 ${${(s:,:z)"$(command docker --version)"}[3]}; then
+		command docker completion zsh | tee "$ZSH_CACHE_DIR/completions/_docker" > /dev/null
+	fi
+} &|
 
 # Officially supported Docker environment variables
 typeset -A DOCKER_ENV_VARS=(
@@ -23,8 +43,8 @@ typeset -A DOCKER_ENV_VARS=(
 
 # Custom Docker environment variables
 typeset -A DOCKER_USER_VARS=(
-	[DOCKER_ENV_VARS]="Associative array of all officially supported Docker environment variables."
-	[DOCKER_USER_VARS]="Associative array of all user-defined Docker environment variables."
+	[DOCKER_ENV_VARS]="Dictionary with all officially supported Docker environment variables."
+	[DOCKER_USER_VARS]="Dictionary with all user-defined Docker environment variables."
 	[DOCKER_BIN]="Path to Docker binaries. Defaults to system installation"
 	[DOCKER_HOME]="Path to general non-configuration Docker files. Defaults to /usr/local/docker for root, and \$HOME/.local/docker for non-root."
 	[DOCKER_USER]="Current non-root user for Docker. Useful for containers where root is not necessary."
@@ -263,11 +283,6 @@ function docker-rootless-uninstall {
 		rmpath "${DOCKER_BIN}"
 		[[ "$f_full" ]] && rm -rf "${DOCKER_BIN}"
 	fi
-}
-
-function docker_rootless_in_rootfull {
-	echo "Run the following command:"
-	printf "\t%s\n" "docker run -d --name dind-rootless --privileged docker:dind-rootless"
 }
 
 # Check if docker is running and if the given container exists
@@ -518,12 +533,10 @@ function docker-alias {
 DOCKER_CONTAINERS_CMD=(
 	caddy cloudflare mollysocket ntfy ollama
 )
-for container_name in ${DOCKER_CONTAINERS_CMD[@]}; do
+for container_name in ${DOCKER_CONTAINERS_CMD}; do
 	docker-alias "$container_name"
 done
 unset DOCKER_CONTAINERS_CMD container_name
 
 # Defining more complex aliases
 docker-alias -a occ -n nextcloud -u www-data "php occ"
-
-fi
