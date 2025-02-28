@@ -19,7 +19,11 @@ fi
 # Initialization
 ####################
 
-(( ${+ZDOTDIR} )) || ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh"
+[[ "$XDG_CONFIG_HOME" == "$HOME/.local/config" ]] || XDG_CONFIG_HOME="$HOME/.local/config"
+[[ "$XDG_CACHE_HOME" == "$HOME/.local/cache" ]] || XDG_CACHE_HOME="$HOME/.local/cache"
+[[ -d "${XDG_CACHE_HOME}"/zsh ]] || mkdir -p "${XDG_CACHE_HOME}/zsh"
+
+(( ${+ZDOTDIR} )) || ZDOTDIR="${XDG_CONFIG_HOME}/zsh"
 
 # Source ZSH files just to be sure. Sourcing .zshrc will autoload all custom functions
 local zfile zfiles=(.zshenv .zprofile .zshrc .zlogin)
@@ -33,21 +37,13 @@ done
 SUDO=$(whatami Android || echo sudo)
 ROOT=$(whatami Android && echo /data/data/com.termux/files/usr)
 
+\grep -rEl 'function file_contents_in' "$ZDOTDIR"/profile.d | while read -r; do
+	source "$REPLY"
+done
 
 ####################
 # Functions
 ####################
-
-### Auxiliary functions
-
-# Checks if file1's contents are in file2
-function file_contents_in {
-	check_argc 2 2 $#
-	local file1="${1:a}"
-	local file2="${2:a}"
-	local differences="$(diff -r "$file1" "$file2" | sed -En '/^</p')"
-	[[ -z "$differences" ]]
-}
 
 ### Setup functions
 
@@ -66,10 +62,11 @@ function setup_zsh {
 	local zshenv=$(echo "$ROOT"/etc/**/zshenv(N.))
 	[[ -z "$zshenv" ]] && zshenv="$ROOT"/etc/zsh/zshenv
 
-	# Add ZDOTDIR to zshenv if not present
-	if [[ ! -f "$zshenv" ]] || ! \grep -qw 'ZDOTDIR=' "$zshenv"; then
-		echo "Adding ZDOTDIR to system zshenv..."
-		echo 'export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh"' | $SUDO tee -a "$zshenv"
+	# Add missing variables to zshenv
+	if [[ ! -f "$zshenv" ]] || ! file_contents_in "$ZDOTDIR/conf/zsh/zshenv" "$zshenv"; then
+		echo "Adding ZSH variables to system zshenv..."
+		diff -u /etc/zsh/zshenv "$ZDOTDIR/conf/zsh/zshenv" > "$XDG_CACHE_HOME"/zsh/zshenv.patch
+		$SUDO patch -su -d/ -p0 -i "$XDG_CACHE_HOME"/zsh/zshenv.patch
 	fi
 }
 
