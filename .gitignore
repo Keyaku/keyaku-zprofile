@@ -14,3 +14,7 @@
 
 # zprofile settings
 .first_init
+
+# Temporary files
+*.swp
+

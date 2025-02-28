@@ -165,9 +165,11 @@ source $ZSH/oh-my-zsh.sh
 
 # Bash modules & autocompletion (for programs which contain only bash completions)
 autoload bashcompinit && bashcompinit
-echo "$XDG_DATA_HOME"/bash-completion/completions/*(-N.) | while read -r; do
-	source "$REPLY"
+
+for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-N.); do
+	source "$f_bashcomp"
 done
+unset f_bashcomp
 
 # ZSH modules
 zmodload zsh/zutil # zparseopts
