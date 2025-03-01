@@ -13,12 +13,10 @@ SSH_HOME="${SSH_HOME:-"$HOME"/.ssh}"
 _ssh_configfile="${SSH_HOME}/config"
 if [[ -f "$_ssh_configfile" ]]; then
 	_ssh_hosts=($(
-		egrep '^Host.*' "$_ssh_configfile" |\
+		grep -E '^Host[^*]*' "$_ssh_configfile"{,.d/*.conf} |\
 		awk '{for (i=2; i<=NF; i++) print $i}' |\
-		sort |\
-		uniq |\
-		grep -v '^*' |\
-		sed -e 's/\.*\*$//'
+		sort -u |\
+		grep -v '\*'
 	))
 	zstyle ':completion:*:hosts' hosts $_ssh_hosts
 	unset _ssh_hosts
