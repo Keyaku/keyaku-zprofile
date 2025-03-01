@@ -111,8 +111,6 @@ export MESA_SHADER_CACHE_DIR="${XDG_CACHE_HOME}/mesa_shader_cache"
 
 ### NPM (Node.js)
 if command -v npm &>/dev/null; then
-	[[ ! -d "${XDG_CONFIG_HOME}"/npm ]] && mkdir -p "${XDG_CONFIG_HOME}"/npm
-	[[ ! -d "${XDG_CACHE_HOME}"/npm ]]  && mkdir -p "${XDG_CACHE_HOME}"/npm
 	export NPM_CONFIG_USERCONFIG="${XDG_CONFIG_HOME}"/npm/.npmrc
 fi
 
@@ -135,9 +133,11 @@ export SSH_HOME=${XDG_CONFIG_HOME}/ssh
 
 
 ### SSL
-[[ -f /.flatpak-info ]] && SSL_DIR="/etc/pki/tls" || SSL_DIR="/etc/ssl"
-export SSL_DIR
-export SSL_CERT_DIR="$SSL_DIR/certs"
+# Avoid setting root-based paths in Termux
+if [[ ! -d "$HOME/.termux" ]]; then
+	export SSL_DIR="/etc/ssl"
+	export SSL_CERT_DIR="$SSL_DIR/certs"
+fi
 
 
 ### Tk/Tcl, tkinter

@@ -47,7 +47,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [x] Make core functions stop execution if an error occurred.
 * [ ] Fix SSH configuration so that it meets the following criteria:
 	* [ ] Sets up configuration without user prompt (also remove the message to delete `~/.ssh`).
-	* [ ] Autocompletion works in Terminal.
+	* [x] Autocompletion works in Terminal.
 	* [ ] VScode (at least in Flatpak) finds configured hosts.
 	* [ ] Git config should follow the new SSH path.
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
