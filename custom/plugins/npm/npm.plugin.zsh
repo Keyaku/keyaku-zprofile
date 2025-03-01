@@ -4,11 +4,15 @@ if [[ ! -f "$NPM_CONFIG_USERCONFIG" ]] || ! file_contents_in "$NPM_CONFIG_USERCO
 	cat "$ZDOTDIR/conf/npm/.npmrc" >> "$NPM_CONFIG_USERCONFIG"
 fi
 
-# Add global node_modules to PATH
-addpath 1 "$(npm config get prefix)/bin"
+_npm_pfx="$(npm config get prefix)"
 
-# Add global node_modules to MANPATH
-(( ${+MANPATH} )) && addvar MANPATH "$(npm config get prefix)/share"
+# Prepend global node_modules to PATH
+(( ${(v)+path[(I)"$_npm_pfx"/bin]} )) || path=("$_npm_pfx/bin" $path)
+
+# Append global node_modules to MANPATH
+(( ${+MANPATH} )) && addvar MANPATH "$_npm_pfx/share"
+
+unset _npm_pfx
 
 # Add npm completion
 command rm -f "${ZSH_CACHE_DIR:-$ZSH/cache}/npm_completion"
