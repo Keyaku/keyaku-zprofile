@@ -29,6 +29,11 @@ if (( ${+commands[docker]} )) && (( ! ${+commands[podman]} )); then
 	docker-set-env
 fi
 
+### Python
+if [[ -f "$XDG_DATA_HOME"/pyvenv/pyvenv.cfg ]]; then
+	vrun "$XDG_DATA_HOME"/pyvenv &>/dev/null
+fi
+
 ### SSH configuration
 if (( ${+SSH_HOME} )) && [[ -d ~$USER/.ssh ]]; then
 	[[ ! -d "$SSH_HOME" ]] && mkdir -p "$SSH_HOME"
