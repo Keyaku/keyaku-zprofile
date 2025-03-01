@@ -149,8 +149,8 @@ HIST_STAMPS="dd/mm/yyyy"
 plugins=(
 	# ohmyzsh plugins
 	command-not-found
-	brew git pip nmap
-	ufw
+	brew git pip python
+	nmap ufw
 	# Custom plugins (load them all by default)
     "$ZSH_CUSTOM"/plugins/(*~example)(-FN:t)
 )
