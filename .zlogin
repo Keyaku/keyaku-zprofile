@@ -29,17 +29,22 @@ if (( ${+commands[docker]} )) && (( ! ${+commands[podman]} )); then
 	docker-set-env
 fi
 
+### Homebrew
+if (( ${+commands[brew]} )); then
+	export HOMEBREW_NO_ANALYTICS=1
+	export HOMEBREW_NO_ENV_HINTS=1
+fi
+
 ### Python
 if [[ -f "$XDG_DATA_HOME"/pyvenv/pyvenv.cfg ]]; then
 	vrun "$XDG_DATA_HOME"/pyvenv &>/dev/null
 fi
 
 ### SSH configuration
-if (( ${+SSH_HOME} )) && [[ -d ~$USER/.ssh ]]; then
-	[[ ! -d "$SSH_HOME" ]] && mkdir -p "$SSH_HOME"
-	rsync -Praz ~$USER/.ssh/ "${SSH_HOME}" &>/dev/null
-	[[ ! -d "$SSH_HOME/known_hosts.d" ]] && mkdir -p "$SSH_HOME/known_hosts.d"
-	echo "~/.ssh copied to $SSH_HOME. You may now delete it."
+if (( ${+SSH_HOME} )) && [[ -d $HOME/.ssh ]]; then
+	[[ -d "$SSH_HOME" ]] || mkdir -p "$SSH_HOME"
+	rsync -Praz "$HOME"/.ssh/ "${SSH_HOME}" &>/dev/null
+	[[ -d "$SSH_HOME/known_hosts.d" ]] || mkdir -p "$SSH_HOME/known_hosts.d"
 fi
 
 ### Steam
