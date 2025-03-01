@@ -76,7 +76,7 @@ function docker-get-credhelper {
 	fi
 
 	# 2. If credstore is `pass`, check if it's installed
-	if [[ "$credstore" == "pass" ]] && ! command-has pass; then
+	if [[ "$credstore" == "pass" ]] && (( ! ${+commands[pass]} )); then
 		local pkgmgr="$(pkgmgr-get)"
 		print_fn -e "pass not installed.${pkgmgr:+ Install it via $pkgmgr.}"
 		return 1
@@ -87,7 +87,7 @@ function docker-get-credhelper {
 	local local_version
 	local -i needs_update=1
 
-	if command-has docker-credential-${credstore}; then
+	if (( ${+commands[docker-credential-${credstore}]} )); then
 		local_version="$(docker-credential-${credstore} -v | awk '{print $NF}')"
 		[[ "$local_version" == "$latest_version" ]] && needs_update=0
 	fi
@@ -197,7 +197,7 @@ function docker-set-host {
 
 # Helper to install Docker rootless via URL
 function docker-rootless-install {
-	if ! command-has curl; then
+	if (( ! ${+commands[curl]} )); then
 		print_fn -e "curl not installed"
 		return 1
 	fi
@@ -266,7 +266,7 @@ function docker-rootless-uninstall {
 	elif [[ -z "${f_full}" ]] && ! haspath "${DOCKER_BIN}"; then
 		echo "Docker rootless not in \$PATH, but binaries found (a.k.a. soft uninstalled). Use -f to force remove"
 		return 0
-	elif [[ -z "${f_full}" ]] && ! command-has dockerd-rootless-setuptool.sh; then
+	elif [[ -z "${f_full}" ]] && (( ! ${+commands[dockerd-rootless-setuptool.sh]} )); then
 		print_fn -e "Uninstall script not found, but binaries found. Use -f to force remove"
 		return 1
 	fi
@@ -279,7 +279,7 @@ function docker-rootless-uninstall {
 		echo "Deleting docker daemon..."
 		rm -f "${DOCKER_BIN}"/dockerd
 	else
-		command-has dockerd-rootless-setuptool.sh && dockerd-rootless-setuptool.sh uninstall
+		(( ${+commands[dockerd-rootless-setuptool.sh]} )) && dockerd-rootless-setuptool.sh uninstall
 		rmpath "${DOCKER_BIN}"
 		[[ "$f_full" ]] && rm -rf "${DOCKER_BIN}"
 	fi

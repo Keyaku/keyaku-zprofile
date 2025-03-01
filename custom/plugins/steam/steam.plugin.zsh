@@ -1,8 +1,4 @@
-command-has steam com.valvesoftware.Steam || return
-
-### WeMod launcher
-WEMOD_HOME="${GIT_HOME:-$HOME/.local/git}/_games/wemod-launcher"
-[[ -d "$WEMOD_HOME" ]] && export WEMOD_HOME || unset WEMOD_HOME
+(( ${(v)+commands[(I)steam|com.valvesoftware.Steam]} )) || return
 
 ### Setting main variables for Steam paths
 function steam-set-paths {
@@ -20,7 +16,7 @@ function steam-set-paths {
 
 			# Check if flatpak (only if default is not available)
 			if [[ ! -d "${(P)env_var}" ]]; then
-				command-has com.valvesoftware.Steam && : ${(P)env_var::="$HOME/.var/app/com.valvesoftware.Steam/$env_path"}
+				(( ${+commands[com.valvesoftware.Steam]} )) && : ${(P)env_var::="$HOME/.var/app/com.valvesoftware.Steam/$env_path"}
 			fi
 
 			# Force search Steam home in case it was not found (for custom setups)
@@ -35,25 +31,23 @@ function steam-set-paths {
 
 	### Check which variables were not set
 	for env_var env_path in ${(kv)steam_paths}; do
-		if command-has steam && ! env | \grep -qw "$env_var" && [[ -z "${(P)env_var}" || ! -d "${(P)env_var}" ]]; then
+		if (( ${+commands[steam]} )) && ! env | \grep -qw "$env_var" && [[ -z "${(P)env_var}" || ! -d "${(P)env_var}" ]]; then
 			print_fn -e "Could not set '$env_var' environment variable"
 		fi
 	done
 }
-steam-set-paths
 
 # Locate app_id from name
 function steam-app-id {
-
 	local library="${STEAM_LIBRARY:-"${XDG_DATA_HOME}"/Steam}"
-	[[ -z "$STEAM_LIBRARY" ]] && {
+	if [[ -z "$STEAM_LIBRARY" ]]; then
 		print_fn -e "STEAM_LIBRARY environment variable not set. Assuming default: ${XDG_DATA_HOME}/Steam"
-	}
+	fi
 
-	(( ! $# )) && {
+	if (( ! $# )); then
 		print_fn -e "Missing App name(s)"
 		return 1
-	}
+	fi
 
 	local retval=0
 	while (( $# )); do
@@ -79,12 +73,12 @@ function steam-app-library {
 		return 1
 	fi
 
-	local arg app_id
-	for arg in $@; do
-		if is_int "$arg"; then
-			app_id="$arg"
+	local app_id
+	while (( $# )); do
+		if is_int "$1"; then
+			app_id="$1"
 		else
-			app_id=$(steam-app-id "$arg") || return 2
+			app_id=$(steam-app-id "$1") || return 2
 		fi
 
 		local app_path=$(
@@ -110,6 +104,7 @@ function steam-app-library {
 
 		readlink -f "$app_path"
 		((retval += $?))
+		shift
 	done
 
 	return $retval
@@ -125,19 +120,20 @@ function steam-app-data {
 	fi
 
 	# Parse arguments
-	local arg app_id
-	for arg in $@; do
-		if is_int "$arg"; then
-			app_id="$arg"
+	local app_id
+	while (( $# )); do
+		if is_int "$1"; then
+			app_id="$1"
 		else
-			app_id=$(steam-app-id "$arg") || {
+			app_id=$(steam-app-id "$1") || {
 				((retval += $?))
 				continue
 			}
 		fi
 
-		readlink -f "$(steam-app-library "$arg")/steamapps/compatdata/${app_id}"
+		readlink -f "$(steam-app-library "$1")/steamapps/compatdata/${app_id}"
 		((retval += $?))
+		shift
 	done
 
 	return $retval
@@ -180,6 +176,6 @@ function steam-app-proton {
 }
 
 ### Flatpak version
-if command-has com.valvesoftware.Steam && ! alias steam &>/dev/null && ! command-has steam steam-native; then
+if (( ${+commands[com.valvesoftware.Steam]} )) && (( ! ${(v)+commands[(I)steam|steam-native]})); then
 	alias steam='flatpak run com.valvesoftware.Steam'
 fi

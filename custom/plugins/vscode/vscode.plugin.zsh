@@ -1,28 +1,3 @@
-#######################################
-### Microsoft
-#######################################
-
-if [[ -o login ]]; then
-
-### .NET
-# Use Homebrew's .NET installation
-if (( ${+HOMEBREW_PREFIX} )) && [[ -d "$HOMEBREW_CELLAR/dotnet" ]]; then
-	export DOTNET_ROOT="${HOMEBREW_PREFIX}/opt/dotnet/libexec"
-# Use user installation
-elif [[ "${XDG_DATA_HOME}/dotnet" ]]; then
-	export DOTNET_ROOT="${XDG_DATA_HOME}/dotnet"
-else
-	unset DOTNET_ROOT
-fi
-
-if (( ${+DOTNET_ROOT} )); then
-	export DOTNET_INSTALL_DIR="${DOTNET_ROOT}"
-	[[ -d "$DOTNET_INSTALL_DIR/.dotnet/tools" ]] && addpath "$DOTNET_INSTALL_DIR/.dotnet/tools"
-	export DOTNET_CLI_HOME="${DOTNET_ROOT}"
-	export DOTNET_CLI_TELEMETRY_OPTOUT=true
-	export NUGET_PACKAGES="${XDG_CACHE_HOME}/NuGetPackages"
-fi
-
 ### VScode (Flatpak)
 if (( ${+commands[com.visualstudio.code]} )); then
 	# Sets VScode Flatpak's overrides
@@ -78,6 +53,4 @@ if (( ${+commands[com.visualstudio.code]} )); then
 			fi
 		done
 	}
-fi
-
 fi

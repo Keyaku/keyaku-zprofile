@@ -37,6 +37,16 @@ if (( ${+SSH_HOME} )) && [[ -d ~$USER/.ssh ]]; then
 	echo "~/.ssh copied to $SSH_HOME. You may now delete it."
 fi
 
+### Steam
+if (( ${+commands[steam]} )); then
+	# Default Steam paths
+	steam-set-paths
+
+	# WeMod launcher
+	WEMOD_HOME="${GIT_HOME:-$HOME/.local/git}/_games/wemod-launcher"
+	[[ -d "$WEMOD_HOME" ]] && export WEMOD_HOME || unset WEMOD_HOME
+fi
+
 
 ### Last execution to run if in an interactive shell
 if [[ -o interactive ]]; then
