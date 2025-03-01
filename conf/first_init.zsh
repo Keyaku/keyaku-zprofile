@@ -2,8 +2,8 @@
 
 # Script to setup environment after Linux (or Termux) installation
 
-readonly SCRIPT_NAME=${0##*/}
-readonly SCRIPT_DIR=${0:a:h}
+readonly SCRIPT_DIR="${0:P:h}"
+readonly SCRIPT_NAME="${0:P:t}"
 
 # Prevent running as root or any privileged user
 if (( $UID < 1000 )); then
@@ -51,7 +51,10 @@ done
 function install_pkgs {
 	local pkgs_needed=(getconf rsync git zsh wget curl vim fastfetch)
 	if ! command -v ${pkgs_needed[@]} &>/dev/null; then
-		whatami Android && pkg install -y ${pkgs_needed[@]}
+		if whatami Android; then
+			local pkgs_termux=(mount-utils)
+			pkg install -y ${pkgs_needed} ${pkgs_termux}
+		fi
 		# TODO: install for other systems
 	fi
 }
@@ -101,6 +104,12 @@ function setup_termux {
 
 	# Setup Termux storage
 	[[ -d ~/storage ]] || termux-setup-storage
+
+	# Add .termux configuration and scripts
+	rsync -Przcq --no-t "$ZDOTDIR/conf/termux/" "$HOME/.termux"
+	chmod ug+x "$HOME"/.termux/boot/**/*.sh(-.)
+
+	# TODO: Install rish and add it to path
 }
 
 # Sets up XDG configuration
