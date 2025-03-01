@@ -142,8 +142,15 @@ COMPLETION_WAITING_DOTS="true"
 HIST_STAMPS="dd/mm/yyyy"
 
 # Which plugins would you like to load?
-# Standard plugins can be found in $ZSH/plugins/
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
+for plugin_path ("$ZSH_CUSTOM"/plugins/(*~example)(-FN)); do
+	plugin="${plugin_path:t}"
+	[[ -f "$plugin_path"/_$plugin ]] && fpath=("$plugin_path" $fpath)
+	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh"
+done
+unset plugin_path plugin
+
+# Standard plugins can be found in $ZSH/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
@@ -151,8 +158,6 @@ plugins=(
 	command-not-found
 	brew git pip python
 	nmap ufw
-	# Custom plugins (load them all by default)
-    "$ZSH_CUSTOM"/plugins/(*~example)(-FN:t)
 )
 # Add OS-specific plugins
 whatami Arch && plugins+=(archlinux)
