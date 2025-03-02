@@ -27,7 +27,7 @@ fi
 SUDO+=(-M -c)
 
 # Mount Pictures/DCIM to DCIM to allow cloud services synchronization
-readonly PICTURES_DCIM_DIR="$(readlink -f $HOME/storage/shared/Pictures/DCIM)"
-readonly DCIM_DIR="$(readlink -f $HOME/storage/shared/DCIM)"
+readonly PICTURES_DCIM_DIR=$(echo "$HOME"/storage/shared/Pictures/DCIM(:A))
+readonly DCIM_DIR=$(echo "$HOME"/storage/shared/DCIM(:A))
 
-${RISH:-$SUDO} "${RISH:+$SUDO }mount --bind $PICTURES_DCIM_DIR $DCIM_DIR"
+${RISH:-$SUDO} "${RISH:+$SUDO }mount -R ${PICTURES_DCIM_DIR} ${DCIM_DIR}"
