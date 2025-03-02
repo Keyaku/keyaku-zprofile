@@ -143,8 +143,17 @@ HIST_STAMPS="dd/mm/yyyy"
 
 # Which plugins would you like to load?
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
+custom_plugins=()
 for plugin_path ("$ZSH_CUSTOM"/plugins/(*~example)(-FN)); do
 	plugin="${plugin_path:t}"
+
+	# Check if plugin contains completions; if so, delegate their load to ohmzysh
+	if \grep -rElq 'comp(add|def|set)' "$plugin_path"; then
+		custom_plugins+=($plugin)
+		continue
+	fi
+
+	# Add plugin to fpath if it contains `_$plugin` completions
 	[[ -f "$plugin_path"/_$plugin ]] && fpath=("$plugin_path" $fpath)
 	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh"
 done
@@ -158,6 +167,8 @@ plugins=(
 	command-not-found
 	brew git pip python
 	nmap ufw
+	# Custom plugins
+	$custom_plugins
 )
 # Add OS-specific plugins
 whatami Arch && plugins+=(archlinux)
@@ -171,7 +182,6 @@ source $ZSH/oh-my-zsh.sh
 
 # Bash modules & autocompletion (for programs which contain only bash completions)
 autoload bashcompinit && bashcompinit
-
 for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-N.); do
 	source "$f_bashcomp"
 done

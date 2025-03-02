@@ -1,0 +1,39 @@
+# Measure time taken to load plugins in $ZDOTDIR
+
+emulate -L zsh
+
+local -r usage=(
+	"Usage: $(get_funcname) [OPTION...]"
+	"\t[-h|--help] : Print this help message"
+	"\t[--omz] : Uses _omz_source instead of source to load plugins"
+)
+
+## Setup parseopts
+local f_help f_omz
+zparseopts -D -E -F -K -- \
+	{h,-help}=f_help \
+	-omz=f_omz \
+	|| return 1
+
+## Help/usage message
+if [[ "$f_help" ]]; then
+	>&2 print -l $usage
+	[[ "$f_help" ]]; return $?
+fi
+
+# Load all of the plugins that were defined in ~/.zshrc
+for plugin ($plugins); do
+	timer=$(($(date +%s%N)/1000000))
+	if (( ${+f_omz} )); then
+		_omz_source $plugin
+	else
+		if [[ -f $ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh ]]; then
+			source $ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh
+		elif [[ -f $ZSH/plugins/$plugin/$plugin.plugin.zsh ]]; then
+			source $ZSH/plugins/$plugin/$plugin.plugin.zsh
+		fi
+	fi
+	now=$(($(date +%s%N)/1000000))
+	elapsed=$(($now-$timer))
+	echo $elapsed":" $plugin
+done
