@@ -146,7 +146,7 @@ HIST_STAMPS="dd/mm/yyyy"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-all_plugins=(
+typeset -aU all_plugins=(
 	# ohmyzsh plugins
 	command-not-found
 	brew git pip python
@@ -154,18 +154,24 @@ all_plugins=(
 	# Custom plugins
 	"$ZSH_CUSTOM"/plugins/(*~example)(-FN:t)
 )
-# Add OS-specific plugins
-whatami Arch && all_plugins+=(archlinux)
+# These are non-binary plugins, so checking if a command by their name exists is guaranteed to return false
+typeset -aU nonbin_plugins=(
+	android
+	zsh-syntax-highlighting
+)
 
 # Adding to plugins only those which contain completions; otherwise, source them natively
-plugins=()
+typeset -aU plugins=()
 for plugin ($all_plugins); do
 	for plugin_pfx in "$ZSH_CUSTOM/plugins" "$ZSH/plugins"; do
 		[[ -f "$plugin_pfx/$plugin/$plugin.plugin.zsh" ]] && break
 	done
 
+	# if plugin as a command doesn't exist, do not load it.
+	if (( ! ${+commands[$plugin]} )) && ! [[ " ${nonbin_plugins} " =~ " $plugin " ]]; then
+		continue
 	# if plugin contains completions, delegate their loading to ohmzysh
-	if \grep -rElwq 'comp(add|ctl|def|letion|set)' "$plugin_pfx/$plugin" || [[ -f "$plugin_pfx/$plugin"/_$plugin ]]; then
+	elif \grep -rElwq 'comp(add|ctl|def|letion|set)' "$plugin_pfx/$plugin" || [[ -f "$plugin_pfx/$plugin"/_$plugin ]]; then
 		plugins+=($plugin)
 		continue
 	fi

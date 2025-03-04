@@ -1,4 +1,4 @@
-(( ${+commands[ssh] })) || return
+(( ${+commands[ssh]} )) || return
 
 function is_ssh_dir {
 	local ssh_dir="$1"
