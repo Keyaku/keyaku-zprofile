@@ -1,19 +1,31 @@
-# Define root directory for .ssh. The first found will be picked
-for SSH_HOME in "${XDG_CONFIG_HOME}"/ssh ; do
-	[[ -d "$SSH_HOME" ]] && break
-done
+function is_ssh_dir {
+	local ssh_dir="$1"
+	[[ -f "$ssh_dir/config" || -d "$ssh_dir/config.d" ]] || \
+	[[ -f "$ssh_dir/known_hosts" || -d "$ssh_dir/known_hosts.d" ]] || \
+	[[ -f "$ssh_dir/authorized_keys" ]]
+}
+
+if (( ! ${+SSH_HOME} )) || [[ ! -d "$SSH_HOME" ]]; then
+	# Define root directory for .ssh. The first found will be picked
+	for SSH_HOME in "${XDG_CONFIG_HOME}"/ssh "${XDG_DATA_HOME}"/ssh "${XDG_STATE_HOME}"/ssh; do
+		if [[ -d "$SSH_HOME" ]] && is_ssh_dir "$SSH_HOME"; then
+			break
+		fi
+	done
+fi
+
+unfunction is_ssh_dir
 
 # Pick default value if unset
 SSH_HOME="${SSH_HOME:-"$HOME"/.ssh}"
 
 ############################################################
-# Take all host sections in .ssh/config and offer them for
+# Take all host sections in config (and config.d/*) and offer them for
 # completion as hosts (e.g. for ssh, rsync, scp and the like)
 # Filter out wildcard host sections.
-_ssh_configfile="${SSH_HOME}/config"
-if [[ -f "$_ssh_configfile" ]]; then
+if [[ "$(echo "${SSH_HOME}/config"{,.d/*.conf}(N))" ]]; then
 	_ssh_hosts=($(
-		grep -E '^Host[^*]*' "$_ssh_configfile"{,.d/*.conf} |\
+		\grep -E '^Host[^*]*' "${SSH_HOME}/config"{,.d/*.conf} |\
 		awk '{for (i=2; i<=NF; i++) print $i}' |\
 		sort -u |\
 		grep -v '\*'
@@ -21,16 +33,14 @@ if [[ -f "$_ssh_configfile" ]]; then
 	zstyle ':completion:*:hosts' hosts $_ssh_hosts
 	unset _ssh_hosts
 fi
-unset _ssh_configfile
 
 ############################################################
 # Remove host key from known hosts based on a host section
-# name from .ssh/config
+# name from config
 function ssh_rmhkey {
-	local ssh_configfile="${SSH_HOME}/config"
 	local ssh_host="$1"
-	if [[ -z "$ssh_host" ]]; then return; fi
-	ssh-keygen -R $(grep -A10 "$ssh_host" "$ssh_configfile" | grep -i HostName | head -n 1 | awk '{print $2}')
+	[[ -z "$ssh_host" ]] && return
+	ssh-keygen -R $(\grep -A10 "$ssh_host" "$SSH_HOME"/config{,.d/*.conf} | sed -nE '/HostName/{s/.*HostName\s+(.+?)/\1/pi;q}')
 }
 compctl -k hosts ssh_rmhkey
 
@@ -38,10 +48,10 @@ compctl -k hosts ssh_rmhkey
 # Load SSH key into agent
 function ssh_load_key() {
 	local key="$1"
-	if [[ -z "$key" ]]; then return; fi
+	[[ -z "$key" ]] && return
 	local keyfile="${SSH_HOME}/$key"
 	local keysig=$(ssh-keygen -l -f "$keyfile")
-	if ( ! ssh-add -l | grep -q "$keysig" ); then
+	if ( ! ssh-add -l | \grep -q "$keysig" ); then
 		ssh-add "$keyfile"
 	fi
 }
@@ -50,10 +60,10 @@ function ssh_load_key() {
 # Remove SSH key from agent
 function ssh_unload_key {
 	local key="$1"
-	if [[ -z "$key" ]]; then return; fi
+	[[ -z "$key" ]] && return
 	local keyfile="${SSH_HOME}/$key"
 	local keysig=$(ssh-keygen -l -f "$keyfile")
-	if ( ssh-add -l | grep -q "$keysig" ); then
+	if ( ssh-add -l | \grep -q "$keysig" ); then
 		ssh-add -d "$keyfile"
 	fi
 }

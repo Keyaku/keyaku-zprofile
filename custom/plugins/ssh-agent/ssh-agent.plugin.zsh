@@ -1,10 +1,5 @@
 (( ${(v)+commands[ssh|ssh-agent]} )) || return
 
-# Define root directory for .ssh. The first found will be picked
-for SSH_HOME in "${XDG_CONFIG_HOME}"/ssh ; do
-	[[ -d "$SSH_HOME" ]] && break
-done
-
 # Pick default value if unset
 SSH_HOME="${SSH_HOME:-"$HOME"/.ssh}"
 

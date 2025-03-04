@@ -148,7 +148,7 @@ for plugin_path ("$ZSH_CUSTOM"/plugins/(*~example)(-FN)); do
 	plugin="${plugin_path:t}"
 
 	# if plugin contains completions, delegate their loading to ohmzysh
-	if \grep -rElwq 'comp(add|def|letion|set)' "$plugin_path" || [[ -f "$plugin_path"/_$plugin ]]; then
+	if \grep -rElwq 'comp(add|ctl|def|letion|set)' "$plugin_path" || [[ -f "$plugin_path"/_$plugin ]]; then
 		custom_plugins+=($plugin)
 		continue
 	fi
