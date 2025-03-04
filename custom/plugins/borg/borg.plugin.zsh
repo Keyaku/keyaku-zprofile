@@ -1,8 +1,6 @@
-#######################################
-# Backup systems
-#######################################
-if command-has borg; then
+(( ${+commands[borg]} )) || return
 
+# Looks for a user-defined borg script in $PATH, containing the entire procedure for backup
 BORG_SCRIPT="$(whereis borg-backup.sh | awk '{ print $2 }')"
 
 if [[ -f "$BORG_SCRIPT" ]]; then
@@ -11,6 +9,3 @@ if [[ -f "$BORG_SCRIPT" ]]; then
 fi
 
 unset BORG_SCRIPT
-
-fi
-

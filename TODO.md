@@ -59,4 +59,4 @@ This tasklist contains all ideas or improvements for this environment setup.
 
 ### `custom/plugins`
 
-* [ ] Consider porting some of the `.zsh` from `profile.d` over to `custom/plugins`.
+* [x] Consider porting some of the `.zsh` from `profile.d` over to `custom/plugins`.
