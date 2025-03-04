@@ -1,12 +1,13 @@
 (( ${+commands[svn]} )) || return
 
-# Load available stuff from ohmyzsh
-[[ -f "$ZDOTDIR/plugins/svn/svn.plugin.zsh" ]] && _omz_source "$ZDOTDIR/plugins/svn/svn.plugin.zsh"
+# Load available plugin from ohmyzsh
+[[ -f "$ZSH/plugins/${0:h:t}/${0:t}" ]] && source "$ZSH/plugins/${0:h:t}/${0:t}"
 
 ### Personal configuration
 
 alias svn='svn --config-dir ${XDG_CONFIG_HOME}/subversion'
 export SVN_STASH="$XDG_CONFIG_HOME/subversion/stash"
+[[ -d "$SVN_STASH" ]] || mkdir -p "$SVN_STASH"
 
 function svn_root {
 	svn info --show-item wc-root $@
@@ -16,25 +17,7 @@ function svn_path {
 	svn info --show-item relative-url $@ | sed 's/^\^//'
 }
 
-function _svn_dir_stash {
-	# Check if environment variable is set
-	if [[ -z "$SVN_STASH" ]]; then
-		echo "Environment variable \$SVN_STASH. Create and set a directory for your svn patches."
-		echo "Ex.:"
-		printf "\texport SVN_STASH=\"$XDG_CONFIG_HOME/subversion/stash\" && mkdir -p \$SVN_STASH\n"
-		return 1
-	elif [[ ! -d "$SVN_STASH" ]]; then
-		echo "Directory \$SVN_STASH=$SVN_STASH doesn't exist. Create it first"
-		return 2
-	fi
-
-	return 0
-}
-
 function svn_ls_stash {
-	# Check if environment variable is set
-	_svn_dir_stash || return $?
-
 	# Arg checking
 	local BOOL_all=false
 	local BOOL_pretty=false
@@ -80,9 +63,6 @@ function svn_ls_stash {
 }
 
 function svn_stash {
-	# Check if environment variable is set
-	_svn_dir_stash || return $?
-
 	# Check if we're in an svn repo
 	[[ $(svn info >/dev/null; echo $?) -eq 0 ]] || return 1
 
@@ -121,9 +101,6 @@ function svn_stash {
 }
 
 function svn_unstash {
-	# Check if environment variable is set
-	_svn_dir_stash || return $?
-
 	# Check if we're in an svn repo
 	svn info >/dev/null || return 1
 
