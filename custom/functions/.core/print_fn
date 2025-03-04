@@ -72,9 +72,12 @@ zparseopts -D -F -K -- \
 
 # Get the first char from the very first f_level argument (any other is discarded)
 f_level=${${f_level[1]//-/}[1]}
+if [[ "${f_callstack}" ]]; then
+	[[ -z "$f_level" ]] && f_level=e
+fi
 
 ## Help/usage message
-if (( ! $# )) || [[ -z "$f_level" ]] || [[ "$f_help" ]]; then
+if ( (( ! $# )) && [[ -z "$f_callstack" ]] ) || [[ -z "$f_level" ]] || [[ "$f_help" ]]; then
 	[[ -z "$f_level" ]] && echo "Missing level argument"
 	>&2 print -l $usage
 	[[ "$f_help" ]]; return $?
@@ -119,6 +122,11 @@ if [[ "$f_timestamp" ]]; then
 fi
 
 # Print message via stderr as well
->&2 printf "${timestamp:+%-*s}${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s\n" ${timestamp} "$fn_fullname" $fn_line "$(printf "$1" ${@:2})"
-[[ "$f_callstack" ]] && print_callstack $color
+local message="$(printf "$1" ${@:2})"
+>&2 printf "${timestamp:+%-*s}${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s" ${timestamp} "$fn_fullname" $fn_line "$message"
+if [[ "$f_callstack" ]]; then
+	[[ "$message" ]] && printf "\n"
+	print_callstack $color
+fi
+printf "\n"
 (( $idx ))

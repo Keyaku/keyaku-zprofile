@@ -1,7 +1,10 @@
 (( ${+commands[npm]} )) || return 0
 
-if [[ ! -f "$NPM_CONFIG_USERCONFIG" ]] || ! file_contents_in "$NPM_CONFIG_USERCONFIG" "$ZDOTDIR/conf/npm/.npmrc"; then
-	cat "$ZDOTDIR/conf/npm/.npmrc" >> "$NPM_CONFIG_USERCONFIG"
+# If NPM_CONFIG_USERCONFIG is set, check if file exists and if it contains a given configuration
+if (( ${+NPM_CONFIG_USERCONFIG} )) && ! file_contents_in "$ZDOTDIR/conf/npm/.npmrc" "$NPM_CONFIG_USERCONFIG"; then
+	diff -BNPZbrw --changed-group-format='%>' --unchanged-group-format='' --to-file "$ZDOTDIR/conf/npm/.npmrc" "$NPM_CONFIG_USERCONFIG" > "$XDG_CACHE_HOME"/zsh/npmrc.diff
+	cat "$XDG_CACHE_HOME"/zsh/npmrc.diff >> "$NPM_CONFIG_USERCONFIG"
+	rm -f "$XDG_CACHE_HOME"/zsh/npmrc.diff
 fi
 
 _npm_pfx="$(npm config get prefix)"
