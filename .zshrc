@@ -142,34 +142,37 @@ COMPLETION_WAITING_DOTS="true"
 HIST_STAMPS="dd/mm/yyyy"
 
 # Which plugins would you like to load?
-# Custom plugins may be added to $ZSH_CUSTOM/plugins/
-custom_plugins=()
-for plugin_path ("$ZSH_CUSTOM"/plugins/(*~example)(-FN)); do
-	plugin="${plugin_path:t}"
-
-	# if plugin contains completions, delegate their loading to ohmzysh
-	if \grep -rElwq 'comp(add|ctl|def|letion|set)' "$plugin_path" || [[ -f "$plugin_path"/_$plugin ]]; then
-		custom_plugins+=($plugin)
-		continue
-	fi
-
-	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh"
-done
-unset plugin_path plugin
-
 # Standard plugins can be found in $ZSH/plugins/
+# Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(
+all_plugins=(
 	# ohmyzsh plugins
 	command-not-found
 	brew git pip python
 	nmap ufw
 	# Custom plugins
-	$custom_plugins
+	"$ZSH_CUSTOM"/plugins/(*~example)(-FN:t)
 )
 # Add OS-specific plugins
-whatami Arch && plugins+=(archlinux)
+whatami Arch && all_plugins+=(archlinux)
+
+# Adding to plugins only those which contain completions; otherwise, source them natively
+plugins=()
+for plugin ($all_plugins); do
+	for plugin_pfx in "$ZSH_CUSTOM/plugins" "$ZSH/plugins"; do
+		[[ -f "$plugin_pfx/$plugin/$plugin.plugin.zsh" ]] && break
+	done
+
+	# if plugin contains completions, delegate their loading to ohmzysh
+	if \grep -rElwq 'comp(add|ctl|def|letion|set)' "$plugin_pfx/$plugin" || [[ -f "$plugin_pfx/$plugin"/_$plugin ]]; then
+		plugins+=($plugin)
+		continue
+	fi
+
+	source "$plugin_pfx/$plugin/$plugin.plugin.zsh"
+done
+unset plugin_pfx plugin
 
 source $ZSH/oh-my-zsh.sh
 

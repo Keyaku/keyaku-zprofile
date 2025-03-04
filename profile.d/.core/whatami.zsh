@@ -68,9 +68,9 @@ function whatami {
 	fi
 
 	if (( $# )); then
-		local sorted=(${(uoz)@:l})
-		local machines=(${(uo)LIST_machines:l})
-		local mutual_excl=(${(@)sorted:|machines})
+		local -a sorted=(${(uoz)@:l})
+		local -a machines=(${(uo)LIST_machines:l})
+		local -a mutual_excl=(${(@)sorted:|machines})
 
 		if [[ "$logical" =~ a(nd)? ]]; then
 			# if subtraction is empty, then all elements are present
@@ -84,4 +84,3 @@ function whatami {
 
 	echo ${LIST_machines}
 }
-
