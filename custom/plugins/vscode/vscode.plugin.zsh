@@ -1,5 +1,15 @@
 ### VScode (Flatpak)
 if (( ${+commands[com.visualstudio.code]} )); then
+	# Point Flatpak's .ssh config to user's config
+	(_ssh_dir="$HOME"/.var/app/com.visualstudio.code/.ssh
+	_ssh_configfile="$_ssh_dir"/config
+		if [[ ! -f "$_ssh_configfile" ]] || ! \grep -Eq "Include ${SSH_HOME:-~/.ssh}/config" "$_ssh_configfile"; then
+			[[ -d "$_ssh_dir" ]] || mkdir -p "$_ssh_dir"
+			echo "Include ${SSH_HOME:-~/.ssh}/config" >> "$_ssh_configfile"
+			echo "Include ${SSH_HOME:-~/.ssh}/config.d/*" >> "$_ssh_configfile"
+		fi
+	)
+
 	# Sets VScode Flatpak's overrides
 	function vscode-flatpak-overrides {
 		local -r flatpak_app="com.visualstudio.code"
@@ -9,7 +19,6 @@ if (( ${+commands[com.visualstudio.code]} )); then
 		local -A VSCODE_SYMLINKS=(
 			[.pki]="$XDG_DATA_HOME/pki"
 			[.gitconfig]="$XDG_CONFIG_HOME/git/config"
-			[config/ssh]="${SSH_HOME:-$XDG_CONFIG_HOME/ssh}"
 		)
 
 		local vs_target vs_src

@@ -19,6 +19,14 @@ unfunction is_ssh_dir
 # Pick default value if unset
 SSH_HOME="${SSH_HOME:-"$HOME"/.ssh}"
 
+# If $HOME/.ssh exists and is not defined as SSH_HOME, move its contents
+if [[ -d ~$USER/.ssh ]] && [[ "$SSH_HOME" != ~$USER/.ssh ]]; then
+	rsync -Praz ~$USER/.ssh/ "${SSH_HOME}" &>/dev/null
+	if (( ! $? )); then
+		rm -r ~$USER/.ssh
+	fi
+fi
+
 ############################################################
 # Take all host sections in config (and config.d/*) and offer them for
 # completion as hosts (e.g. for ssh, rsync, scp and the like)

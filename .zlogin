@@ -40,13 +40,6 @@ if [[ -f "$XDG_DATA_HOME"/pyvenv/pyvenv.cfg ]]; then
 	vrun "$XDG_DATA_HOME"/pyvenv &>/dev/null
 fi
 
-### SSH configuration
-if (( ${+SSH_HOME} )) && [[ -d $HOME/.ssh ]]; then
-	[[ -d "$SSH_HOME" ]] || mkdir -p "$SSH_HOME"
-	rsync -Praz "$HOME"/.ssh/ "${SSH_HOME}" &>/dev/null
-	[[ -d "$SSH_HOME/known_hosts.d" ]] || mkdir -p "$SSH_HOME/known_hosts.d"
-fi
-
 ### Steam
 if (( ${+commands[steam]} )); then
 	# Default Steam paths
