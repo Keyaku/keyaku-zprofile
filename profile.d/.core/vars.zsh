@@ -24,7 +24,7 @@ function assign {
 
 # Checks if a defined variable $1 with semicolon-delimited values contains a given value $2
 function hasvar {
-	# If parent function is addvar or rmvar, impose argument restrictions
+	# If parent function is not addvar or rmvar, impose argument restrictions
 	if ! [[ "$(get_funcname 1)" =~ (add|rm)var ]]; then
 		check_argc 2 2 $#
 	fi

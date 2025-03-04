@@ -4,11 +4,10 @@
 
 # Check if string $1 contains any substring from arguments (case-sensitive)
 function str_contains {
-	check_argc 2 0 $#
 	local haystack="$1"
 	shift
 
-	while (( $# )); do
+	(( $# )) && while (( $# )); do
 		[[ "$haystack" == *"$1"* ]] || return $?
 		shift
 	done
@@ -16,8 +15,7 @@ function str_contains {
 
 # Check if string $1 starts with substring $2
 function str_starts_with {
-	check_argc 2 2 $#
-	[[ "$1" =~ ^"$2"* ]]
+	[[ "$1" =~ ^"${2:-[[:space:]]}".* ]]
 }
 
 # Joins array of strings with delimiter
@@ -49,13 +47,12 @@ function str_join {
 
 # Count number of occurrences of any substring in string $1
 function count_occurrences {
-	check_argc 2 0 $#
 	# $1  - Haystack
 	# $2+ - Needle(s)
 	local haystack="$1"
 	shift
 
-	while (( $# )); do
+	(( $# )) && while (( $# )); do
 		echo "${haystack}" | \grep -Fo "$1" | wc -l
 		shift
 	done

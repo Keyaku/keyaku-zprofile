@@ -145,8 +145,6 @@ function is_valid_date {
 
 # Check if defined array $1 contains value(s) ${@:2}
 function array_has {
-	check_argc 2 0 $#
-
 	if ! is_array "$1"; then
 		print_fn -e "not an array: '$1'"
 		return 1
@@ -154,7 +152,7 @@ function array_has {
 
 	local array=(${(P)1})
 	shift
-	while (( $# )); do
+	(( $# )) && while (( $# )); do
 		[[ " ${array} " =~ " $1 " ]] || return $?
 		shift
 	done
@@ -162,8 +160,6 @@ function array_has {
 
 # Check if defined associative array $1 contains key(s) ${@:2}
 function dict_has {
-	check_argc 2 0 $#
-
 	if ! is_dict "$1"; then
 		print_fn -e "not an associative array: '$1'"
 		return 1
@@ -171,7 +167,7 @@ function dict_has {
 
 	local array=(${(P@k)1})
 	shift
-	while (( $# )); do
+	(( $# )) && while (( $# )); do
 		[[ " ${array} " =~ " $1 " ]] || return $?
 		shift
 	done
