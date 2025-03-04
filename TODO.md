@@ -44,10 +44,10 @@ This tasklist contains all ideas or improvements for this environment setup.
 ### `profile.d/`
 
 * [x] Make core functions stop execution if an error occurred.
-* [x] Fix SSH configuration so that it meets the following criteria:
+* [ ] Fix SSH configuration so that it meets the following criteria:
 	* [x] Sets up configuration without user prompt (also remove the message to delete `~/.ssh`).
 	* [x] Autocompletion works in Terminal.
-	* [x] VScode Flatpak finds configured hosts.
+	* [ ] VScode Flatpak finds configured hosts.
 	* [x] Git config should follow the new SSH path.
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
 * [ ] Wrap appropriate sections with `[[ -o login ]]`, `[[ -o interactive ]]` and/or `is_sourced_by` so that sourcing one of these files from main profiles sets only the according environment stuff.
