@@ -98,9 +98,6 @@ fi
 ### GNUPG & security tools
 export GNUPGHOME="${XDG_DATA_HOME}/gnupg"
 export PASSWORD_STORE_DIR="${XDG_DATA_HOME}/password-store"
-if command -v gpg-agent &>/dev/null && ! killall -0 gpg-agent &>/dev/null; then
-	gpg-agent --pinentry-program /usr/bin/pinentry-qt --daemon
-fi
 
 ### GTK
 export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtkrc-2.0"
