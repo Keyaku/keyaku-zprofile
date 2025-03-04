@@ -1,3 +1,5 @@
+(( ${+commands[ssh] })) || return
+
 function is_ssh_dir {
 	local ssh_dir="$1"
 	[[ -f "$ssh_dir/config" || -d "$ssh_dir/config.d" ]] || \
