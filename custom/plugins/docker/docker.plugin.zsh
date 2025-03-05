@@ -483,7 +483,7 @@ function docker-socket-ssh {
 # Function which defines container aliases
 function docker-alias {
 	local -r usage=(
-		"Usage: $(get_funcname) [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
+		"Usage: ${funcstack[1]} [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
 		"\t[-h|--help]"
 	)
 
@@ -510,7 +510,7 @@ function docker-alias {
 		container_name="$1"
 		shift
 	else # Otherwise, check if it's a flag
-		[[ "${(t)container_alias}" =~ array-* ]] && container_name="${container_name[-1]}"
+		[[ "${(t)container_alias}" == *array* ]] && container_name="${container_name[-1]}"
 	fi
 
 	# Presume rest of arguments are for container_cmd
@@ -522,8 +522,8 @@ function docker-alias {
 		print_fn -e "requires at least a container name"
 		return 1
 	fi
-	[[ "${(t)container_alias}" =~ array-* ]] && container_alias="${(q+)container_alias[-1]}" || container_alias="${container_alias:-$container_name}"
-	[[ "${(t)container_cmd}" =~ array-* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
+	[[ "${(t)container_alias}" == *array* ]] && container_alias="${(q+)container_alias[-1]}" || container_alias="${container_alias:-$container_name}"
+	[[ "${(t)container_cmd}" == *array* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
 
 	# Define alias
 	alias $container_alias="docker exec ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
