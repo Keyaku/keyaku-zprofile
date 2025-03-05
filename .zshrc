@@ -141,44 +141,53 @@ COMPLETION_WAITING_DOTS="true"
 # see 'man strftime' for details.
 HIST_STAMPS="dd/mm/yyyy"
 
-# Which plugins would you like to load?
-# Standard plugins can be found in $ZSH/plugins/
-# Custom plugins may be added to $ZSH_CUSTOM/plugins/
-# Example format: plugins=(rails git textmate ruby lighthouse)
-# Add wisely, as too many plugins slow down shell startup.
-typeset -aU all_plugins=(
+# Plugins section.
+# All omz plugins
+typeset -arU omz_plugins=("$ZSH"/plugins/**/*.zsh(-N:h:t))
+# All plugins containing completions
+typeset -arU comp_plugins=(
+	${(@f)$(\grep --include='*.zsh' -rElw 'comp(add|ctl|def|letion|set)' "$ZSH"/plugins "$ZSH_CUSTOM"/plugins):h:t}
+	"$ZSH"/plugins/**/_*(-N:h:t)
+	"$ZSH_CUSTOM"/plugins/**/_*(-N:h:t)
+)
+# All custom plugins
+typeset -arU custom_plugins=("$ZSH_CUSTOM"/plugins/(*~example)(-FN:t))
+
+# Selected plugins to load
+typeset -arU select_plugins=(
 	# ohmyzsh plugins
 	command-not-found
 	brew git pip python
 	nmap ufw
-	# Custom plugins
-	"$ZSH_CUSTOM"/plugins/(*~example)(-FN:t)
+	# Custom plugins. Load all by default
+	$custom_plugins
 )
-# These are non-binary plugins, so checking if a command by their name exists is guaranteed to return false
+
+# Plugins whose names have an equivalent command
+typeset -arU cmd_plugins=(${(v)commands[(I)${(j:|:)select_plugins}]:t})
+
+# Non-binary plugins; checking if a command by their name exists is guaranteed to return false
 typeset -aU nonbin_plugins=(
 	android
 	zsh-syntax-highlighting
 )
+nonbin_plugins=(${nonbin_plugins:*comp_plugins})
 
-# Adding to plugins only those which contain completions; otherwise, source them natively
-typeset -aU plugins=()
-for plugin ($all_plugins); do
+# Plugins to load natively: all selected except those with completions or with commands not installed
+typeset -aU native_plugins=(${${select_plugins:|comp_plugins}:*cmd_plugins} $nonbin_plugins)
+
+# Source native plugins
+for plugin ($native_plugins); do
 	for plugin_pfx in "$ZSH_CUSTOM/plugins" "$ZSH/plugins"; do
 		[[ -f "$plugin_pfx/$plugin/$plugin.plugin.zsh" ]] && break
 	done
 
-	# if plugin as a command doesn't exist, do not load it.
-	if (( ! ${+commands[$plugin]} )) && ! [[ " ${nonbin_plugins} " =~ " $plugin " ]]; then
-		continue
-	# if plugin contains completions, delegate their loading to ohmzysh
-	elif \grep -rElwq 'comp(add|ctl|def|letion|set)' "$plugin_pfx/$plugin" || [[ -f "$plugin_pfx/$plugin"/_$plugin ]]; then
-		plugins+=($plugin)
-		continue
-	fi
-
 	source "$plugin_pfx/$plugin/$plugin.plugin.zsh"
 done
 unset plugin_pfx plugin
+
+# Plugins to load via omz: all selected except native ones
+typeset -aU plugins=(${${select_plugins:|native_plugins}:*cmd_plugins})
 
 source $ZSH/oh-my-zsh.sh
 
