@@ -1,6 +1,6 @@
 # Set machine identifiers (Linux, WSL, etc.)
 
-export LIST_machines=()
+typeset -axU LIST_machines=()
 
 function whatami {
 	local -r usage=(
@@ -45,8 +45,6 @@ function whatami {
 		# Checking by uname
 		tmpname="$(uname -s)"
 		(( ${LIST_machines[(i)$tmpname]} <= ${#LIST_machines})) || LIST_machines+=("${tmpname}")
-		set +x
-		# [[ " ${LIST_machines} " =~ " ${tmpname} " ]] || LIST_machines+=("${tmpname}")
 
 		# Checking by lsb_release
 		if (( ${+commands[lsb_release]} )); then
@@ -68,9 +66,9 @@ function whatami {
 	fi
 
 	if (( $# )); then
-		local -a sorted=(${(uoz)@:l})
-		local -a machines=(${(uo)LIST_machines:l})
-		local -a mutual_excl=(${(@)sorted:|machines})
+		local -aU sorted=(${(uoz)@:l})
+		local -aU machines=(${(uo)LIST_machines:l})
+		local -aU mutual_excl=(${(@)sorted:|machines})
 
 		if [[ "$logical" =~ a(nd)? ]]; then
 			# if subtraction is empty, then all elements are present
@@ -84,3 +82,7 @@ function whatami {
 
 	echo ${LIST_machines}
 }
+
+if (( ! ${#LIST_machines} )); then
+	whatami &>/dev/null
+fi
