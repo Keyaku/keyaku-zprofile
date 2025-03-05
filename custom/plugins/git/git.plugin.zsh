@@ -10,8 +10,4 @@ GIT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/git/config"
 	touch "$GIT_CONFIG"
 }
 
-if ! [[ "$(git config --global core.sshCommand)" =~ "ssh -F \${SSH_HOME:-".+?"}/config" ]]; then
-	git config --global core.sshCommand "ssh -F \${SSH_HOME:-\$HOME/.ssh}/config"
-fi
-
 unset GIT_CONFIG
