@@ -9,12 +9,18 @@
 # DE files (KDE, GNOME, etc.)
 .directory
 
-# VS Code
+# editor configs
 .vscode
+.idea
 
 # zprofile settings
 .first_init
 
-# Temporary files
-*.swp
+# zcompile cached files
+*.zwc
 
+# Temporary files
+cache/
+log/
+*.swp
+.DS_Store
