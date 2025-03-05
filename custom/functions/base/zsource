@@ -5,7 +5,7 @@ emulate -L zsh
 setopt extendedglob
 
 local -r usage=(
-	"Usage: $(get_funcname) [OPTION...] [FILE...] [DIR...]"
+	"Usage: ${funcstack[1]} [OPTION...] [FILE...] [DIR...]"
 	"\tReloads files under profile.d. Presumes \$ZDOTDIR/profile.d as root directory, meaning it can't load files outside of it (including local)"
 	""
 	"\t[-h|--help] : Print this help message"
@@ -94,11 +94,10 @@ if (( 1 <= $verbosity )); then
 fi
 
 # Source resulting profiles
-set -- $profiles
-while (( $# )); do
-	if ! source "$1"; then
-		(( 1 <= $verbosity )) && print_fn -e "error when sourcing '${1//"${ZDOTDIR}"/\$ZDOTDIR}'"
+local arg
+for arg in $profiles; do
+	if ! source "$arg"; then
+		(( 1 <= $verbosity )) && print_fn -e "error when sourcing '${arg//"${ZDOTDIR}"/\$ZDOTDIR}'"
 		return 1
 	fi
-	shift
 done
