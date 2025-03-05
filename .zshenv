@@ -22,6 +22,10 @@ export XDG_CACHE_HOME=~$USER/.local/cache
 export XDG_CONFIG_HOME=~$USER/.local/config
 export XDG_DATA_HOME=~$USER/.local/share
 export XDG_STATE_HOME=~$USER/.local/state
+# Set XDG_RUNTIME_DIR for Termux
+if [[ "$HOME" == "/data/data/com.termux/files/home" ]]; then
+	export XDG_RUNTIME_DIR="$(readlink -f $HOME/../usr/var/run/$UID)"
+fi
 
 ### System directories
 export XDG_DATA_DIRS="${XDG_DATA_DIRS:-${XDG_DATA_HOME}:/usr/local/share:/usr/share}"
