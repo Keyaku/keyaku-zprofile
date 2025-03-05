@@ -11,7 +11,7 @@ function whatami {
 	)
 
 	## Setup func opts
-	local f_help f_verbose f_quiet logical=or # default
+	local f_help logical # default
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{o,-or}=logical \
@@ -19,10 +19,13 @@ function whatami {
 		|| return 1
 
 	## Help/usage message
-	if [[ "$f_help" ]]; then
+	if ( [[ "$logical" ]] && (( ! $# )) ) || [[ "$f_help" ]]; then
 		>&2 print -l $usage
 		[[ "$f_help" ]]; return $?
 	fi
+
+	## Parse arguments
+	logical=${${logical##*-}:-o}
 
 	if (( ! ${#LIST_machines} )); then
 		local tmpname
@@ -66,15 +69,15 @@ function whatami {
 	fi
 
 	if (( $# )); then
-		local -aU sorted=(${(uoz)@:l})
-		local -aU machines=(${(uo)LIST_machines:l})
-		local -aU mutual_excl=(${(@)sorted:|machines})
+		local -aU args=(${@:l})
+		local -a machines=(${LIST_machines:l})
 
-		if [[ "$logical" =~ a(nd)? ]]; then
+		if [[ "$logical" == a ]]; then
 			# if subtraction is empty, then all elements are present
-			(( ! $#mutual_excl ))
-		elif [[ "$logical" =~ o(r)? ]]; then
-			[[ " ${LIST_machines:l} " =~ " (${sorted:gs/ /|}) " ]]
+			(( ! ${#args:|LIST_machines} ))
+		elif [[ "$logical" == o ]]; then
+			# if mutual exclusion is contains elements, return true
+			(( ${#args:*LIST_machines} ))
 		fi
 
 		return $?
