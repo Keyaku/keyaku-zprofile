@@ -164,17 +164,17 @@ typeset -arU select_plugins=(
 )
 
 # Plugins whose names have an equivalent command
+# Careful: At this point, not every PATH has been added, so this list *will* be incomplete
 typeset -arU cmd_plugins=(${(v)commands[(I)${(j:|:)select_plugins}]:t})
 
 # Non-binary plugins; checking if a command by their name exists is guaranteed to return false
 typeset -aU nonbin_plugins=(
 	android
-	zsh-syntax-highlighting
 )
-nonbin_plugins=(${nonbin_plugins:*comp_plugins})
+nonbin_plugins=(${nonbin_plugins:|comp_plugins})
 
 # Plugins to load natively: all selected except those with completions or with commands not installed
-typeset -aU native_plugins=(${${select_plugins:|comp_plugins}:*cmd_plugins} $nonbin_plugins)
+typeset -aU native_plugins=(${select_plugins:|comp_plugins} $nonbin_plugins)
 
 # Source native plugins
 for plugin ($native_plugins); do
@@ -187,7 +187,7 @@ done
 unset plugin_pfx plugin
 
 # Plugins to load via omz: all selected except native ones
-typeset -aU plugins=(${${select_plugins:|native_plugins}:*cmd_plugins})
+typeset -aU plugins=(${select_plugins:|native_plugins})
 
 source $ZSH/oh-my-zsh.sh
 
