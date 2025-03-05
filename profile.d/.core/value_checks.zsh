@@ -4,34 +4,40 @@
 
 # Check if argument is an integer
 function is_int {
-	while (( $# )); do
-		[[ "$1" =~ ^-?[0-9]+$ ]] || return $?
-		shift
+	local arg
+	(( $# )) && for arg; do
+		(( arg == arg )) || return $?
 	done
 }
 
 # Check if argument is a number
 function is_num {
-	while (( $# )); do
-		[[ $1 =~ ^[+-]?[0-9]+([.][0-9]+)?$ ]] || return $?
-		shift
+	local arg
+	(( $# )) && for arg; do
+		# Use arithmetic evaluation to check if the argument is a number.
+		# Since we're dealing with decimals, handle the evaluation carefully.
+		if ! (( ${arg//[eE]/1} )) 2>/dev/null; then
+			# Handle special cases where arithmetic evaluation might fail
+			# due to scientific notation (e.g., 1e10).
+			[[ $1 =~ ^[+-]?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$ ]] || return $?
+		fi
 	done
 }
 
 # Check if arguments are of type array
 function is_array {
-	(( $# )) && while (( $# )); do
-		[[ -v "$1" && ${(Pt)1} == *array* ]] \
-			|| return $?
+	local arg
+	(( $# )) && for arg; do
+		[[ -v "$arg" && ${(Pt)arg} == *array* ]] || return $?
 		shift
 	done
 }
 
 # Check if arguments are of type associative array
 function is_dict {
-	(( $# )) && while (( $# )); do
-		[[ -v "$1" && ${(Pt)1} == *association* ]] \
-			|| return $?
+	local arg
+	(( $# )) && for arg; do
+		[[ -v "$arg" && ${(Pt)arg} == *association* ]] || return $?
 		shift
 	done
 }

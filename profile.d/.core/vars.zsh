@@ -117,46 +117,51 @@ function haspath {
 
 # Adds argument(s) to $path if not set and if they're existing directories. Returns false if no path was set
 function addpath {
-	local -i retval=1
+	local -i mode=0  # 0: append; 1: prepend
+	local -a append_paths=()
+	local -a prepend_paths=()
 
-	# The index will help keep the order of the arguments set when prepending
-	local -i idx=1
-	local -i prepend=0
+	# Parse arguments
 	while (( $# )); do
-		## Define prepending flag if arg is an int
-		if is_int $1; then
-			prepend=$1
-		elif haspath "$1"; then
-			retval=0
-		## If given path exists & it's not set in variable
-		elif ! haspath "$1" && [[ -d "$1" ]]; then
-			retval=0
-			if (( $prepend )); then
-				path[$idx,0]=("$1")
-				((idx++))
-			else
-				path+=("$1")
+		case "$1" in
+		-a|--append)
+			mode=0
+			shift
+		;;
+		-p|--prepend)
+			mode=1
+			shift
+		;;
+		*)
+			# Check if path exists and is not already in $path
+			if [[ -d "$1" ]] && ! haspath "$1"; then
+				if (( ! $mode )); then
+					append_paths+=("$1")
+				else
+					prepend_paths+=("$1")
+				fi
 			fi
-		fi
-		shift
+			shift
+		;;
+		esac
 	done
 
-	return $retval
+	# Add paths
+	(( ${#prepend_paths} )) && mypath=("${prepend_paths}" "${mypath}")
+	(( ${#append_paths} ))  && mypath+=("${append_paths}")
+
+	# Return success if any paths were added
+	(( 0 < ${#prepend_paths} + ${#append_paths} ))
 }
 
 # Remove argument from $path. Returns false if no value was removed
 function rmpath {
-	local -i retval=1
+	local -a removal=($@)
+	local -a tmp=(${path})
 
-	local -i idx
-	while (( $# )); do
-		idx=${path[(i)$1]}
-		(( 0 < $idx && $idx <= ${#path[@]} )) && {
-			path[$idx]=()
-			retval=0
-		}
-		shift
-	done
+	# Use ZSH array filtering with parameter expansion
+	path=(${path:|removal})
 
-	return $retval
+	# return true if at least one argument removed
+	(( 0 != ($#tmp - $#path) ))
 }
