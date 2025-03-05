@@ -9,7 +9,7 @@ function assign {
 		print_fn -e "Argument is not a variable: '$1'"
 		return 1
 	# FIXME: doesn't work with arrays
-	elif is_array $1 || is_array $2; then
+	elif is_array "$1" "$2"; then
 		print_fn -e "This function does not work with arrays!"
 		return 2
 	fi
@@ -112,7 +112,7 @@ function check_envvars {
 
 # Checks if argument exists in $path
 function haspath {
-	array_has path "$1"
+	array_has path $@
 }
 
 # Adds argument(s) to $path if not set and if they're existing directories. Returns false if no path was set

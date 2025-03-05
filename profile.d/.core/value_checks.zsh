@@ -150,12 +150,10 @@ function array_has {
 		return 1
 	fi
 
-	local array=(${(P)1})
-	shift
-	(( $# )) && while (( $# )); do
-		[[ " ${array} " =~ " $1 " ]] || return $?
-		shift
-	done
+	local -a array=(${(P)1})
+	local -a args=(${@:2})
+	# result is any element(s) left subtracted from the following operation
+	(( 0 == ${#args:|array} ))
 }
 
 # Check if defined associative array $1 contains key(s) ${@:2}
@@ -165,10 +163,8 @@ function dict_has {
 		return 1
 	fi
 
-	local array=(${(P@k)1})
-	shift
-	(( $# )) && while (( $# )); do
-		[[ " ${array} " =~ " $1 " ]] || return $?
-		shift
-	done
+	local -a array=(${(P@k)1})
+	local -a args=(${@:2})
+	# result is any element(s) left subtracted from the following operation
+	(( 0 == ${#args:|array} ))
 }
