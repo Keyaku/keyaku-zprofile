@@ -4,7 +4,7 @@ typeset -axU LIST_machines=()
 
 function whatami {
 	local -r usage=(
-		"Usage: $(get_funcname) [OPTION...] COMMAND..."
+		"Usage: ${funcstack[1]} [OPTION...] COMMAND..."
 		"\t[-h|--help] : Print this help message"
 		"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."
 		"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
@@ -74,10 +74,10 @@ function whatami {
 
 		if [[ "$logical" == a ]]; then
 			# if subtraction is empty, then all elements are present
-			(( ! ${#args:|LIST_machines} ))
-		elif [[ "$logical" == o ]]; then
-			# if mutual exclusion is contains elements, return true
-			(( ${#args:*LIST_machines} ))
+			(( ! ${#args:|machines} ))
+		else
+			# if mutual exclusion contains elements, return true
+			(( ${#args:*machines} ))
 		fi
 
 		return $?
