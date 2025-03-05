@@ -18,21 +18,19 @@ function is_num {
 	done
 }
 
-# Check if argument is any type of array (including associative/dictionary)
+# Check if arguments are of type array
 function is_array {
-	setopt re_match_pcre
-	while (( $# )); do
-		[[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-[Aa]" ]] \
+	(( $# )) && while (( $# )); do
+		[[ -v "$1" && ${(Pt)1} == *array* ]] \
 			|| return $?
 		shift
 	done
 }
 
-# Check if argument is exclusively an associative array
+# Check if arguments are of type associative array
 function is_dict {
-	setopt re_match_pcre
-	while (( $# )); do
-   		[[ -v "$1" ]] && [[ "$(typeset -p -- "$1")" =~ "typeset\s*(-g)?\s*-A" ]] \
+	(( $# )) && while (( $# )); do
+		[[ -v "$1" && ${(Pt)1} == *association* ]] \
 			|| return $?
 		shift
 	done
