@@ -71,6 +71,13 @@ setopt re_match_pcre
 
 # Load function that loads all custom functions
 autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/load_zfunc(N) && load_zfunc
+if ! [[ -o login ]]; then
+	# Load additional useful functions
+	for f_zsh ($(\grep -rEl 'function\s+(whatami|addpath|is_int)' "$ZDOTDIR/profile.d")); do
+		source "$f_zsh"
+	done
+	unset f_zsh
+fi
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
