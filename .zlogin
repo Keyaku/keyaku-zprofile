@@ -21,7 +21,7 @@ if (( ${+ANDROID_HOME} )) && [[ -d "$ANDROID_HOME/sdk" ]]; then
 	export GRADLE_USER_HOME="$XDG_DATA_HOME"/gradle
 	#export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
 
-	addpath 1 "${ANDROID_HOME}/sdk/platform-tools"
+	addpath -p "${ANDROID_HOME}/sdk/platform-tools"
 fi
 
 ### Docker configuration
