@@ -9,7 +9,6 @@ local -r usage=(
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."
 	"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
-	"\t[-e|--exit] : Stops on the first non-installed command found. Behavior depends on the logical operator."
 )
 
 ## Setup func opts
@@ -34,26 +33,13 @@ local verbosity=0
 logical=${logical##*-}
 
 ## function logic
-local -i retval=0
-local non_installed=()
-while (( $# )); do
-	command -v "$1" &>/dev/null
-	retval=$?
-	(( ! $retval )) || non_installed+=( "$1" )
-	## Depending on the logical operator, stop for the first non-installed command
-	if {
-		{ (( $retval )) && [[ "$logical" =~ a(nd)? ]] } ||
-		{ (( ! $retval )) && [[ "$logical" =~ o(r)? ]] }
-	}; then
-		(( $verbosity )) || break
-	fi
-	shift
-done
+local -aU installed=(${(k)commands[(I)${(j:|:)@}]})
+local -aU non_installed=(${@:|installed})
 
 ## Print non-installed commands
 if (( $verbosity )) && (( ${#non_installed} )); then
 	>&2 echo "Non-installed commands:"
 	>&2 echo "${non_installed}"
 fi
-
-(( ! $retval ))
+{ (( ! ${#non_installed} )) && [[ "$logical" =~ a(nd)? ]] } ||
+{ (( ${#installed} )) && [[ "$logical" =~ o(r)? ]] }
