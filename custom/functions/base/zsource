@@ -50,14 +50,14 @@ f_pfx="${f_pfx:+${f_pfx[-1]:P}}"
 if [[ -z "$f_pfx" ]]; then
 	f_pfx="$ZDOTDIR/profile.d"
 else
-	local err_pfx="Cannot use prefix '$p_fx'"
+	local err_pfx="Cannot use prefix '$f_pfx'"
 	# If prefix directory not found, abort
 	if [[ ! -d "$f_pfx" ]]; then
 		print_fn -e "%s: %s" "$err_pfx" "Directory not found"
 		return 1
 	# If given directory is not readable by current user, abort
-	elif [[ -r "$f_pfx" ]]; then
-		print_fn -e "%s: %s" "$err_pfx" "Directory not found"
+	elif [[ ! -r "$f_pfx" ]]; then
+		print_fn -e "%s: %s" "$err_pfx" "Directory not readable"
 		return 1
 	fi
 fi
