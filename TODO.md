@@ -46,6 +46,8 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
 * [ ] Create autocomplete for main functions.
 * [x] `zsource`: Add flags for sourcing login (-l|--login) and interactive (-i|--interactive) files.
+* [ ] `zsource`: Allow sourcing any file like with `source`; default prefix to `profile.d`.
+* [ ] Write function or code that receives an associative array for formatted "usage" printing, where keys = `shortopt|longopt`, and values = description of associated option.
 
 
 ### `profile.d/`
