@@ -14,7 +14,7 @@ export ZSH="$ZDOTDIR/ohmyzsh"
 # Changing custom folder from $ZSH/custom to $ZDOTDIR/custom
 ZSH_CUSTOM="$ZDOTDIR/custom"
 
-# Performance profile: Uncomment this first
+# Performance profile: Uncomment this first, then the line at the end
 # zmodload zsh/zprof
 
 ### Detect if this is an interactive shell login
@@ -57,10 +57,10 @@ if [[ -o login ]] && [[ -o interactive ]]; then
 
 	### Print fetch
 	(fetch=fastfetch
-		if command -v $fetch &>/dev/null; then
+		if (( ${+commands[$fetch]} )); then
 			$fetch
 		else
-			printf "%s\n" "'$fetch' is not installed."
+			print_fn -e "%s\n" "'$fetch' is not installed."
 		fi
 	)
 fi
@@ -148,57 +148,33 @@ COMPLETION_WAITING_DOTS="true"
 # see 'man strftime' for details.
 HIST_STAMPS="dd/mm/yyyy"
 
-# Plugins section.
-# All omz plugins
-typeset -arU omz_plugins=("$ZSH"/plugins/**/*.zsh(-N:h:t))
-# All plugins containing completions
-typeset -arU comp_plugins=(
-	${(@f)$(\grep --include='*.zsh' -rElw 'comp(add|ctl|def|letion|set)' "$ZSH"/plugins "$ZSH_CUSTOM"/plugins):h:t}
-	"$ZSH"/plugins/**/_*(-N:h:t)
-	"$ZSH_CUSTOM"/plugins/**/_*(-N:h:t)
-)
+
+##########################################################################
+#### Plugins and omz loading
+
 # All custom plugins
-typeset -arU custom_plugins=("$ZSH_CUSTOM"/plugins/(*~example)(-FN:t))
+typeset -aU custom_plugins=("$ZSH_CUSTOM"/plugins/(*~example)/*.plugin.zsh(-.N:h:t))
 
 # Selected plugins to load
-typeset -arU select_plugins=(
+typeset -aU plugins=(
 	# ohmyzsh plugins
 	command-not-found
-	brew git pip python
-	nmap ufw
-	# Custom plugins. Load all by default
-	$custom_plugins
+	git pip python ufw
 )
 
-# Plugins whose names have an equivalent command
-# Careful: At this point, not every PATH has been added, so this list *will* be incomplete
-typeset -arU cmd_plugins=(${(v)commands[(I)${(j:|:)select_plugins}]:t})
-
-# Non-binary plugins; checking if a command by their name exists is guaranteed to return false
-typeset -aU nonbin_plugins=(
-	android
-)
-nonbin_plugins=(${nonbin_plugins:|comp_plugins})
-
-# Plugins to load natively: all selected except those with completions or with commands not installed
-typeset -aU native_plugins=(${select_plugins:|comp_plugins} $nonbin_plugins)
-
-# Source native plugins
-for plugin ($native_plugins); do
-	for plugin_pfx in "$ZSH_CUSTOM/plugins" "$ZSH/plugins"; do
-		[[ -f "$plugin_pfx/$plugin/$plugin.plugin.zsh" ]] && break
-	done
-
-	source "$plugin_pfx/$plugin/$plugin.plugin.zsh"
-done
-unset plugin_pfx plugin
-
-# Plugins to load via omz: all selected except native ones
-typeset -aU plugins=(${select_plugins:|native_plugins})
+# Plugins to load via omz: all selected except those present in custom
+plugins=(${plugins:|custom_plugins})
 
 source $ZSH/oh-my-zsh.sh
 
+# Source custom plugins natively (avoids massive overhead introduced by _omz_source)
+for plugin ($custom_plugins); do
+	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh"
+done
+unset plugin
 
+
+##########################################################################
 #### User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"

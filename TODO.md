@@ -7,18 +7,25 @@ This tasklist contains all ideas or improvements for this environment setup.
 ### Main profiles (`.zshenv`, `.zprofile`, `.zshrc`, `.zlogin`)
 
 * [ ] Reorganize `.zshenv`, `.zprofile`, `.zshrc`, `.zlogin` to have their intended profiling (and not the currently existing spaghetti). In other words, ensure each file respects their intended `[[ -o login ]]` and/or `[[ -o interactive ]]` behaviors.
-	* [ ] `.zshenv` should NOT output, nor modify anything. Just set user environment variables. Also, add all potential paths to `path` array/`PATH` variable (maybe via external file?).
+	* [ ] `.zshenv`:
+		* [ ] This should NOT output, nor modify anything. Just set user environment variables. Also, add all potential paths to `path` array/`PATH` variable (maybe via external file?).
+		* [ ] Remove all traces of environment variables for programs that do not come with a new installation (currently targeting Arch Linux with KDE Plasma). Every other envvar should be loaded externally.
 	* [ ] `.zprofile` should contain session-wide environment variables and execution.
-	* [x] `.zshrc` should load plugins, functions, aliases, completions and all interactive elements. It should NOT set any environment variable other than for ZSH loading purposes.
-	* [x] `.zlogin` should be restricted to configuration for a login interactive shell. It should NOT run or make any session-wide changes (read: move `first_init` elsewhere).
+	* [ ] `.zshrc`:
+		* [x] Should load plugins, functions, aliases, completions and all interactive elements. It should NOT set any environment variable other than for ZSH loading purposes.
+		* [ ] Remove personal clutter so that it contains the bare minimum for any user to pick up, loading anything else externally.
+	* [ ] `.zlogin`:
+		* [x] This should be restricted to configuration for a login interactive shell. It should NOT run or make any session-wide changes (read: move `first_init` elsewhere).
+		* [ ] Either move anything personal to external files, or add `.zlogin` to `.gitignore`. Preferably the former.
 * [x] Reference to ohmyzsh, either as submodule or cloning it externally. 
 * [x] Add external themes and plugins into this repo.
 * [x] Avoid oh-my-zsh's automatic renaming of the current `.zshrc`, or rename it after its installation.
 * [x] Remove redundant checks for `[[ -o login ]]` and/or `[[ -o interactive ]]` in files that are already loaded for that intended purpose.
-* [ ] Load configuration for each app from a `profile.d` .zsh script, and streamline which scripts to load on each profile file.
+* [ ] Load configuration for each app from a `profile.d` .zsh script (or plugin), and streamline which scripts to load on each profile file.
 * [x] Prepare auto-creation of `.p10k.zsh`, or ask user to set it up.
 * [ ] `zprofile-update`: Improve performance when detecting changes from remote git repo.
 * [x] Add first setup code to point `ZDOTDIR` to this directory in the system's `zshenv`.
+* [ ] Make sure `zsh` is loadable without `login` (`-l`) or `interactive` (`-i`) by either loading required functions accordingly, or avoid the use of these functions altogether. Gearing towards the former.
 
 
 ### Bug fixes
@@ -47,7 +54,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] Fix SSH configuration so that it meets the following criteria:
 	* [x] Sets up configuration without user prompt (also remove the message to delete `~/.ssh`).
 	* [x] Autocompletion works in Terminal.
-	* [ ] VScode Flatpak finds configured hosts.
+	* [ ] VScode Flatpak finds configured hosts, and is able to connect to them.
 	* [x] Git config should follow the new SSH path.
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
 * [ ] Wrap appropriate sections with `[[ -o login ]]`, `[[ -o interactive ]]` and/or `is_sourced_by` so that sourcing one of these files from main profiles sets only the according environment stuff.
