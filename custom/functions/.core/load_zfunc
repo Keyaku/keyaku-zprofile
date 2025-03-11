@@ -12,19 +12,21 @@ zparseopts -D -F -K -- \
 [[ "$ZSH_CUSTOM" ]] || ZSH_CUSTOM="$ZDOTDIR/custom"
 
 # Add all non-empty subdirectories of custom functions to fpath after $ZSH_CUSTOM/functions, or at the beginning
+# FIXME: count matches of found custom function directories, compare them to number of actual directories found
 if ! [[ " $fpath " =~ "$ZSH_CUSTOM"/functions/.\* ]]; then
 	local -i idx=${fpath[(i)$ZSH_CUSTOM/functions]}
 	(( ${#fpath} < idx )) && idx=0
 	fpath[$idx+1,0]=("$ZSH_CUSTOM"/functions/{.,^.}**{,/**}(-/FDN))
 fi
 
+# List of functions, sorted alphabetically, dotdirectories first
 local -aU custom_funcs=( "$ZSH_CUSTOM"/functions/{.,^.}/**/*(-.DN:t) )
 
-# Reload all functions
+# Reset custom functions
 if [[ "$f_reload" ]]; then
 	# Unload defined functions first
 	unfunction ${(k)functions:*custom_funcs}
 fi
 
-# Load custom functions, sorted alphabetically, dotdirectories first
+# Load custom functions
 autoload -Uz ${custom_funcs}
