@@ -18,10 +18,10 @@ local -r usage=(
 )
 
 ## Setup parseopts
-local f_help f_verbose f_quiet
+local f_help f_verbosity
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
-	v+=f_verbose q+=f_quiet \
+	v+=f_verbosity q+=f_verbosity \
 	|| return 1
 
 ## Help/usage message
@@ -30,13 +30,11 @@ if [[ "$f_help" ]]; then
 	[[ "$f_help" ]]; return $?
 fi
 
-# Set verbosity
-local verbosity=1 # defaults to some verbosity
-(( verbosity += ($#f_verbose - $#f_quiet) ))
-
-function print_msg {
-	(( $verbosity )) && >&2 echo "$@"
-}
+### Arg parsing
+# Verbosity
+local -i verbosity=1 # defaults to some verbosity
+f_verbosity="${(j::)f_verbosity//-}"
+(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
 # Check for updates
 [[ -d "${ZDOTDIR}/.git" ]] || return 1
@@ -49,15 +47,15 @@ local REMOTE=$(git -C "${ZDOTDIR}" rev-parse "$UPSTREAM")
 local BASE=$(git -C "${ZDOTDIR}" merge-base @ "$UPSTREAM")
 
 if [[ $LOCAL == $REMOTE ]]; then
-	print_msg "Up-to-date"
+	(( $verbosity )) && >&2 echo "Up-to-date"
 elif [[ $LOCAL == $BASE ]]; then
-	print_msg "Updating..."
-	git -C "${ZDOTDIR}" pull ${f_quiet} ${f_verbose}
+	(( $verbosity )) && >&2 echo "Updating..."
+	git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}}
 elif [[ $REMOTE == $BASE ]]; then
-	print_msg "There are unpushed changes"
+	(( $verbosity )) && >&2 echo "There are unpushed changes"
 	return 2
 else
-	print_msg "Current branch has diverged from remote"
+	(( $verbosity )) && >&2 echo "Current branch has diverged from remote"
 	return 3
 fi
 
@@ -67,9 +65,9 @@ git -C "${ZDOTDIR}" submodule -q foreach --recursive 'git fetch -q'
 
 local OUTDATED_SUBMODULES=$(git -C "${ZDOTDIR}" submodule foreach --recursive 'git rev-list HEAD...@{u}' | \grep -v '^Entering')
 if [[ "${OUTDATED_SUBMODULES}" ]]; then
-	print_msg "Updating submodules..."
+	(( $verbosity )) && >&2 echo "Updating submodules..."
 	git -C "${ZDOTDIR}" submodule update --remote --recursive
 	retval=$?
 else
-	print_msg "All submodules are up-to-date."
+	(( $verbosity )) && >&2 echo "All submodules are up-to-date."
 fi

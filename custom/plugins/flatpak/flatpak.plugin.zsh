@@ -9,10 +9,10 @@ function flatpak-has {
 	)
 
 	## Setup func opts
-	local f_help f_verbose f_quiet f_icase
+	local f_help f_verbosity f_icase
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
-		v+=f_verbose q+=f_quiet \
+		v+=f_verbosity q+=f_verbosity \
 		{i,-ignore-case}=f_icase \
 		|| return 1
 
@@ -22,12 +22,13 @@ function flatpak-has {
 		[[ "$f_help" ]]; return $?
 	fi
 
-	# Setup parameters
-	local verbosity=0
-	(( verbosity += ($#f_verbose - $#f_quiet) ))
-	local icase=$(( ${#f_icase} ? 1 : 0 ))
+	### Arg parsing
+	# Verbosity
+	local -i verbosity=0
+	f_verbosity="${(j::)f_verbosity//-}"
+	(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
-	local retval=1
+	local -i retval=1
 
 	while (( $# )); do
 		local result="$(flatpak list --columns=name,application | awk '{IGNORECASE = '${icase}'; for(i=1;i<=NF;i++) if (/\<'$1'\>/) { print; break } }')"

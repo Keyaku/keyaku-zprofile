@@ -18,15 +18,15 @@ local -r usage=(
 )
 
 ## Setup parseopts (with no extra arguments)
-local void f_help f_verbose f_quiet
-local f_pfx f_all f_login f_interactive
+local void f_help f_verbosity
+local f_pfx f_all f_opts
 zparseopts -a void -D -F -K -- \
 	{h,-help}=f_help \
-	v+=f_verbose q+=f_quiet \
+	v+=f_verbosity q+=f_verbosity \
 	{p,-prefix}:=f_pfx \
 	{a,-all}=f_all \
-	{l,-login}=f_login \
-	{i,-interactive}=f_interactive \
+	{l,-login}=f_opts \
+	{i,-interactive}=f_opts \
 	|| return 1
 
 ## Help/usage message
@@ -37,8 +37,12 @@ fi
 
 ### Arg parsing
 # Verbosity
-local verbosity=0
-(( verbosity += ($#f_verbose - $#f_quiet) ))
+local -i verbosity=0
+f_verbosity="${(j::)f_verbosity//-}"
+(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
+
+# To check if there was an intended use of this command
+local -r flags_set="${f_pfx}${f_all}${f_opts}"
 
 # Prefix (last one set)
 f_pfx="${f_pfx:+${f_pfx[-1]:P}}"
@@ -58,9 +62,6 @@ else
 	fi
 fi
 
-# To check if there was an intended use of this command
-local -r flags_set="${f_pfx}${f_all}${f_login}${f_interactive}"
-
 # Prepare profiles to load
 local -aU profiles=()
 
@@ -69,8 +70,8 @@ if [[ "$f_all" ]]; then
 	profiles=( "$f_pfx"/{.*,^.}/**/*.zsh(-DN.) )
 else
 	# Load login/interactive profiles if specified
-	[[ "$f_login" ]]       && profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$f_pfx") )
-	[[ "$f_interactive" ]] && profiles+=( $(\grep -rEl '\[?\[ -o interactive \]\]?' "$f_pfx") )
+	(( ${f_opts[(I)-i]} )) && profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$f_pfx") )
+	(( ${f_opts[(I)-l]} )) && profiles+=( $(\grep -rEl '\[?\[ -o interactive \]\]?' "$f_pfx") )
 
 	# Load any potential match from arguments, file or directory
 	(( $# )) && profiles+=( "$f_pfx"/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )

@@ -163,10 +163,10 @@ function docker-set-host {
 	)
 
 	## Setup func opts
-	local f_help f_verbose f_quiet
+	local f_help f_verbosity
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
-		v+=f_verbose q+=f_quiet \
+		v+=f_verbosity q+=f_verbosity \
 		|| return 1
 
 	## Help/usage message
@@ -175,9 +175,10 @@ function docker-set-host {
 		[[ "$f_help" ]]; return $?
 	fi
 
-	# Set verbosity
-	local verbosity=1 # defaults to some verbosity
-	(( verbosity += ($#f_verbose - $#f_quiet) ))
+	# Verbosity
+	local -i verbosity=1 # defaults to some verbosity
+	f_verbosity="${(j::)f_verbosity//-}"
+	(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
 
 	# Set docker host variable

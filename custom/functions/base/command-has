@@ -13,10 +13,10 @@ local -r usage=(
 
 ## Setup func opts
 ## FIXME: add flag for ignoring if command is alias
-local f_help f_verbose f_quiet f_exit logical=or # default
+local f_help f_verbosity f_exit logical=or # default
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
-	v+=f_verbose q+=f_quiet \
+	v+=f_verbosity q+=f_verbosity \
 	{o,-or}=logical \
 	{a,-and}=logical \
 	|| return 1
@@ -28,8 +28,11 @@ if (( ! $# )) || [[ "$f_help" ]]; then
 fi
 
 ## Arg parsing
-local verbosity=0
-(( verbosity += ($#f_verbose - $#f_quiet) ))
+# Verbosity
+local -i verbosity=0
+f_verbosity="${(j::)f_verbosity//-}"
+(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
+# Logical OR / AND
 logical=${logical##*-}
 
 ## function logic
