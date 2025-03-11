@@ -147,8 +147,8 @@ function addpath {
 	done
 
 	# Add paths
-	(( ${#prepend_paths} )) && path=("${prepend_paths}" "${path}")
-	(( ${#append_paths} ))  && path+=("${append_paths}")
+	(( ${#prepend_paths} )) && path=(${prepend_paths} ${path})
+	(( ${#append_paths} ))  && path+=(${append_paths})
 
 	# Return success if any paths were added
 	(( 0 < ${#prepend_paths} + ${#append_paths} ))
