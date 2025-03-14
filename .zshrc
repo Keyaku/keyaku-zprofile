@@ -17,6 +17,23 @@ ZSH_CUSTOM="$ZDOTDIR/custom"
 # Performance profile: Uncomment this first, then the line at the end
 # zmodload zsh/zprof
 
+# Standard setopts
+setopt extendedglob
+setopt re_match_pcre
+
+# Load all custom functions
+autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/zsource(N) && zsource -f
+if ! [[ -o login ]]; then
+	func_toload=(whatami addpath is_int)
+	if (( ${#func_toload} != ${#functions[(I)(${(j:|:)func_toload})]} )); then
+		# Load additional useful functions
+		for f_zsh ($(\grep -rEl 'function\s+(${(j:|:)func_toload})' "$ZDOTDIR/profile.d")); do
+			source "$f_zsh"
+		done
+	fi
+	unset f_zsh func_toload
+fi
+
 ### Detect if this is an interactive shell login
 if [[ -o login ]] && [[ -o interactive ]]; then
 	### First-time initialization
@@ -63,20 +80,6 @@ if [[ -o login ]] && [[ -o interactive ]]; then
 			print_fn -e "%s\n" "'$fetch' is not installed."
 		fi
 	)
-fi
-
-# Generic setopts
-setopt extendedglob
-setopt re_match_pcre
-
-# Load function that loads all custom functions
-autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/load_zfunc(N) && load_zfunc
-if ! [[ -o login ]]; then
-	# Load additional useful functions
-	for f_zsh ($(\grep -rEl 'function\s+(whatami|addpath|is_int)' "$ZDOTDIR/profile.d")); do
-		source "$f_zsh"
-	done
-	unset f_zsh
 fi
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.

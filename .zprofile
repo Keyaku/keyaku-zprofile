@@ -21,7 +21,8 @@ fi
 
 # Load function that loads all custom functions
 # FIXME: In theory, this should not be present in .zprofile. Modify .zprofile to avoid this.
-autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/load_zfunc(N) && load_zfunc
+setopt extendedglob
+autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/zsource(N)
 
 ### Check for zprofile git repo changes
 # FIXME: This adds delay to shell startup. Find solution to run this in background, or with timestamp check.

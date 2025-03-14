@@ -1,8 +1,9 @@
 # Reloads files under profile.d
 
 emulate -L zsh
-
 setopt extendedglob
+
+[[ "$ZSH_CUSTOM" ]] || ZSH_CUSTOM="$ZDOTDIR/custom"
 
 local -r usage=(
 	"Usage: ${funcstack[1]} [OPTION...] [FILE...] [DIR...]"
@@ -11,20 +12,22 @@ local -r usage=(
 	""
 	"\t[-h|--help] : Print this help message"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
-	"\t[-p|--prefix] : Set PREFIX directory for profile search. Default: $ZDOTDIR/profile.d"
-	"\t[-a|--all] : Reload all files under PREFIX. Supercedes any of the following options"
-	"\t[-l|--login] : Reloads all files containing block for [[ -o login ]]. Stackable option"
-	"\t[-i|--interactive] : Reloads all files containing block for [[ -o interactive ]]. Stackable option"
+	"\t[-a|--all] : Reload all profiles and functions. Same as using -pf"
+	"\t[-f|--functions] : Reload all functions located under $ZSH_CUSTOM/functions"
+	"\t[-p|--profiles] : Reload all profiles located under $ZDOTDIR/profile.d. Supercedes -l and -i"
+	"\t[-l|--login] : Reload all files containing block for [[ -o login ]]. Stackable on the list of profiles"
+	"\t[-i|--interactive] : Reload all files containing block for [[ -o interactive ]]. Stackable on the list of profiles"
 )
 
 ## Setup parseopts (with no extra arguments)
 local void f_help f_verbosity
-local f_pfx f_all f_opts
+local f_prof f_all f_opts f_func
 zparseopts -a void -D -F -K -- \
 	{h,-help}=f_help \
 	v+=f_verbosity q+=f_verbosity \
-	{p,-prefix}:=f_pfx \
 	{a,-all}=f_all \
+	{f,-functions}=f_func \
+	{p,-profiles}:=f_prof \
 	{l,-login}=f_opts \
 	{i,-interactive}=f_opts \
 	|| return 1
@@ -41,71 +44,96 @@ local -i verbosity=0
 f_verbosity="${(j::)f_verbosity//-}"
 (( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
-# To check if there was an intended use of this command
-local -r flags_set="${f_pfx}${f_all}${f_opts}"
-
-# Prefix (last one set)
-f_pfx="${f_pfx:+${f_pfx[-1]:P}}"
-# If no prefix set, default to profile.d
-if [[ -z "$f_pfx" ]]; then
-	f_pfx="$ZDOTDIR/profile.d"
-else
-	local err_pfx="Cannot use prefix '$f_pfx'"
-	# If prefix directory not found, abort
-	if [[ ! -d "$f_pfx" ]]; then
-		print_fn -e "%s: %s" "$err_pfx" "Directory not found"
-		return 1
-	# If given directory is not readable by current user, abort
-	elif [[ ! -r "$f_pfx" ]]; then
-		print_fn -e "%s: %s" "$err_pfx" "Directory not readable"
-		return 1
-	fi
+# Set appropriate flags if -a was given
+if [[ "$f_all" ]]; then
+	f_func=(-f)
+	f_prof=(-p)
+	f_opts=()
 fi
 
-# Prepare profiles to load
-local -aU profiles=()
+# To check if there was an intended use of this command
+local -r flags_set="${f_func}${f_prof}${f_opts}"
+
+# Prepare profiles and functions to load
+local -aU _profiles=()
+local -aU _functions=()
 
 # Load all profiles if specified
-if [[ "$f_all" ]]; then
-	profiles=( "$f_pfx"/{.*,^.}/**/*.zsh(-DN.) )
+if [[ "$f_prof" ]]; then
+	_profiles=( "$ZDOTDIR/profile.d"/{.*,^.}/**/*.zsh(-DN.) )
 else
-	# Load login/interactive profiles if specified
-	(( ${f_opts[(I)-i]} )) && profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$f_pfx") )
-	(( ${f_opts[(I)-l]} )) && profiles+=( $(\grep -rEl '\[?\[ -o interactive \]\]?' "$f_pfx") )
+	# Load login/interactive _profiles if specified
+	(( ${f_opts[(I)-i]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$ZDOTDIR/profile.d") )
+	(( ${f_opts[(I)-l]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o interactive \]\]?' "$ZDOTDIR/profile.d") )
 
 	# Load any potential match from arguments, file or directory
-	(( $# )) && profiles+=( "$f_pfx"/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
+	if (( $# )); then
+		# FIXME: differentiate between files in PWD and under profile.d
+		# FIXME: check if argument is a function file or a profile
+		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
+	fi
 fi
 
+# Load all functions if specified
+if [[ "$f_func" ]]; then
+	# List of function paths, sorted alphabetically, dotdirectories first
+	local -aU func_dirs=("$ZSH_CUSTOM"/functions/{.,^.}**{,/**}(-/FDN))
+	local -aU func_set=(${fpath:*func_dirs})
 
-# If no profiles were set, do nothing
-if (( ! ${#profiles} )); then
+	# Add all unset, non-empty subdirectories of custom functions to fpath
+	if (( ${#func_dirs} != ${#func_set} )); then
+		# Attempt to index paths right after $ZSH_CUSTOM/functions, or at the beginning if $ZSH_CUSTOM/functions is not yet set
+		local -i fc_idx=${fpath[(i)$ZSH_CUSTOM/functions]}
+		(( ${#fpath} < fc_idx )) && fc_idx=0
+
+		# Only add paths not present in fpath
+		fpath[${fc_idx}+1,0]=( ${func_dirs:|func_set} )
+	fi
+
+	# List of functions using previous directory search
+	_functions=( ${^func_dirs}/*(-.DN:t) )
+fi
+
+# If no profiles or functions were set, do nothing
+if (( 0 == ${#_profiles} + ${#_functions} )); then
 	if (( 1 <= $verbosity )); then
 		if [[ "$flags_set" ]]; then
-			print_fn -e "No valid profiles found with the specified flags"
+			print_fn -e "No valid files found with the specified flags"
 		else
-			print_fn -i "No profiles to source"
+			print_fn -i "Nothing to source"
 		fi
 	fi
-	[[ "$flags_set" ]]
+	[[ -z "$flags_set" ]]
 	return $?
 fi
 
 # Shorten paths just for output
 if (( 1 <= $verbosity )); then
-	local s_profiles=(${profiles//"${ZDOTDIR}"/\$ZDOTDIR})
-	(( 1 == $verbosity )) && s_profiles=(${s_profiles//"\$ZDOTDIR\/profile.d\/"})
-	(( 2 <= $verbosity )) && printf "%s\n" "Sourcing the following profiles:"
-	if (( ${#s_profiles} )); then
+	if (( ${#_profiles} )); then
+		local s_profiles=(${_profiles//"${ZDOTDIR}"/\$ZDOTDIR})
+		(( 1 == $verbosity )) && s_profiles=(${s_profiles//"\$ZDOTDIR\/profile.d\/"})
+		(( 2 <= $verbosity )) && printf "%s\n" "Sourcing the following profiles:"
 		(( 1 <= $verbosity )) && printf "%s\n" ${s_profiles}
-	else
-		(( 1 <= $verbosity )) && printf "%s\n" ${(j:, :)s_profiles}
 	fi
+	if (( ${#_functions} )); then
+		(( 2 <= $verbosity )) && printf "%s\n" "Loading the following functions:"
+		(( 1 <= $verbosity )) && printf "%s\n" ${_functions}
+	fi
+fi
+
+# Reload collected functions
+if (( ${+_functions} )); then
+	local _functions_unload=(${(k)functions:*_functions})
+	# Unload defined functions first
+	(( ${#_functions_unload} )) && unfunction ${_functions_unload}
+
+	# Autoload functions, suppressing alias expansion for functions and marking for zsh-style autoloading
+	autoload -Uz ${_functions}
 fi
 
 # Source resulting profiles
 local arg
-for arg in $profiles; do
+for arg in $_profiles; do
 	if ! source "$arg"; then
 		(( 1 <= $verbosity )) && print_fn -e "error when sourcing '${arg//"${ZDOTDIR}"/\$ZDOTDIR}'"
 		return 1
