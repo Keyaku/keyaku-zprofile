@@ -9,7 +9,7 @@ A whole set of profile and utilities to improve my daily use of ZSH.
 ### Summary
 
 This is a comprehensive list of profile files, loaded at boot, login or interactive shell, filled with auxiliary functions and lifesavers.
-This is not to replace anyone's current profile configuration; this is my own, riddled with issues and spaghetti that I try to improve every once in a while.
+Currently, it's not meant to replace anyone's current profile configuration, although it is going to be the case as soon as I make it flexible to anybody who wishes to make use of the myriad of functions I wrote.
 If any of the functions I introduce is already reproducible via some POSIX shell or ZSH substitution, sometimes even more elegantly or better in performance,
 it's very likely that I am not aware of it, or haven't yet updated the function to reflect that.
 
@@ -17,12 +17,12 @@ I'm always willing to learn new tricks; I just haven't researched them all.
 
 ### Scope
 
-The intent is to write functions, aliases and environment variables to:
-- Have lifesavers to be used via command line, or to avoid boilerplate in scripts. 
-- Prepare the appropriate environment for each installed program (e.g. `GNUPGHOME`).
-- Have an initialization code block which makes the specific setups to my liking for any new Linux distro installation.
+The intent is to have functions, aliases and environment variables to:
+- Have lifesavers to be used via command line, and/or to avoid boilerplate in scripts. 
+- Prepare the appropriate environment for each installed program (e.g. set `GNUPGHOME` for `gnupg`).
+- Have an initialization code block which makes the specific setups for any new Linux distro installation.
 - Attempt to clear the `$HOME` directory from dotfiles as much as possible, so it contains the bare minimum.
-One very quick way to check is with the following command:
+In case you'd like to find out which dotfiles currently sit in your home directory, one very quick way is with the following command:
 ```zsh
 echo $HOME/.*(:s,$HOME/,,)
 ```
@@ -38,7 +38,8 @@ These are:
 	2. `.zprofile` - Used for executing user's commands at start, will be read when starting as a **_login shell_**. Typically used to autostart graphical sessions and to set session-wide environment variables.
 	3. `.zshrc` - Used for setting user's interactive shell configuration and executing commands, will be read when starting as an **_interactive shell_**.
 	4. `.zlogin` - Used for executing user's commands at ending of initial progress, will be read when starting as a **_login shell_**. Typically used to autostart command line utilities. Should not be used to autostart graphical sessions, as at this point the session might contain configuration meant only for an interactive shell.
-- Custom functions under `.zfunc/` (WORK IN PROGRESS).
+- Custom functions under `.zfunc/`.
+- Custom plugins under `custom/plugins`, loaded natively with `source` to avoid using ohmyzsh's `_omz_source` with its massive overhead, making a login shell as fast as possible.
 - Various .zsh scripts under `profile.d/`, containing everything from base functionality that helps one's everyday use, down to setting up the environment of an app or program, or even of a specific OS.
 
 
@@ -46,23 +47,29 @@ These are:
 
 ### How to use this
 
-Why would you want to?
+Since my main objectives haven't been achieved yet, I don't recommend it just yet;  
+However, if you wish to adopt it now, the procedure is a bit straightforward (with plans to make it much easier in the future). The following presumes `$XDG_CONFIG_HOME` is set to `$HOME/.local/config`, though I plan making it flexible to any other path _except `$HOME/.config`_, since one major point is to clear the home directory from dotfiles: 
 
-If you insist, do the following:
-1. Download the ZIP.
-2. Extract its contents to `$XDG_CONFIG_HOME/zsh`, so that all dotfiles (e.g. `.zshenv`) stay at the root of that directory.
-3. The rest of the setup is currently manual, though I am working in a one-click solution.
-Essentially, add the line `export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh` to the default `zshenv` of your system (usually located at `/etc/zsh/zshenv`).
+1. In a terminal session, go to `$XDG_CONFIG_HOME` and clone this repository to a directory named `zsh`:
+```shell
+cd "${XDG_CONFIG_HOME:-$HOME/.local/config}"
+git clone https://github.com/Keyaku/keyaku-zprofile zsh
+```
+2. Run the initial setup script:
+```shell
+"${XDG_CONFIG_HOME:-$HOME/.local/config}"/zsh/conf/first_setup.zsh
+```
+3. Make sure the script sets up everything correctly. It'll keep track of every substep in the file `.first_init` at the root of the git repo.
 4. Reboot your system.
 
-I really don't recommend cloning the repo if you want to have these for yourself; you'll have a storage wasting `.git` directory in your `$ZDOTDIR`, and in case you accidentally pull any remote changes, they'll be overwriting any of your own.
-The best you can do is fork it, then rename your setup so it reflects _your_ configuration.
+Right now, customization is not possible, though it is intended.
+In case you need to customize it to fit your needs, the best you can do is fork it.
 
-However, it would very nice and helpful if you'd fork this with the intent of making fixes or improvements to push via Pull Requests; I'd be extremely thankful, especially if those modifications end up being useful for everyone.
+In addition, it would very nice and helpful if you'd fork this with the intent of making fixes and improvements to push via Pull Requests; I'd be extremely thankful, especially if those modifications end up being useful for everyone.
 
 ### Tasks
 
-I store a [list of all tasks](TODO.md) (that I can think of) to improve this setup.
+I store a [list of all major tasks](TODO.md) (that I can think of) to improve this setup.
 This thing is one of those projects that will essentially _never_ end, until I migrate to a newer or better shell. And I'm fine with that.
 
 In case you're wondering: **No**, I'm not moving to `fish`. It's cool, but I don't like it (yet).
