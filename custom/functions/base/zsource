@@ -54,9 +54,8 @@ fi
 # To check if there was an intended use of this command
 local -r flags_set="${f_func}${f_prof}${f_opts}"
 
-# Prepare profiles and functions to load
+## Concerning profiles
 local -aU _profiles=()
-local -aU _functions=()
 
 # Load all profiles if specified
 if [[ "$f_prof" ]]; then
@@ -69,29 +68,25 @@ else
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
 		# FIXME: differentiate between files in PWD and under profile.d
-		# FIXME: check if argument is a function file or a profile
 		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
 	fi
 fi
 
+## Concerning functions
+local -aU _functions=()
+
+# List of function paths, sorted alphabetically, dotdirectories first
+local -aU func_dirs=("$ZSH_CUSTOM"/functions/{.,^.}**{,/**}(-/FDN))
+
 # Load all functions if specified
 if [[ "$f_func" ]]; then
-	# List of function paths, sorted alphabetically, dotdirectories first
-	local -aU func_dirs=("$ZSH_CUSTOM"/functions/{.,^.}**{,/**}(-/FDN))
-	local -aU func_set=(${fpath:*func_dirs})
-
-	# Add all unset, non-empty subdirectories of custom functions to fpath
-	if (( ${#func_dirs} != ${#func_set} )); then
-		# Attempt to index paths right after $ZSH_CUSTOM/functions, or at the beginning if $ZSH_CUSTOM/functions is not yet set
-		local -i fc_idx=${fpath[(i)$ZSH_CUSTOM/functions]}
-		(( ${#fpath} < fc_idx )) && fc_idx=0
-
-		# Only add paths not present in fpath
-		fpath[${fc_idx}+1,0]=( ${func_dirs:|func_set} )
-	fi
-
 	# List of functions using previous directory search
 	_functions=( ${^func_dirs}/*(-.DN:t) )
+else
+	# Load any potential match from arguments, file or directory
+	if (( $# )); then
+		_functions+=( "$ZSH_CUSTOM"/functions/**/(${(j:|:)@}){,/**/*}(-DN.) )
+	fi
 fi
 
 # If no profiles or functions were set, do nothing
@@ -123,6 +118,17 @@ fi
 
 # Reload collected functions
 if (( ${+_functions} )); then
+	# Correct fpath with yet-to-be set paths from custom/functions
+	local -aU func_set=(${fpath:*func_dirs})
+	if (( ${#func_dirs} != ${#func_set} )); then
+		# Attempt to index paths right after $ZSH_CUSTOM/functions, or at the beginning if $ZSH_CUSTOM/functions is not yet set
+		local -i fc_idx=${fpath[(i)$ZSH_CUSTOM/functions]}
+		(( ${#fpath} < fc_idx )) && fc_idx=0
+
+		# Only add paths not present in fpath
+		fpath[${fc_idx}+1,0]=( ${func_dirs:|func_set} )
+	fi
+
 	local _functions_unload=(${(k)functions:*_functions})
 	# Unload defined functions first
 	(( ${#_functions_unload} )) && unfunction ${_functions_unload}
