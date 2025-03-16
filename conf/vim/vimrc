@@ -1,0 +1,40 @@
+" Basic Settings
+let $vimhome = expand("$XDG_CONFIG_HOME") .'/vim'
+set viminfo+=n$vimhome/viminfo
+set mouse=a
+set number " display line numbers
+set shiftwidth=4 " indent width
+set softtabstop=0 noexpandtab " prevent unintentional space insertions
+set tabstop=4 " tab width
+
+" Search and Navigation
+set incsearch " incremental search
+set ignorecase " ignore case in search
+set smartcase " override ignorecase for capital letters
+
+" Syntax Highlighting
+syntax enable " enable syntax highlighting
+
+" Load user vimrc if available
+if ! empty(glob($vimhome ."/myvimrc"))
+	source $vimhome/myvimrc
+endif
+
+""" Plug-ins with junegunn's vim-plug
+" Install vim-plug if not found
+if empty(glob($vimhome . '/autoload/plug.vim'))
+	silent !curl -fLo $vimhome/autoload/plug.vim --create-dirs
+		\ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+endif
+
+" Run PlugInstall if there are missing plugins
+autocmd VimEnter * if len(filter(values(g:plugs), '!isdirectory(v:val.dir)'))
+	\| PlugInstall --sync | source $MYVIMRC
+\| endif
+
+" Begin vim-plug
+call plug#begin($vimhome .'/plugged')
+if ! empty(glob($vimhome ."/plugins"))
+	source $vimhome/plugins
+endif
+call plug#end()
