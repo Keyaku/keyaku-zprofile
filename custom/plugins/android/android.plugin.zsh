@@ -7,4 +7,9 @@ if ! whatami Android; then
 # if actually on Android (Termux)
 elif [[ -d "$HOME/.termux" ]]; then
 	alias pkg-all='pkg update && pkg upgrade -y'
+	
+	# Silence Message of the Day (motd)
+	if [[ -f "$HOME"/../usr/etc/motd ]]; then
+		mv "$HOME"/../usr/etc/motd{,.old}
+	fi
 fi
