@@ -1,0 +1,11 @@
+# For truly minimal overhead, fastcmp is a wrapper
+# around the builtin `sysread` to read file contents directly
+local content1 content2
+
+# Read files directly into memory using ZSH builtins
+# Limit file read size to 1MB. Anything above will be truncated
+{ sysread -s 1048576 content1 < "$1" } 2>/dev/null || return 2
+{ sysread -s 1048576 content2 < "$2" } 2>/dev/null || return 2
+
+# Direct string comparison
+[[ "$content1" == "$content2" ]]
