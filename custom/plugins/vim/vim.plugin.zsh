@@ -6,7 +6,6 @@ export MYVIMRC="${XDG_CONFIG_HOME}/vim/vimrc"
 
 # Copy the whole vimrc file. Any user plugin should be loaded in a 'plugins' file, or additional configuration in 'myvimrc'
 if ! fastcmp "$ZDOTDIR/conf/vim/vimrc" "$MYVIMRC"; then
-	echo $?
 	mv "$MYVIMRC"{,.old}
 	cp "$ZDOTDIR/conf/vim/vimrc" "$MYVIMRC"
 fi
