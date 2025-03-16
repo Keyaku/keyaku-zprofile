@@ -1,91 +1,75 @@
 # Set machine identifiers (Linux, WSL, etc.)
+typeset -agxU WHATAMI_LIST=()
 
-typeset -axU LIST_machines=()
+# Cache file location. Remove this file
+WHATAMI_CACHE_FILE="${ZSH_CACHE_HOME:-${XDG_CACHE_HOME:-$HOME/.local/cache}}/whatami_cache"
 
 function whatami {
-	local -r usage=(
-		"Usage: ${funcstack[1]} [OPTION...] COMMAND..."
-		"\t[-h|--help] : Print this help message"
-		"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are installed."
-		"\t[-a|--and] : Logical AND operator. Checks if all of the commands are installed."
-	)
+	local -r usage="Usage: ${funcstack[1]} [DISTRO...]"
 
-	## Setup func opts
-	local f_help logical # default
-	zparseopts -D -F -K -- \
-		{h,-help}=f_help \
-		{o,-or}=logical \
-		{a,-and}=logical \
-		|| return 1
-
-	## Help/usage message
-	if ( [[ "$logical" ]] && (( ! $# )) ) || [[ "$f_help" ]]; then
-		>&2 print -l $usage
-		[[ "$f_help" ]]; return $?
+	if (( ${@[(I)-*|--*]} )); then
+		if (( ${@[(I)-h|--help]} )); then
+			>&2 echo "$usage"
+			return 0
+		else
+			print_fn -e "Unknown option: ${(v)@[(I)-*|--*]}"
+		fi
 	fi
 
-	## Parse arguments
-	logical=${${logical##*-}:-o}
-
-	if (( ! ${#LIST_machines} )); then
-		local tmpname
-
-		# Checking by OSTYPE
-		if [[ -n "${OSTYPE}" ]]; then
+	# Compile list of possible identifiers for this machine
+	if (( ! ${#WHATAMI_LIST} )); then
+		# Checking by OSTYPE - fast check first
+		if [[ "${OSTYPE}" ]]; then
 			case "${OSTYPE}" in
-			solaris*)        tmpname="Solaris" ;;
-			darwin*)         tmpname="macOS" ;;
-			*android)        tmpname="Android" ;;
-			linux*)          tmpname="Linux" ;;
-			bsd*)            tmpname="BSD" ;;
-			msys* | cygwin*) tmpname="Windows" ;;
-			*microsoft*)     tmpname="WSL" ;;
-			*)               tmpname="${OSTYPE}" ;;
+			solaris*)        WHATAMI_LIST+=("Solaris") ;;
+			darwin*)         WHATAMI_LIST+=("macOS") ;;
+			*android)        WHATAMI_LIST+=("Android") ;;
+			linux*)          WHATAMI_LIST+=("Linux") ;;
+			bsd*)            WHATAMI_LIST+=("BSD") ;;
+			msys* | cygwin*) WHATAMI_LIST+=("Windows") ;;
+			*microsoft*)     WHATAMI_LIST+=("WSL") ;;
+			*)               WHATAMI_LIST+=("${OSTYPE}") ;;
 			esac
-			LIST_machines+=("${tmpname}")
 		fi
 
-		# Checking by uname
-		tmpname="$(uname -s)"
-		(( ${LIST_machines[(i)$tmpname]} <= ${#LIST_machines})) || LIST_machines+=("${tmpname}")
-
-		# Checking by lsb_release
-		if (( ${+commands[lsb_release]} )); then
-			tmpname="$(lsb_release -si)"
-			(( ${LIST_machines[(i)$tmpname]} <= ${#LIST_machines})) || LIST_machines+=("${tmpname}")
+		# Only run uname if needed
+		if (( ! ${#WHATAMI_LIST} )); then
+			WHATAMI_LIST+=("$(uname -s)")
 		fi
 
-		# Checking from /etc/os-release
-		if [[ -f /etc/os-release ]]; then
-			tmpname="$(awk -F= '/^ID=/ {print $2}' /etc/os-release)"
-			(( ${LIST_machines[(i)$tmpname]} <= ${#LIST_machines})) || LIST_machines+=("${(C)tmpname}")
+		# Distribution detection - only if Linux
+		if (( ${+WHATAMI_LIST[(r)Linux]} )); then
+			if [[ -f /etc/os-release ]]; then
+				# Faster than lsb_release
+				local distro=$(sed -n 's/^ID=//p' /etc/os-release)
+				[[ "$distro" ]] && WHATAMI_LIST+=("${(C)distro}")
+			elif (( ${+commands[lsb_release]} )); then
+				# Fallback to lsb_release
+				WHATAMI_LIST+=("$(lsb_release -si)")
+			fi
+
+			# Raspberry Pi check - use simple grep with limited pattern
+			if [[ -f /proc/cpuinfo ]] && \grep -q "BCM2" /proc/cpuinfo; then
+				WHATAMI_LIST+=("pi")
+			fi
 		fi
 
-		# Checking if RPi
-		if \grep -Eq "BCM(283(5|6|7)|270(8|9)|2711)" /proc/cpuinfo; then
-			tmpname=pi
-			(( ${LIST_machines[(i)$tmpname]} <= ${#LIST_machines})) || LIST_machines+=("${tmpname}")
+		# Save to cache file
+		if (( ${#WHATAMI_LIST} )); then
+			[[ -d "${WHATAMI_CACHE_FILE:h}" ]] || mkdir -p "${WHATAMI_CACHE_FILE:h}"
+			echo "${WHATAMI_LIST}" > "$WHATAMI_CACHE_FILE"
 		fi
 	fi
 
 	if (( $# )); then
-		local -aU args=(${@:l})
-		local -a machines=(${LIST_machines:l})
-
-		if [[ "$logical" == a ]]; then
-			# if subtraction is empty, then all elements are present
-			(( ! ${#args:|machines} ))
-		else
-			# if mutual exclusion contains elements, return true
-			(( ${#args:*machines} ))
-		fi
-
+		(( ${+WHATAMI_LIST[(I)(${(uj:|:)@:l})]} ))
 		return $?
 	fi
 
-	echo ${LIST_machines}
+	echo ${WHATAMI_LIST}
 }
 
-if (( ! ${#LIST_machines} )); then
-	whatami &>/dev/null
+# Load if cache file exists
+if [[ -f "$WHATAMI_CACHE_FILE" ]]; then
+	WHATAMI_LIST=($(cat "$WHATAMI_CACHE_FILE"))
 fi
