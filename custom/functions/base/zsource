@@ -91,15 +91,17 @@ fi
 
 # If no profiles or functions were set, do nothing
 if (( 0 == ${#_profiles} + ${#_functions} )); then
+	# Check if no functions, profiles or arguments were given (read: nothing to source)
+	[[ -z "${f_func}${f_prof}" ]] && (( ! $# ))
+	local retval=$?
 	if (( 1 <= $verbosity )); then
-		if [[ "$flags_set" ]]; then
-			print_fn -e "No valid files found with the specified flags"
-		else
+		if (( ! $retval )); then
 			print_fn -i "Nothing to source"
+		else
+			print_fn -e "No valid files found with the specified flags"
 		fi
 	fi
-	[[ -z "$flags_set" ]]
-	return $?
+	return $retval
 fi
 
 # Shorten paths just for output
@@ -117,7 +119,7 @@ if (( 1 <= $verbosity )); then
 fi
 
 # Reload collected functions
-if (( ${+_functions} )); then
+if (( ${#_functions} )); then
 	# Correct fpath with yet-to-be set paths from custom/functions
 	local -aU func_set=(${fpath:*func_dirs})
 	if (( ${#func_dirs} != ${#func_set} )); then
@@ -145,3 +147,5 @@ for arg in $_profiles; do
 		return 1
 	fi
 done
+
+(( 0 < ${#_profiles} + ${#_functions} ))
