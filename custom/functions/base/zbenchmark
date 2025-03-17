@@ -58,9 +58,13 @@ if (( ${#_profiles} )); then
 	zsh ${f_opts} -c "zmodload zsh/zprof; for _prof in $_profiles; do source \$_prof >/dev/null; done; zprof"
 fi
 
+# Check if there are invalid files, printing errors accordingly
 if (( ${#invalid_profiles} )); then
-	echo "Failed to benchmark the following:"
-	printf '- %s\n' $invalid_profiles
+	(( 1 <= $verbosity )) && print_fn -e "Invalid file(s) passed. Make sure they exist and are valid zsh files."
+	if (( 2 <= $verbosity )); then
+		echo "List of invalid files:"
+		printf '- %s\n' $invalid_profiles
+	fi
 fi
 
 (( 0 < ${#_profiles} && 0 == ${#invalid_profiles} ))
