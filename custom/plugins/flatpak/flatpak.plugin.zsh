@@ -2,7 +2,7 @@
 
 function flatpak-has {
 	local -r usage=(
-		"Usage: $(get_funcname) [OPTION...]"
+		"Usage: ${funcstack[1]} [OPTION...]"
 		"\t[-h|--help] : Print this help message"
 		"\t[-v] / [-q] : Increase / Decrease verbosity"
 		"\t[-i|--ignore-case] : Sets case-sensitivity to none"

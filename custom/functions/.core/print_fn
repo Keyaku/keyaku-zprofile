@@ -1,7 +1,8 @@
 # Base function to print text formatted as "func:lineno: fmt [args]"
 
 emulate -L zsh
-autoload -U colors && colors
+(( ${+functions[colors]} )) || autoload -Uz colors
+[[ "$LS_COLORS" ]] || colors
 
 # auxiliary function to print color examples
 function _usage_color_aux {
@@ -46,7 +47,7 @@ local -A lvl_color=(
 )
 
 local -r usage=(
-	"Usage: $(get_funcname) LEVEL [OPTION...] FMT [ARGS...]"
+	"Usage: ${funcstack[1]} LEVEL [OPTION...] FMT [ARGS...]"
 	"\t[-h|--help] : Print this help message"
 	"\t[-c|--callstack] : Print the callstack"
 	"\t[-T|--timestamp] : Prepend timestamp to the message based on current locale"

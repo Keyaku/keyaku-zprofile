@@ -3,7 +3,7 @@
 emulate -L zsh
 
 local -r usage=(
-	"Usage: $(get_funcname) [OPTION...] [-t|--time=]<time_amount>"
+	"Usage: ${funcstack[1]} [OPTION...] [-t|--time=]<time_amount>"
 	"\t[-h|--help]"
 	"\t[-t|--time]"
 	"\t[-m|--msg|--message]"

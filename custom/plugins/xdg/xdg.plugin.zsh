@@ -52,7 +52,7 @@ alias xdg-desktop-update="update-desktop-database $XDG_DATA_HOME/applications"
 # Check for dotfiles in HOME
 function xdg-home-check {
 	local -r usage=(
-		"Usage: $(get_funcname) [OPTION...] FILENAME"
+		"Usage: ${funcstack[1]} [OPTION...] FILENAME"
 		"\t[-h|--help]"
 	)
 

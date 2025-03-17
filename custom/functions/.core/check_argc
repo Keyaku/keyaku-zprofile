@@ -5,7 +5,7 @@ emulate -L zsh
 set -o err_return
 
 local -r usage=(
-	"Usage: $(get_funcname) minargs maxargs numargs"
+	"Usage: ${funcstack[1]} minargs maxargs numargs"
 	"\tminargs  - (0 <= int)            : minimum number of arguments"
 	"\tmaxargs  - (0 <= minargs <= int) : maximum number of arguments"
 	"\tnumargs  - (int)                 : \$# of the running function"

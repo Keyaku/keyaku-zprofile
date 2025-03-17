@@ -79,7 +79,7 @@ function vercmp {
 # Check if argument is an IPv4
 function is_ip_address {
 	local -r usage=(
-		"Usage: $(get_funcname) [OPTION...] IP_ADDRESS"
+		"Usage: ${funcstack[1]} [OPTION...] IP_ADDRESS"
 		"\t[-h|--help]"
 		"\t[-4|--ipv4]"
 		"\t[-6|--ipv6]"

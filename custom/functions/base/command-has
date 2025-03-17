@@ -4,7 +4,7 @@
 emulate -L zsh
 
 local -r usage=(
-	"Usage: $(get_funcname) [OPTION...] COMMAND..."
+	"Usage: ${funcstack[1]} [OPTION...] COMMAND..."
 	"\t[-h|--help] : Print this help message"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	"\t[-o|--or] : Logical OR operator. Default behavior. Checks if any of the commands are valid."
@@ -13,7 +13,8 @@ local -r usage=(
 
 ## Setup func opts
 ## FIXME: add flag for ignoring if command is alias
-local f_help f_verbosity f_exit logical=or # default
+local f_help f_verbosity f_exit
+local logical=or # default
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
 	v+=f_verbosity q+=f_verbosity \
@@ -41,7 +42,7 @@ local -aU invalid=(${@:|valid})
 
 ## Print non-valid commands
 if (( $verbosity )) && (( ${#invalid} )); then
-	>&2 echo "Invalid commands:"
+	print_fn -e "Invalid commands:"
 	>&2 echo "${invalid}"
 fi
 { (( ! ${#invalid} )) && [[ "$logical" =~ a(nd)? ]] } ||

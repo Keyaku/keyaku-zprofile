@@ -21,7 +21,7 @@ function str_starts_with {
 # Joins array of strings with delimiter
 function str_join {
 	local -r usage=(
-		"Usage: $(get_funcname) [OPTION...] ARRAY"
+		"Usage: ${funcstack[1]} [OPTION...] ARRAY"
 		"\t[-h|--help]"
 		"\t-d|--delim|--delimiter EXPRESSION (e.g. -d:)"
 	)

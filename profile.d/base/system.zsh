@@ -27,7 +27,7 @@ function gpu-list {
 	cmd_name=""
 
 	local -r usage=(
-		"Usage: $(get_funcname) [OPTION...] [-t|--tool=]<tool name>"
+		"Usage: ${funcstack[1]} [OPTION...] [-t|--tool=]<tool name>"
 		"\t[-h|--help]"
 		"\t[-t|--tool]"
 	)
@@ -90,7 +90,7 @@ function du_hast {
 
 ### Memory
 function meminfo {
-	local -r usage=("Usage: $(get_funcname) [OPTION...] IP_ADDRESS"
+	local -r usage=("Usage: ${funcstack[1]} [OPTION...] IP_ADDRESS"
 		"\t[-h|--help]"
 		"\t[-a|--all]   : Prints Usable memory / Total memory (default)"
 		"\t[-f|--free]  : Prints Usable memory"
@@ -218,11 +218,10 @@ function pkgmgr-binpath {
 		return 1
 	fi
 
-	local result
-	while (( $# )); do
-		$pkgmgr -${PKGMGR_LIST[$pkgmgr]} "$1" | \grep -Eo -m1 '/usr(/.+)?/bin/[^/]+'
+	local arg
+	for arg; do
+		$pkgmgr -${PKGMGR_LIST[$pkgmgr]} "$arg" | \grep -Eo -m1 '/usr(/.+)?/bin/[^/]+'
 		(( $? && ! $retval )) && retval=1
-		shift
 	done
 
 	return $retval
@@ -230,7 +229,7 @@ function pkgmgr-binpath {
 
 ### Systemd
 function has_systemd {
-	[[ "$(ps --no-headers -o comm 1)" == "systemd" ]]
+	command -v systemctl &>/dev/null && systemctl -q is-system-running
 }
 
 if has_systemd; then
