@@ -67,8 +67,10 @@ else
 
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
-		# FIXME: differentiate between files in PWD and under profile.d
-		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@}){,/**/*}.zsh(-DN.) )
+		# Match any files in $PWD
+		_profiles+=(${${@%%.zsh}:A}(.zsh)#(.N))
+		# Match any file under profile.d
+		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-DN.) )
 	fi
 fi
 
@@ -85,6 +87,7 @@ if [[ "$f_func" ]]; then
 else
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
+		# Match any file under $ZSH_CUSTOM/functions
 		_functions+=( "$ZSH_CUSTOM"/functions/**/(${(j:|:)@}){,/**/*}(-DN.) )
 	fi
 fi
