@@ -26,7 +26,7 @@ autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/zsource(N)
 
 ### Check for zprofile git repo changes
 # FIXME: This adds delay to shell startup. Find solution to run this in background, or with timestamp check.
-# zprofile-update -q
+# zupdate -q
 
 ### Load login environment variables
 # FIXME: Currently loads all files; implement loading login ones

@@ -1,4 +1,4 @@
-# Reloads files under profile.d
+# Reloads profiles and/or functions under $ZDOTDIR/custom and $ZDOTDIR/profile.d
 
 emulate -L zsh
 setopt extendedglob
