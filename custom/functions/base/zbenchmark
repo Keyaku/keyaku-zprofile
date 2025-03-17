@@ -1,0 +1,66 @@
+# Benchmarks a given zsh profile
+
+emulate -L zsh
+
+[[ "$ZSH_CUSTOM" ]] || ZSH_CUSTOM="$ZDOTDIR/custom"
+
+local -r usage=(
+	"Usage: ${funcstack[1]} [OPTION...] FILE"
+	"Uses zsh module 'zprof' to benchmark zsh profile(s)."
+	""
+	"\t[-h|--help] : Print this help message"
+	"\t[-v] / [-q] : Increase / Decrease verbosity"
+	"\t[-l|--login] : Sources file(s) using login shell ('zsh -l')"
+	"\t[-i|--interactive] : Sources file(s) using interactive shell ('zsh -i')"
+)
+
+## Setup parseopts (with no extra arguments)
+local void f_help f_verbosity
+local -aU f_opts
+zparseopts -a void -D -F -K -- \
+	{h,-help}=f_help \
+	v+=f_verbosity q+=f_verbosity \
+	{l,-login}=f_opts \
+	{i,-interactive}=f_opts \
+	|| return 1
+
+## Help/usage message
+if (( ! $# )) || [[ "$f_help" ]]; then
+	(( ! $# )) && print_fn -e "at least 1 argument required, $# given"
+	>&2 print -l $usage
+	[[ "$f_help" ]]; return $?
+fi
+
+### Arg parsing
+# Verbosity
+local -i verbosity=0
+f_verbosity="${(j::)f_verbosity//-}"
+(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
+
+# Aggregate all profiles
+local -ra valid_profiles=(z{sh{,env,rc},profile,log{in,out}})
+local -aU args=(${@:A})
+local -aU _profiles=(${args}(.N)) # Gather only existing files
+local -aU invalid_profiles=(${args:|_profiles})
+
+# Filter invalid profiles
+local _prof
+for _prof in $_profiles; do
+	if [[ ! -f "$_prof" ]] || (( ! ${valid_profiles[(I)${_prof:e}]} )); then
+		invalid_profiles+=("$_prof")
+		continue
+	fi
+done
+_profiles=(${_profiles:|invalid_profiles})
+
+# Only benchmark if there are any files to benchmark
+if (( ${#_profiles} )); then
+	zsh ${f_opts} -c "zmodload zsh/zprof; for _prof in $_profiles; do source \$_prof >/dev/null; done; zprof"
+fi
+
+if (( ${#invalid_profiles} )); then
+	echo "Failed to benchmark the following:"
+	printf '- %s\n' $invalid_profiles
+fi
+
+(( 0 < ${#_profiles} && 0 == ${#invalid_profiles} ))

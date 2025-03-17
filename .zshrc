@@ -14,9 +14,6 @@ export ZSH="$ZDOTDIR/ohmyzsh"
 # Changing custom folder from $ZSH/custom to $ZDOTDIR/custom
 ZSH_CUSTOM="$ZDOTDIR/custom"
 
-# Performance profile: Uncomment this first, then the line at the end
-# zmodload zsh/zprof
-
 # Standard setopts
 setopt extendedglob
 setopt re_match_pcre
@@ -216,6 +213,3 @@ add-zsh-hook -Uz precmd rehash_precmd
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
 [[ -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
-
-# Performance profile: Uncomment this second
-# zprof
