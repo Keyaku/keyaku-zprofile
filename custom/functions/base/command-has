@@ -1,7 +1,7 @@
 # Checks argument list for valid commands.
 # Can make use of operators AND and OR.
 
-emulate -L zsh
+# emulate -L zsh
 
 local -r usage=(
 	"Usage: ${funcstack[1]} [OPTION...] COMMAND..."
@@ -36,14 +36,19 @@ f_verbosity="${(j::)f_verbosity//-}"
 # Logical OR / AND
 logical=${logical##*-}
 
-## function logic
-local -aU valid=(${(k)commands[(I)${(j:|:)@}]} ${(k)functions[(I)${(j:|:)@}]})
-local -aU invalid=(${@:|valid})
+# # function logic
+local args="${(j:|:)@}"
 
-## Print non-valid commands
-if (( $verbosity )) && (( ${#invalid} )); then
-	print_fn -e "Invalid commands:"
-	>&2 echo "${invalid}"
+## Print invalid commands
+if (( $verbosity )); then
+	local -aU valid=(${commands[(I)($args)]} ${functions[(I)($args)]})
+	local -aU invalid=(${@:|valid})
+	if (( ${#invalid} )); then
+		print_fn -e "Not found:"
+		>&2 echo "${(j:, :)invalid}"
+	fi
 fi
-{ (( ! ${#invalid} )) && [[ "$logical" =~ a(nd)? ]] } ||
-{ (( ${#valid} )) && [[ "$logical" =~ o(r)? ]] }
+
+# Fastest process to check for commands
+{ [[ -z "${logical#a(nd)#}" ]] && command -v ${@} &>/dev/null } ||
+{ [[ -z "${logical#o(r)#}" ]] && (( ${#commands[(I)($args)]} + ${#functions[(I)($args)]} )) }
