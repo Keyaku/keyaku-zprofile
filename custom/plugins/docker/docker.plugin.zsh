@@ -125,7 +125,7 @@ function docker-get-credhelper {
 # Sets environment for Docker
 function docker-set-env {
 	if ! command-has systemctl-service-path; then
-		zsource base/system.zsh # FIXME: specify base/system.zsh
+		zsource system.zsh
 	fi
 
 	### If rootless binaries exist, prefer those over rootful
