@@ -125,7 +125,7 @@ function docker-get-credhelper {
 # Sets environment for Docker
 function docker-set-env {
 	if ! command-has systemctl-service-path; then
-		zsource system # FIXME: specify base/system.zsh
+		zsource base/system.zsh # FIXME: specify base/system.zsh
 	fi
 
 	### If rootless binaries exist, prefer those over rootful
@@ -532,7 +532,7 @@ function docker-alias {
 
 # Defining simple container aliases
 DOCKER_CONTAINERS_CMD=(
-	caddy cloudflare mollysocket ntfy ollama
+	caddy cloudflared mollysocket ntfy ollama
 )
 for container_name in ${DOCKER_CONTAINERS_CMD}; do
 	docker-alias "$container_name"
