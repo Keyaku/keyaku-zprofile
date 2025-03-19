@@ -41,7 +41,7 @@ local args="${(j:|:)@}"
 
 ## Print invalid commands
 if (( $verbosity )); then
-	local -aU valid=(${commands[(I)($args)]} ${functions[(I)($args)]})
+	local -aU valid=(${commands[(I)($args)]} ${functions[(I)($args)]} ${aliases[(I)($args)]})
 	local -aU invalid=(${@:|valid})
 	if (( ${#invalid} )); then
 		print_fn -e "Not found:"
@@ -51,4 +51,4 @@ fi
 
 # Fastest process to check for commands
 { [[ -z "${logical#a(nd)#}" ]] && command -v ${@} &>/dev/null } ||
-{ [[ -z "${logical#o(r)#}" ]] && (( ${#commands[(I)($args)]} + ${#functions[(I)($args)]} )) }
+{ [[ -z "${logical#o(r)#}" ]] && (( ${#commands[(I)($args)]} + ${#functions[(I)($args)]} + ${#aliases[(I)($args)]} )) }
