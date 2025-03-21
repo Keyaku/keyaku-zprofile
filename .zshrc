@@ -148,9 +148,9 @@ typeset -aU custom_plugins=("$ZSH_CUSTOM"/plugins/(*~example)/*.plugin.zsh(-.N:h
 # Selected plugins to load
 typeset -aU plugins=(
 	# ohmyzsh plugins
-	${functions[command_not_found_handler]:-command-not-found}
 	git pip python ufw
 )
+(( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
 
 # Plugins to load via omz: all selected except those present in custom
 plugins=(${plugins:|custom_plugins})

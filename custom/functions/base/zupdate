@@ -36,9 +36,6 @@ local -i verbosity=1 # defaults to some verbosity
 f_verbosity="${(j::)f_verbosity//-}"
 (( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
-# Check for updates
-[[ -d "${ZDOTDIR}/.git" ]] || return 1
-
 # Update main repo
 git -C "${ZDOTDIR}" fetch -q
 local UPSTREAM='@{u}'
