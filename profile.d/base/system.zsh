@@ -230,7 +230,7 @@ function pkgmgr-binpath {
 ### Systemd
 function has_systemd {
 	# (( ${+commands[systemctl]} )) && systemctl -q is-system-running
-	[[ "$(echo /run/systemd/sessions/<->##(N))" ]]
+	[[ -r /run/systemd/sessions ]] && [[ "$(echo /run/systemd/sessions/<->##(N))" ]]
 }
 
 if has_systemd; then

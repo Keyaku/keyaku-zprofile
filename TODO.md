@@ -25,7 +25,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [x] Prepare auto-creation of `.p10k.zsh`, or ask user to set it up.
 * [ ] `zupdate`: Improve performance when detecting changes from remote git repo.
 * [x] Add first setup code to point `ZDOTDIR` to this directory in the system's `zshenv`.
-* [ ] Make sure `zsh` is loadable without `login` (`-l`) or `interactive` (`-i`) by either loading required functions accordingly, or avoid the use of these functions altogether. Gearing towards the former.
+* [x] Make sure `zsh` is loadable without `login` (`-l`) or `interactive` (`-i`) by either loading required functions accordingly, or avoid the use of these functions altogether. Gearing towards the former.
 
 
 ### Bug fixes

@@ -19,17 +19,7 @@ setopt extendedglob
 setopt re_match_pcre
 
 # Load all custom functions
-autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/zsource(N) && zsource -f
-if ! [[ -o login ]]; then
-	func_toload=(whatami addpath is_int)
-	if (( ${#func_toload} != ${#functions[(I)(${(j:|:)func_toload})]} )); then
-		# Load additional useful functions
-		for f_zsh ($(\grep -rEl 'function\s+(${(j:|:)func_toload})' "$ZDOTDIR/profile.d")); do
-			source "$f_zsh"
-		done
-	fi
-	unset f_zsh func_toload
-fi
+autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/zsource(N) && zsource -a
 
 ### Detect if this is an interactive shell login
 if [[ -o login ]] && [[ -o interactive ]]; then
@@ -82,8 +72,8 @@ fi
 # Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-	source "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
+if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+	source "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
 # Set name of the theme to load --- if set to "random", it will
@@ -158,7 +148,7 @@ typeset -aU custom_plugins=("$ZSH_CUSTOM"/plugins/(*~example)/*.plugin.zsh(-.N:h
 # Selected plugins to load
 typeset -aU plugins=(
 	# ohmyzsh plugins
-	command-not-found
+	${functions[command_not_found_handler]:-command-not-found}
 	git pip python ufw
 )
 
@@ -180,28 +170,16 @@ unset plugin
 # export MANPATH="/usr/local/man:$MANPATH"
 
 # Bash modules & autocompletion (for programs which contain only bash completions)
-autoload bashcompinit && bashcompinit
-for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-N.); do
-	source "$f_bashcomp"
-done
-unset f_bashcomp
+if [[ -d "$XDG_DATA_HOME"/bash-completion/completions ]]; then
+	autoload bashcompinit && bashcompinit
+	for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-N.); do
+		source "$f_bashcomp"
+	done
+	unset f_bashcomp
+fi
 
 # ZSH modules
 zmodload zsh/zutil # zparseopts
-
-# On-demand bin rehash
-_zshcache_time="$(date +%s%N)"
-autoload -Uz add-zsh-hook
-rehash_precmd() {
-	if [[ -a /var/cache/zsh/pacman ]]; then
-		local paccache_time="$(date -r /var/cache/zsh/pacman +%s%N)"
-		if (( _zshcache_time < paccache_time )); then
-			rehash
-			_zshcache_time="$paccache_time"
-		fi
-	fi
-}
-add-zsh-hook -Uz precmd rehash_precmd
 
 # Compilation flags
 # export ARCHFLAGS="-arch x86_64"
