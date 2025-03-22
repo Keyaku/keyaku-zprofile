@@ -34,4 +34,5 @@ zsource -a
 
 ### Local bin
 [[ -d "$HOME/.local/bin" ]] || mkdir -p "$HOME/.local/bin"
-addpath -p "$HOME/.local/bin"
+haspath "$HOME/.local/bin" || addpath -p "$HOME/.local/bin"
+

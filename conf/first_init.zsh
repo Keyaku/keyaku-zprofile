@@ -24,6 +24,7 @@ fi
 [[ -d "${XDG_CACHE_HOME}"/zsh ]] || mkdir -p "${XDG_CACHE_HOME}/zsh"
 
 (( ${+ZDOTDIR} )) || ZDOTDIR="${XDG_CONFIG_HOME}/zsh"
+(( ${+ZSH_CACHE_HOME} )) || ZSH_CACHE_HOME="${XDG_CACHE_HOME}/zsh"
 
 # Source ZSH files just to be sure. Sourcing .zshrc will autoload all custom functions
 local zfile zfiles=(.zshenv .zprofile .zshrc .zlogin)
@@ -68,8 +69,8 @@ function setup_zsh {
 	# Add missing variables to zshenv
 	if [[ ! -f "$zshenv" ]] || ! file_contents_in "$ZDOTDIR/conf/zsh/zshenv" "$zshenv"; then
 		echo "Adding ZSH variables to system zshenv..."
-		diff -u /etc/zsh/zshenv "$ZDOTDIR/conf/zsh/zshenv" > "$XDG_CACHE_HOME"/zsh/zshenv.patch
-		$SUDO patch -su -d/ -p0 -i "$XDG_CACHE_HOME"/zsh/zshenv.patch
+		diff -u "$zshenv" "$ZDOTDIR/conf/zsh/zshenv" > "$ZSH_CACHE_HOME"/zshenv.patch
+		$SUDO patch -su -d/ -p0 -i "$ZSH_CACHE_HOME"/zshenv.patch
 	fi
 }
 
