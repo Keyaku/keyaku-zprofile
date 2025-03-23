@@ -23,8 +23,8 @@ export XDG_CONFIG_HOME=~$USER/.local/config
 export XDG_DATA_HOME=~$USER/.local/share
 export XDG_STATE_HOME=~$USER/.local/state
 # Set XDG_RUNTIME_DIR for Termux
-if [[ "$HOME" == "/data/data/com.termux/files/home" ]]; then
-	export XDG_RUNTIME_DIR="$(readlink -f $HOME/../usr/var/run/$UID)"
+if [[ -d "$HOME/.termux" ]]; then
+	export XDG_RUNTIME_DIR="${${:-$HOME/../usr/var/run/$UID}:P}"
 fi
 
 ### System directories
@@ -37,11 +37,10 @@ export XDG_CONFIG_DIRS="${XDG_CONFIG_DIRS:-${XDG_CONFIG_HOME}:/etc/xdg}"
 #######################################
 
 ### ZSH profile
-export ZDOTDIR="${XDG_CONFIG_HOME}/zsh"
 export ZSH_CACHE_HOME="${XDG_CACHE_HOME}/zsh"
-[[ ! -d "${ZSH_CACHE_HOME}" ]] && mkdir -p "${ZSH_CACHE_HOME}"
-export ZSH_COMPDUMP="${ZSH_CACHE_HOME}/zcompdump"
-export HISTFILE="${ZSH_CACHE_HOME}/zsh_history"
+[[ -d "$ZSH_CACHE_HOME" ]] || mkdir -p "$ZSH_CACHE_HOME"
+export ZSH_COMPDUMP="$ZSH_CACHE_HOME/zcompdump"
+export HISTFILE="$ZSH_CACHE_HOME/zsh_history"
 export HISTCONTROL=ignoredups:erasedups
 
 
@@ -83,7 +82,6 @@ if command -v cargo &>/dev/null; then
 fi
 
 ### Editors
-export EDITOR='vim'
 export MYVIMRC="${XDG_CONFIG_HOME}/vim/vimrc"
 
 ### Less (is more)

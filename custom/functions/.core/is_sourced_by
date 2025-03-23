@@ -10,7 +10,7 @@ local -i argc=$#
 # Specifiy zprofiles if arguments were given
 if (( $argc )); then
 	while (( $# )); do
-		if [[ -f "$(echo "$ZDOTDIR"/{,.}"${1:t}"(-.N))" ]]; then
+		if test "$ZDOTDIR"/{,.}"${1:t}"(-.N); then
 			zpatterns="${zpatterns:+$zpatterns|}${1:t}"
 		fi
 		shift

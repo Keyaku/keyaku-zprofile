@@ -1,7 +1,11 @@
 # Personal shell files
 .*history
+.*.z*
 .dir_colors
-.p10k*
+.first_init
+custom/plugins/plugins.zsh
+custom/*.zsh
+custom/*.zshrc
 
 # Sync app files
 .st*
@@ -10,11 +14,8 @@
 .directory
 
 # editor configs
-.vscode
-.idea
-
-# zprofile settings
-.first_init
+.vscode/
+.idea/
 
 # zcompile cached files
 *.zwc

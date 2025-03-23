@@ -11,25 +11,32 @@
 # Path to your oh-my-zsh installation.
 export ZSH="$ZDOTDIR/ohmyzsh"
 
-# Changing custom folder from $ZSH/custom to $ZDOTDIR/custom
+# Changing some zsh variables
 ZSH_CUSTOM="$ZDOTDIR/custom"
+ZSH_COMPDUMP="$ZSH_CACHE_HOME/zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
 
-# Standard setopts
+# Required setopts for this setup to work
 setopt extendedglob
 setopt re_match_pcre
 
-# Load all custom functions
-if ! [[ -o login ]]; then
-	autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/zsource(N) && zsource -a
-fi
-
-### Detect if this is an interactive shell login
-if [[ -o login ]] && [[ -o interactive ]]; then
+### Detect if this is an interactive login shell (interactive is implied in .zshrc)
+if [[ -o login ]]; then
 	### First-time initialization
-	if [[ ! -f "$ZDOTDIR/.first_init" ]] || (( 1 != $(cat "$ZDOTDIR/.first_init") )); then
+	if [[ ! -f "$ZDOTDIR/conf/.first_init" ]] || (( 1 != $(cat "$ZDOTDIR/conf/.first_init") )); then
 		zsh "$ZDOTDIR"/conf/first_init.zsh
 	fi
+else
+	# Load all custom functions
+	autoload -Uz "$ZSH_CUSTOM"/functions/{.,^.}**/zsource(.N) && zsource -a
+fi
 
+#####################################################################
+
+# TODO: Load user configuration pre-ohmyzsh
+# [[ -f "$ZSH_CUSTOM"/pre-omz.zshrc ]] && source "$ZSH_CUSTOM"/pre-omz.zshrc
+
+### Detect if this is an interactive login shell (interactive is implied in .zshrc)
+if [[ -o login ]]; then
 	### If on Android, sync with local storage Syncthing directory
 	if whatami Android; then
 		## Setup function to sync between Termux and local storage. Useful when synchronizing storage files (e.g. with SyncThing)
@@ -71,43 +78,12 @@ if [[ -o login ]] && [[ -o interactive ]]; then
 	)
 fi
 
-# Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-	source "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
-# Set name of the theme to load --- if set to "random", it will
-# load a random theme each time oh-my-zsh is loaded, in which case,
-# to know which specific one was loaded, run: echo $RANDOM_THEME
-# See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-if [[ -L "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
-	ZSH_THEME="powerlevel10k"
-else
-	ZSH_THEME="robbyrussell"
-fi
-
-# Set list of themes to pick from when loading at random
-# Setting this variable when ZSH_THEME=random will cause zsh to load
-# a theme from this variable instead of looking in $ZSH/themes/
-# If set to an empty array, this variable will have no effect.
-# ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
-
 # Uncomment the following line to use case-sensitive completion.
-# CASE_SENSITIVE="true"
+CASE_SENSITIVE="true"
 
 # Uncomment the following line to use hyphen-insensitive completion.
 # Case-sensitive completion must be off. _ and - will be interchangeable.
 # HYPHEN_INSENSITIVE="true"
-
-# Uncomment one of the following lines to change the auto-update behavior
-zstyle ':omz:update' mode disabled  # disable automatic updates
-# zstyle ':omz:update' mode auto      # update automatically without asking
-# zstyle ':omz:update' mode reminder  # just remind me to update when it's time
-
-# Uncomment the following line to change how often to auto-update (in days).
-# zstyle ':omz:update' frequency 7
 
 # Uncomment the following line if pasting URLs and other text is messed up.
 # DISABLE_MAGIC_FUNCTIONS="true"
@@ -140,51 +116,46 @@ COMPLETION_WAITING_DOTS="true"
 # see 'man strftime' for details.
 HIST_STAMPS="dd/mm/yyyy"
 
+#####################################################################
 
-##########################################################################
-#### Plugins and omz loading
+# ohmyzsh plugins to load
+typeset -aU plugins=()
+# Plugins to load natively (to avoid massive overhead from _omz_source)
+typeset -aU native_plugins=()
 
-# All custom plugins
-typeset -aU custom_plugins=("$ZSH_CUSTOM"/plugins/(*~example)/*.plugin.zsh(-.N:h:t))
+# Load personal plugins configuration
+[[ -f "$ZSH_CUSTOM"/plugins/plugins.zsh ]] && source "$ZSH_CUSTOM"/plugins/plugins.zsh
 
-# Selected plugins to load
-typeset -aU plugins=(
-	# ohmyzsh plugins
-	git pip python ufw
-)
-(( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
+# Prepare ohmyzsh specifically for this configuration
+zstyle ':omz:update' mode disabled  # disable automatic updates
+# Load ohmyzsh
+source "$ZSH"/oh-my-zsh.sh
 
-# Plugins to load via omz: all selected except those present in custom
-plugins=(${plugins:|custom_plugins})
-
-source $ZSH/oh-my-zsh.sh
-
-# Source custom plugins natively (avoids massive overhead introduced by _omz_source)
-for plugin ($custom_plugins); do
+# Load native plugins
+for plugin ($native_plugins); do
 	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh"
 done
 unset plugin
 
-
-##########################################################################
-#### User configuration
-
-# export MANPATH="/usr/local/man:$MANPATH"
-
 # Bash modules & autocompletion (for programs which contain only bash completions)
-if [[ -d "$XDG_DATA_HOME"/bash-completion/completions ]]; then
-	autoload bashcompinit && bashcompinit
+if test "$XDG_DATA_HOME"/bash-completion/completions(FN); then
+	autoload bashcompinit && bashcompinit && \
 	for f_bashcomp in "$XDG_DATA_HOME"/bash-completion/completions/*(-N.); do
 		source "$f_bashcomp"
 	done
 	unset f_bashcomp
 fi
 
+#####################################################################
+
+# TODO: Load user configuration post-ohmyzsh
+# [[ -f "$ZSH_CUSTOM"/post-omz.zshrc ]] && source "$ZSH_CUSTOM"/post-omz.zshrc
+
 # ZSH modules
 zmodload zsh/zutil # zparseopts
 
-# Compilation flags
-# export ARCHFLAGS="-arch x86_64"
+# Preferred editor
+export EDITOR='vim'
 
 # Set personal aliases, overriding those provided by oh-my-zsh libs,
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh

@@ -38,9 +38,13 @@ done
 SUDO=$(whatami Android || echo sudo)
 ROOT=$(whatami Android && echo /data/data/com.termux/files/usr)
 
-\grep -rEl 'function file_contents_in' "$ZDOTDIR"/profile.d | while read -r; do
-	source "$REPLY"
-done
+typeset -rA templates=(
+	[plugins.zsh]="plugins"
+	[themes.zsh]=""
+	# TODO: Uncomment these when ready
+	# [pre-omz.zshrc]=""
+	# [post-omz.zshrc]=""
+)
 
 ####################
 # Functions
@@ -154,11 +158,19 @@ function main {
 	fn_completed=${(vM)#fn_results:#1}
 	local -a fn_failed=(${(k)fn_results[(R)0]})
 
-	echo "$fn_completed/$fn_total" > "$ZDOTDIR/.first_init"
+	echo "$fn_completed/$fn_total" > "$SCRIPT_DIR/.first_init"
 
 	# Mini report
 	if (( $fn_completed/$fn_total )); then
 		echo "${SCRIPT_NAME}: First-time initialization completed successfully."
+		if ask -B -d n "Would you like to create the base files for your custom configuration of .zshrc (pre-omz, themes, plugins, post-omz)?"; then
+			local zsh_template zsh_path
+			echo "Creating base files..."
+			for zsh_template zsh_path in ${templates}; do
+				cp "$ZDOTDIR/templates/$zsh_template.zsh-template" "$ZSH_CUSTOM/$zsh_path/$zsh_template"
+				printf '- %s\n' "$zsh_path/$zsh_template"
+			done
+		fi
 	else
 		print_fn -w "$fn_completed/$fn_total functions completed."
 		echo "${SCRIPT_NAME}: The following functions failed: ${fn_failed}"
