@@ -19,7 +19,9 @@ setopt extendedglob
 setopt re_match_pcre
 
 # Load all custom functions
-autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/zsource(N) && zsource -a
+if ! [[ -o login ]]; then
+	autoload -Uz "${ZSH_CUSTOM}"/functions/{.,^.}**/zsource(N) && zsource -a
+fi
 
 ### Detect if this is an interactive shell login
 if [[ -o login ]] && [[ -o interactive ]]; then
