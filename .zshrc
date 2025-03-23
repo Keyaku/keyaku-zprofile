@@ -123,8 +123,18 @@ typeset -aU plugins=()
 # Plugins to load natively (to avoid massive overhead from _omz_source)
 typeset -aU native_plugins=()
 
-# Load personal plugins configuration
-[[ -f "$ZSH_CUSTOM"/plugins/plugins.zsh ]] && source "$ZSH_CUSTOM"/plugins/plugins.zsh
+# TODO: Load personal plugins configuration
+# [[ -f "$ZSH_CUSTOM"/plugins/plugins.zsh ]] && source "$ZSH_CUSTOM"/plugins/plugins.zsh
+
+# ohmyzsh plugins
+plugins=(git python pip ufw)
+(( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
+
+# Plugins to load natively (to avoid omz's heavy overhead)
+native_plugins=("$ZSH_CUSTOM"/plugins/(*~example)/*.plugin.zsh(-.N:h:t))
+
+# Plugins to load via omz: all selected except those present in custom
+plugins=(${plugins:|native_plugins})
 
 # Prepare ohmyzsh specifically for this configuration
 zstyle ':omz:update' mode disabled  # disable automatic updates
