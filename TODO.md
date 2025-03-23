@@ -26,6 +26,7 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] `zupdate`: Improve performance when detecting changes from remote git repo.
 * [x] Add first setup code to point `ZDOTDIR` to this directory in the system's `zshenv`.
 * [x] Make sure `zsh` is loadable without `login` (`-l`) or `interactive` (`-i`) by either loading required functions accordingly, or avoid the use of these functions altogether. Gearing towards the former.
+* [ ] Fix `.zshrc` recompiling `compdef` when `.zshrc` is read with `-li` or not. Will improve performance. The problem seems to lie in how `$fpath` is aggregated.
 
 
 ### Bug fixes
@@ -36,11 +37,11 @@ This tasklist contains all ideas or improvements for this environment setup.
 * [ ] `zsource`: Allow sending parameters with `/` as if indicating relative paths.
 
 
-### `.zfunc/`
+### `custom/functions/`
 
 * [x] Write function to initialize this entire environment without manual setup.
 * [x] Rewrite some of the functions from `functions.zsh` as loadable `fpath` functions, and load them in `.zshrc`.
-	* [x] Load from `.zfunc` in `.zshrc`.
+	* [x] Load from `custom/functions/` in `.zshrc`.
 	* [x] Rewrite core functions: `command-has`, `env_update`/`env_find`, `get_funcname`.
 	* [x] Rewrite print functions: `print_callstack`, `print_error`, `print_warn`.
 * [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
