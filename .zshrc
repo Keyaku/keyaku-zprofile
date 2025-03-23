@@ -78,6 +78,11 @@ if [[ -o login ]]; then
 	)
 fi
 
+# Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
+if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+	source "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 # Uncomment the following line to use case-sensitive completion.
 CASE_SENSITIVE="true"
 
