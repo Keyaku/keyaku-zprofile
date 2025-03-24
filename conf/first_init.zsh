@@ -175,14 +175,14 @@ function main {
 	# Mini report
 	if (( $fn_completed/$fn_total )); then
 		echo "${SCRIPT_NAME}: First-time initialization completed successfully."
-		if ask -B -d n "Would you like to create the base files for your custom configuration of .zshrc (pre-omz, themes, plugins, post-omz)?"; then
-			local zsh_template zsh_path
-			echo "Creating base files..."
-			for zsh_template zsh_path in ${templates}; do
-				cp "$ZDOTDIR/templates/$zsh_template.zsh-template" "$ZSH_CUSTOM/$zsh_path/$zsh_template"
-				printf '- %s\n' "$zsh_path/$zsh_template"
-			done
-		fi
+		# if ask -B -d n "Would you like to create the base files for your custom configuration of .zshrc (pre-omz, themes, plugins, post-omz)?"; then
+		# 	local zsh_template zsh_path
+		# 	echo "Creating base files..."
+		# 	for zsh_template zsh_path in ${templates}; do
+		# 		cp "$ZDOTDIR/templates/$zsh_template.zsh-template" "$ZSH_CUSTOM/$zsh_path/$zsh_template"
+		# 		printf '- %s\n' "$zsh_path/$zsh_template"
+		# 	done
+		# fi
 	else
 		print_fn -w "$fn_completed/$fn_total functions completed."
 		echo "${SCRIPT_NAME}: The following functions failed: ${fn_failed}"
