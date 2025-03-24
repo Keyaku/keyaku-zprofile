@@ -1,12 +1,17 @@
 ### VScode (Flatpak)
 if (( ${+commands[com.visualstudio.code]} )); then
 	# Point Flatpak's .ssh config to user's config
-	(_ssh_dir="$HOME"/.var/app/com.visualstudio.code/.ssh
-	_ssh_configfile="$_ssh_dir"/config
-		if [[ ! -f "$_ssh_configfile" ]] || ! \grep -Eq "Include ${SSH_HOME:-~/.ssh}/config" "$_ssh_configfile"; then
+	(_vscode_dir="$HOME"/.var/app/com.visualstudio.code
+		_ssh_dir="$_vscode_dir"/.ssh
+		_ssh_configfile="$_ssh_dir"/config
+		# Prepare ssh_config
+		if [[ ! -f "$_ssh_configfile" ]] || ! \grep -q "Include ${SSH_HOME:-$HOME/.ssh}/config.d" "$_ssh_configfile"; then
 			[[ -d "$_ssh_dir" ]] || mkdir -p "$_ssh_dir"
-			echo "Include ${SSH_HOME:-~/.ssh}/config" >> "$_ssh_configfile"
-			echo "Include ${SSH_HOME:-~/.ssh}/config.d/*" >> "$_ssh_configfile"
+			echo "Include ${SSH_HOME:-$HOME/.ssh}/config.d/*" >> "$_ssh_configfile"
+		fi
+		# Prepare ssh link
+		if [[ ! -L "$_vscode_dir/config/ssh" ]]; then
+			ln -s "${SSH_HOME:-$HOME/.ssh}" "$_vscode_dir/config/ssh"
 		fi
 	)
 
