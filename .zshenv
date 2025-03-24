@@ -13,17 +13,13 @@
 ### XDG variables
 #######################################
 
-# The ~$USER serves as workaround when overriding
-# $HOME variable in Flatpaks
-
-
 ### User Directories
-export XDG_CACHE_HOME=~$USER/.local/cache
-export XDG_CONFIG_HOME=~$USER/.local/config
-export XDG_DATA_HOME=~$USER/.local/share
-export XDG_STATE_HOME=~$USER/.local/state
+export XDG_CACHE_HOME=$HOME/.local/cache
+export XDG_CONFIG_HOME=$HOME/.local/config
+export XDG_DATA_HOME=$HOME/.local/share
+export XDG_STATE_HOME=$HOME/.local/state
 # Set XDG_RUNTIME_DIR for Termux
-if [[ -d "$HOME/.termux" ]]; then
+if (( ${+TERMUX_VERSION} )); then
 	export XDG_RUNTIME_DIR="${${:-$HOME/../usr/var/run/$UID}:P}"
 fi
 
@@ -55,7 +51,7 @@ export HISTCONTROL=ignoredups:erasedups
 
 ### AM/AppMan
 if (( ${+commands[appman]} )); then
-	export SANDBOXDIR=~$USER/.local/app/appman/sandboxes
+	export SANDBOXDIR=$HOME/.local/app/appman/sandboxes
 fi
 
 ### Android debugging
@@ -82,7 +78,9 @@ if (( ${+commands[cargo]} )); then
 fi
 
 ### Editors
-export MYVIMRC="${XDG_CONFIG_HOME}/vim/vimrc"
+if (( ${+commands[vim]} )); then
+	export MYVIMRC="${XDG_CONFIG_HOME}/vim/vimrc"
+fi
 
 ### Less (is more)
 if (( ${+commands[less]} )); then
@@ -91,8 +89,10 @@ if (( ${+commands[less]} )); then
 fi
 
 ### Git
-export GIT_HOME=~$USER/.local/git
-[[ ! -d "$GIT_HOME" ]] && mkdir -p "$GIT_HOME"
+if (( ${+commands[git]} )); then
+	export GIT_HOME=$HOME/.local/git
+	[[ -d "$GIT_HOME" ]] || mkdir -p "$GIT_HOME"
+fi
 
 ### Golang
 if (( ${+commands[go]} )); then
@@ -100,7 +100,9 @@ if (( ${+commands[go]} )); then
 fi
 
 ### GNUPG & security tools
-export GNUPGHOME="${XDG_DATA_HOME}/gnupg"
+if (( ${+commands[gpg]} )); then
+	export GNUPGHOME="${XDG_DATA_HOME}/gnupg"
+fi
 export PASSWORD_STORE_DIR="${XDG_DATA_HOME}/password-store"
 
 ### GTK
@@ -139,7 +141,7 @@ fi
 
 ### SSL
 # Avoid setting root-based paths in Termux
-if [[ ! -d "$HOME/.termux" ]]; then
+if (( ! ${+TERMUX_VERSION} )); then
 	export SSL_DIR="/etc/ssl"
 	export SSL_CERT_DIR="$SSL_DIR/certs"
 fi
