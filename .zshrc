@@ -78,11 +78,6 @@ if [[ -o login ]]; then
 	)
 fi
 
-# Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
-if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-	source "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
 # Uncomment the following line to use case-sensitive completion.
 CASE_SENSITIVE="true"
 
@@ -120,6 +115,29 @@ COMPLETION_WAITING_DOTS="true"
 # or set a custom format using the strftime function format specifications,
 # see 'man strftime' for details.
 HIST_STAMPS="dd/mm/yyyy"
+
+#####################################################################
+
+# Check for p10k; if non-existent, use robbyrussel
+if [[ -L "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
+	ZSH_THEME="powerlevel10k"
+
+	# Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
+	# Initialization code that may require console input (password prompts, [y/n]
+	# confirmations, etc.) must go above this block; everything else may go below.
+	if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+		source "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
+	fi
+else
+	ZSH_THEME="robbyrussell"
+fi
+
+# Set list of themes to pick from when loading at random
+# Setting this variable when ZSH_THEME=random will cause zsh to load
+# a theme from this variable instead of looking in $ZSH/themes/
+# If set to an empty array, this variable will have no effect.
+# ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
+
 
 #####################################################################
 
@@ -178,4 +196,4 @@ export EDITOR='vim'
 # For a full list of active aliases, run `alias`.
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
-[[ -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
+[[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
