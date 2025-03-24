@@ -54,12 +54,12 @@ export HISTCONTROL=ignoredups:erasedups
 ##############################################################################
 
 ### AM/AppMan
-if command -v appman &>/dev/null; then
+if (( ${+commands[appman]} )); then
 	export SANDBOXDIR=~$USER/.local/app/appman/sandboxes
 fi
 
 ### Android debugging
-if command -v adb &>/dev/null || [[ -d "${XDG_DATA_HOME}/android" ]]; then
+if (( ${+commands[adb]} )) || [[ -d "${XDG_DATA_HOME}/android" ]]; then
 	export ANDROID_HOME="${XDG_DATA_HOME}/android"
 	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
 	export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
@@ -70,14 +70,14 @@ fi
 
 
 ### Bundle (Ruby gems)
-if command -v bundle &>/dev/null; then
+if (( ${+commands[bundle]} )); then
 	export BUNDLE_USER_CACHE="${XDG_CACHE_HOME}"/bundle
 	export BUNDLE_USER_CONFIG="${XDG_CONFIG_HOME}"/bundle
 	export BUNDLE_USER_PLUGIN="${XDG_DATA_HOME}"/bundle
 fi
 
 ### Cargo
-if command -v cargo &>/dev/null; then
+if (( ${+commands[cargo]} )); then
 	export CARGO_HOME="$XDG_DATA_HOME"/cargo
 fi
 
@@ -85,15 +85,17 @@ fi
 export MYVIMRC="${XDG_CONFIG_HOME}/vim/vimrc"
 
 ### Less (is more)
-export LESSHISTFILE="${XDG_CACHE_HOME}/less/history"
-export LESS=' -R '
+if (( ${+commands[less]} )); then
+	export LESSHISTFILE="${XDG_CACHE_HOME}/less/history"
+	export LESS=' -R '
+fi
 
 ### Git
 export GIT_HOME=~$USER/.local/git
 [[ ! -d "$GIT_HOME" ]] && mkdir -p "$GIT_HOME"
 
 ### Golang
-if command -v go &>/dev/null; then
+if (( ${+commands[go]} )); then
 	export GOPATH="${XDG_DATA_HOME}/go"
 fi
 
@@ -109,26 +111,30 @@ export GTK_USE_PORTAL=1
 export MESA_SHADER_CACHE_DIR="${XDG_CACHE_HOME}/mesa_shader_cache"
 
 ### NPM (Node.js)
-if command -v npm &>/dev/null; then
+if (( ${+commands[npm]} )); then
 	export NPM_CONFIG_USERCONFIG="${XDG_CONFIG_HOME}"/npm/.npmrc
 fi
 
 ### Perl
-export PERL_LOCAL_LIB_ROOT="${XDG_DATA_HOME}/perl"
-export PERL_CPANM_HOME="${PERL_LOCAL_LIB_ROOT}/cpan"
+if (( ${+commands[perl]} )); then
+	export PERL_LOCAL_LIB_ROOT="${XDG_DATA_HOME}/perl"
+	export PERL_CPANM_HOME="${PERL_LOCAL_LIB_ROOT}/cpan"
 
-export PERL5LIB="${PERL_CPANM_HOME}:${PERL_LOCAL_LIB_ROOT}/lib/perl5"
+	export PERL5LIB="${PERL_CPANM_HOME}:${PERL_LOCAL_LIB_ROOT}/lib/perl5"
 
-export PERL_MB_OPT="--install_base '${PERL_LOCAL_LIB_ROOT}'"
-export PERL_MM_OPT="  INSTALL_BASE='${PERL_LOCAL_LIB_ROOT}'"
+	export PERL_MB_OPT="--install_base '${PERL_LOCAL_LIB_ROOT}'"
+	export PERL_MM_OPT="  INSTALL_BASE='${PERL_LOCAL_LIB_ROOT}'"
+fi
 
-if command -v cpan &>/dev/null; then
+if (( ${+commands[cpan]} )); then
 	alias cpan='cpan -j ${PERL_CPANM_HOME}/CPAN/MyConfig.pm'
 fi
 
 
 ### SSH
-export SSH_HOME=${XDG_CONFIG_HOME}/ssh
+if (( ${+commands[ssh]} )); then
+	export SSH_HOME=${XDG_CONFIG_HOME}/ssh
+fi
 
 
 ### SSL
@@ -140,12 +146,14 @@ fi
 
 
 ### Tk/Tcl, tkinter
-export TCL_LIBRARY=/usr/lib/tcl8.6
-export TK_LIBRARY=/usr/lib/tk8.6
+if [[ -d /usr/lib/tcl8.6 && -d /usr/lib/tk8.6 ]]; then
+	export TCL_LIBRARY=/usr/lib/tcl8.6
+	export TK_LIBRARY=/usr/lib/tk8.6
+fi
 
 
 ### wget/curl
-if command -v wget &>/dev/null; then
+if (( ${+commands[wget]} )); then
 	export WGETRC="${XDG_CONFIG_HOME}/wgetrc"
 	[[ ! -d "${XDG_DATA_HOME}"/wget ]] && mkdir -p "${XDG_DATA_HOME}"/wget
 	if [[ ! -f $XDG_CONFIG_HOME/wgetrc ]] || ! \grep -Eqw "hsts-file=${XDG_DATA_HOME}/wget/hsts" $XDG_CONFIG_HOME/wgetrc; then
