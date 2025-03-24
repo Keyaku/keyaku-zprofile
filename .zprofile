@@ -23,16 +23,8 @@ fi
 # FIXME: In theory, this should not be present in .zprofile. Modify .zprofile to avoid this.
 setopt extendedglob
 autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/zsource(N)
-
-### Check for zprofile git repo changes
-# FIXME: This adds delay to shell startup. Find solution to run this in background, or with timestamp check.
-# zupdate -q
-
-### Load login environment variables
-# FIXME: Currently loads all files; implement loading login ones
 zsource -a
 
 ### Local bin
 [[ -d "$HOME/.local/bin" ]] || mkdir -p "$HOME/.local/bin"
 haspath "$HOME/.local/bin" || addpath -p "$HOME/.local/bin"
-
