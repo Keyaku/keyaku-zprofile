@@ -120,8 +120,17 @@ function setup_termux {
 # Sets up XDG configuration
 function setup_xdg {
 	# Disable xdg-user-dirs-update from firing on every login
-	if ! grep -Eq '^enabled=True' /etc/xdg/user-dirs.conf; then
+	if ! \grep -Eq '^enabled=True' /etc/xdg/user-dirs.conf; then
 		sudo sed -i 's;^enabled=True;enabled=False;' /etc/xdg/user-dirs.conf
+	fi
+}
+
+# Sets up some pacman configuration and hooks
+function setup_pacman {
+	# Prepare rehash hook, to work with this repo's pacman plugin
+	if [[ ! -f /etc/pacman.d/hooks/zsh.hook ]]; then
+		[[ -d /etc/pacman.d/hooks ]] || $SUDO mkdir -p /etc/pacman.d/hooks
+		$SUDO cp "$SCRIPT_DIR"/hooks/zsh.hook /etc/pacman.d/hooks/.
 	fi
 }
 
@@ -133,6 +142,8 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh)
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
 typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_systemd)
+# Arch Linux functions
+typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
 ### Main function
 
@@ -143,6 +154,7 @@ function main {
 	whatami Android && fn_to_run+=($ANDROID_FUNCTIONS)
 	has_systemd && fn_to_run+=(setup_systemd)
 	[[ -d "$ROOT"/etc/xdg ]] && fn_to_run+=(setup_xdg)
+	whatami Arch && n_to_run+=($ARCH_FUNCTIONS)
 
 	local -i fn_completed=0 fn_total=${#fn_to_run}
 
