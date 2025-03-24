@@ -62,7 +62,7 @@ function whatami {
 	fi
 
 	if (( $# )); then
-		(( ${+WHATAMI_LIST[(I)(${(uj:|:)@:l})]} ))
+		(( ${${(@L)WHATAMI_LIST}[(I)(${(j:|:)@:l})]} ))
 		return $?
 	fi
 

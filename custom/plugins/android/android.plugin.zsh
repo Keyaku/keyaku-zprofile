@@ -5,9 +5,9 @@ if ! whatami Android; then
 		alias shizuku-start='adb shell sh /storage/emulated/0/Android/data/moe.shizuku.privileged.api/start.sh'
 	fi
 # if actually on Android (Termux)
-elif [[ -d "$HOME/.termux" ]]; then
+elif (( ${+TERMUX_VERSION} )); then
 	alias pkg-all='pkg update && pkg upgrade -y'
-	
+
 	# Silence Message of the Day (motd)
 	if [[ -f "$HOME"/../usr/etc/motd ]]; then
 		mv "$HOME"/../usr/etc/motd{,.old}

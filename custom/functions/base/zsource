@@ -27,7 +27,7 @@ zparseopts -a void -D -F -K -- \
 	v+=f_verbosity q+=f_verbosity \
 	{a,-all}=f_all \
 	{f,-functions}=f_func \
-	{p,-profiles}:=f_prof \
+	{p,-profiles}=f_prof \
 	{l,-login}=f_opts \
 	{i,-interactive}=f_opts \
 	|| return 1
