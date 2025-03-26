@@ -50,5 +50,5 @@ if (( $verbosity )); then
 fi
 
 # Fastest process to check for commands
-{ [[ -z "${logical#a(nd)#}" ]] && command -v ${@} &>/dev/null } ||
-{ [[ -z "${logical#o(r)#}" ]] && (( ${(v)#commands[(I)($args)]} + ${#functions[(I)($args)]} + ${#aliases[(I)($args)]} )) }
+{ [[ -z "${logical#a(nd)?#}" ]] && command -v ${@} &>/dev/null } ||
+{ [[ -z "${logical#o(r)?#}" ]] && (( ${(v)#commands[(I)($args)]} + ${#functions[(I)($args)]} + ${#aliases[(I)($args)]} )) }
