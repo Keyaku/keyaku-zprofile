@@ -1,6 +1,4 @@
-if (( ! $+commands[docker] )) || (( $+commands[podman] )); then
-	return
-fi
+(( $+commands[docker] && ! $+commands[podman] )) || return
 
 # Standardized $0 handling
 # https://zdharma-continuum.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html

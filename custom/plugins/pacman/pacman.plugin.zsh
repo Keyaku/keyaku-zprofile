@@ -1,4 +1,4 @@
-(( ${+commands[pacman]} )) || return 0
+(( ${+commands[pacman]} )) || return
 
 # On-demand bin rehash
 _zshcache_time="$(date +%s%N)"

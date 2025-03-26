@@ -1,4 +1,4 @@
-(( ${(v)+commands[(I)steam|com.valvesoftware.Steam]} )) || return
+(( ${(v)#commands[(I)steam|com.valvesoftware.Steam]} )) || return
 
 ### Setting main variables for Steam paths
 function steam-set-paths {
@@ -176,6 +176,6 @@ function steam-app-proton {
 }
 
 ### Flatpak version
-if (( ${+commands[com.valvesoftware.Steam]} )) && (( ! ${(v)+commands[(I)steam|steam-native]})); then
+if (( ${+commands[com.valvesoftware.Steam]} )) && (( ! ${(v)#commands[(I)steam|steam-native]})); then
 	alias steam='flatpak run com.valvesoftware.Steam'
 fi

@@ -1,4 +1,4 @@
-(( ${(v)+commands[ssh|ssh-agent]} )) || return
+(( ${+commands[ssh-agent]} )) || return
 
 # Pick default value if unset
 SSH_HOME="${SSH_HOME:-"$HOME"/.ssh}"

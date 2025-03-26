@@ -67,4 +67,8 @@ if (( ${+commands[com.visualstudio.code]} )); then
 			fi
 		done
 	}
+elif (( ${+commands[code]} )); then
+	: # Add config for regular VScode installation
+else
+	return 1
 fi

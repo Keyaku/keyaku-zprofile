@@ -1,7 +1,7 @@
 # Select exclusively Debian or Ubuntu
-whatami Debian Ubuntu || return
+whatami Debian Ubuntu Android || return
 
-(( ${(v)+commands[(I)apt|apt-get]} )) || return
+(( ${(v)#commands[(I)apt|apt-get]} )) || return
 
 SUDO=$(whatami Android || echo sudo)
 

@@ -165,9 +165,12 @@ zstyle ':omz:update' mode disabled  # disable automatic updates
 source "$ZSH"/oh-my-zsh.sh
 
 # Load native plugins
+typeset -aU unloaded_plugins
 for plugin ($native_plugins); do
-	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh"
+	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh" || unloaded_plugins+=($plugin)
 done
+# Filter unloaded plugins
+native_plugins=(${native_plugins:|unloaded_plugins})
 unset plugin
 
 # Bash modules & autocompletion (for programs which contain only bash completions)

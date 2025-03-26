@@ -1,4 +1,4 @@
-(( ${(v)+commands[(I)gpg|gpg-agent]} )) || return
+(( ${+commands[gpg-agent]} )) || return
 
 GNUPGHOME="${GNUPGHOME:-XDG_DATA_HOME/gnupg}"
 
