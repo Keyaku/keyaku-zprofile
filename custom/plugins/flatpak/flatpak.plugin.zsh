@@ -66,22 +66,24 @@ done
 # Update all Flatpak apps from all installations
 function flatpak-update {
 	# Fetch all remotes, sorted by priority
-	set -- $(flatpak-remotes)
-	if (( ! $# )); then
+	local -a fp_remotes=($(flatpak-remotes))
+	if (( ! ${#fp_remotes} )); then
 		print_fn -e "No remotes found"
 		return 1
 	fi
 
 	# Iterate through all installations
+	local fp_remote SUDO
 	local -a args
-	while (( $# )); do
+	for fp_remote in ${fp_remotes}; do
 		args=()
-		if [[ "$1" =~ (system|user) ]]; then
-			args=(--$1)
-		elif [[ -f "/etc/flatpak/installations.d/$1" ]]; then
-			args=(--installation=$1)
+		SUDO=""
+		if [[ "$fp_remote" == system || "$fp_remote" == user ]]; then
+			args=(--$fp_remote)
+			[[ "$fp_remote" == system ]] && SUDO=sudo
+		elif [[ -e "/etc/flatpak/installations.d/$fp_remote" ]]; then
+			args=(--installation=$fp_remote)
 		fi
-		flatpak ${args} update -y
-		shift
+		$SUDO flatpak ${args} update -y
 	done
 }
