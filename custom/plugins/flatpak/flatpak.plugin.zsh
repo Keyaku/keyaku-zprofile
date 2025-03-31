@@ -31,7 +31,7 @@ function flatpak-has {
 	local -i retval=1
 
 	while (( $# )); do
-		local result="$(flatpak list --columns=name,application | awk '{IGNORECASE = '${+f_icase}'; for(i=1;i<=NF;i++) if (/\<'$1'\>/) { print; break } }')"
+		local result="$(flatpak list --columns=name,application | awk '{IGNORECASE = '${${f_icase:+1}:-0}'; for(i=1;i<=NF;i++) if (/\<'$1'\>/) { print; break } }')"
 		if [[ "$result" ]]; then
 			retval=0
 			(( 0 < $verbosity )) && echo "$result"
