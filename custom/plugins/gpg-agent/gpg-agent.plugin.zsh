@@ -1,6 +1,7 @@
 (( ${+commands[gpg-agent]} )) || return
 
 GNUPGHOME="${GNUPGHOME:-XDG_DATA_HOME/gnupg}"
+[[ -d "$GNUPGHOME" ]] || mkdir -p "$GNUPGHOME"
 
 # Load available plugin from ohmyzsh
 [[ -f "$ZSH/plugins/${0:h:t}/${0:t}" ]] && source "$ZSH/plugins/${0:h:t}/${0:t}"

@@ -46,6 +46,8 @@ typeset -rA templates=(
 	# [post-omz.zshrc]=""
 )
 
+typeset -i NEEDS_RESTART=0
+
 ####################
 # Functions
 ####################
@@ -54,11 +56,14 @@ typeset -rA templates=(
 
 # Installs system packages
 function install_pkgs {
-	local pkgs_needed=(getconf rsync git zsh wget curl vim fastfetch)
-	if ! command -v ${pkgs_needed[@]} &>/dev/null; then
+	local pkgs_needed=(rsync git zsh wget curl vim fastfetch)
+	if ! command -v ${pkgs_needed} &>/dev/null; then
 		if whatami Android; then
-			local pkgs_termux=(mount-utils)
+			local pkgs_termux=(getconf mount-utils)
 			pkg install -y ${pkgs_needed} ${pkgs_termux}
+		elif whatami Arch; then
+			local pkgs_arch=(ttf-meslo-nerd flatpak plymouth power-profiles-daemon)
+			sudo pacman -Syu --noconfirm ${pkgs_needed} ${pkgs_arch}
 		fi
 		# TODO: install for other systems
 	fi
@@ -71,7 +76,11 @@ function setup_zsh {
 	[[ -z "$zshenv" ]] && zshenv="$ROOT"/etc/zsh/zshenv
 
 	# Add missing variables to zshenv
-	if [[ ! -f "$zshenv" ]] || ! file_contents_in "$ZDOTDIR/conf/zsh/zshenv" "$zshenv"; then
+	if [[ ! -f "$zshenv" ]]; then
+		NEEDS_RESTART=1
+		$SUDO cp "$ZDOTDIR/conf/zsh/zshenv" "$zshenv"
+	elif ! file_contents_in "$ZDOTDIR/conf/zsh/zshenv" "$zshenv"; then
+		NEEDS_RESTART=1
 		echo "Adding ZSH variables to system zshenv..."
 		diff -u "$zshenv" "$ZDOTDIR/conf/zsh/zshenv" > "$ZSH_CACHE_HOME"/zshenv.patch
 		$SUDO patch -su -d/ -p0 -i "$ZSH_CACHE_HOME"/zshenv.patch
@@ -94,6 +103,7 @@ function setup_ssh {
 function setup_systemd {
 	# Synchronize systemd configuration files
 	if ! file_contents_in "$ZDOTDIR/conf/systemd" /etc/systemd; then
+		NEEDS_RESTART=1
 		echo "Synchronizing systemd conf..."
 		$SUDO rsync -Przcq --no-t "$ZDOTDIR/conf/systemd/" "/etc/systemd"
 	fi
@@ -117,12 +127,23 @@ function setup_termux {
 	# TODO: Install rish and add it to path
 }
 
-# Sets up XDG configuration
+# Sets up XDG configuration and dotdirs locations
 function setup_xdg {
 	# Disable xdg-user-dirs-update from firing on every login
 	if ! \grep -Eq '^enabled=True' /etc/xdg/user-dirs.conf; then
 		sudo sed -i 's;^enabled=True;enabled=False;' /etc/xdg/user-dirs.conf
 	fi
+
+	# Relocate .config and .cache directories
+	local -a dotdirs=(cache config)
+	local dotdir
+	for dotdir in ${dotdirs}; do
+		if [[ -d "$HOME/.$dotdir" && ! -L "$HOME/.$dotdir" ]]; then
+			rsync -Praz "$HOME/.$dotdir/" "$HOME/.local/$dotdir"
+			rm -rf "$HOME/.$dotdir"
+			ln -s "$HOME/.local/$dotdir" "$HOME/.$dotdir"
+		fi
+	done
 }
 
 # Sets up some pacman configuration and hooks
@@ -134,6 +155,38 @@ function setup_pacman {
 	fi
 }
 
+# Sets up Flatpak user repo and base packages
+function setup_flatpak {
+	local fp_install=user
+	flatpak-remotes | \grep -q user || flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+	if flatpak-remotes | \grep -q system; then
+		if ask -Bd y -p "Flatpak: Would you like to remove the default system flathub repo?"; then
+			$SUDO flatpak --system remote-delete flathub
+		else
+			fp_install=system
+		fi
+	fi
+
+	# Install base apps
+	local -a fp_apps=(flatseal missioncenter)
+	if ! flatpak-has -i ${fp_apps}; then
+		flatpak --$fp_install --noninteractive -y install ${fp_apps}
+	fi
+}
+
+# Sets up DE (Desktop Environment)
+function setup_de {
+	if [[ "$XDG_CURRENT_DESKTOP" == KDE ]]; then
+		# Install required packages
+		local -a pkgs_needed=(kdeconnect)
+		whatami Arch && $SUDO pacman -S ${pkgs_needed}
+		# FIXME: Set Monospace font to the insalled Meslo Nerd font
+		#qt6ct -set monospace_font "MesloLGS Nerd Font Mono"
+
+	fi
+	# TODO: Add other DEs
+}
+
 ### Function filters
 
 # Base functions for all platforms
@@ -141,7 +194,7 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
-typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_systemd)
+typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_flatpak setup_de)
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
@@ -151,10 +204,13 @@ function main {
 	# Gather all functions to run
 	local -A fn_results
 	local -a fn_to_run=($BASE_FUNCTIONS)
-	whatami Android && fn_to_run+=($ANDROID_FUNCTIONS)
-	has_systemd && fn_to_run+=(setup_systemd)
-	[[ -d "$ROOT"/etc/xdg ]] && fn_to_run+=(setup_xdg)
-	whatami Arch && n_to_run+=($ARCH_FUNCTIONS)
+	if whatami Android; then
+		fn_to_run+=($ANDROID_FUNCTIONS)
+	else
+		fn_to_run+=($LINUX_FUNCTIONS)
+		has_systemd && fn_to_run+=(setup_systemd)
+		whatami Arch && n_to_run+=($ARCH_FUNCTIONS)
+	fi
 
 	local -i fn_completed=0 fn_total=${#fn_to_run}
 
@@ -175,6 +231,9 @@ function main {
 	# Mini report
 	if (( $fn_completed/$fn_total )); then
 		echo "${SCRIPT_NAME}: First-time initialization completed successfully."
+		if (( $NEEDS_RESTART )); then
+			echo "${SCRIPT_NAME}: Restart your system for changes to take effect."
+		fi
 		# if ask -B -d n "Would you like to create the base files for your custom configuration of .zshrc (pre-omz, themes, plugins, post-omz)?"; then
 		# 	local zsh_template zsh_path
 		# 	echo "Creating base files..."

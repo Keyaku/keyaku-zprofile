@@ -200,3 +200,4 @@ export EDITOR='vim'
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
 [[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
+(( ${+ZDOTDIR} )) # Safety 0 return value
