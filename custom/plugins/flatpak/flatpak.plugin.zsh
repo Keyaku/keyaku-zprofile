@@ -1,5 +1,6 @@
 (( ${+commands[flatpak]} )) || return
 
+# Checks if given argument is an installed Flatpak package
 function flatpak-has {
 	local -r usage=(
 		"Usage: ${funcstack[1]} [OPTION...]"
@@ -42,47 +43,50 @@ function flatpak-has {
 	return $retval
 }
 
-function flatpak-remotes {
-	flatpak remotes --columns=priority,options | sort | awk '{print $NF}'
+# Prints Flatpak installations
+function flatpak-installations {
+	flatpak remotes --columns=priority,name,options | sort -r | awk '{split($NF, a, ","); print a[1]}' | sort -u
 }
 
 ### Flatpak environment variables
-typeset -Ag FLATPAK_ENV=(
-	[USER_APPDATA]="$HOME/.var/app"
-	[SYSTEM_DIR]="/var/lib/flatpak"
-)
+if (( ! $+FLATPAK_ENV )); then
+	typeset -Ag FLATPAK_ENV=(
+		[USER_APPDATA]="$HOME/.var/app"
+		[SYSTEM_DIR]="/var/lib/flatpak"
+	)
 
-# Set Flatpak environment variables depending on available remotes
-flatpak-remotes | while read -r; do
-	if [[ "$REPLY" == user ]]; then
-		FLATPAK_ENV[USER_DIR]="${XDG_DATA_HOME}/flatpak"
-		FLATPAK_ENV[USER_INSTALL]="${FLATPAK_ENV[USER_DIR]}/app"
-	elif [[ "$REPLY" == system ]]; then
-		FLATPAK_ENV[SYSTEM_INSTALL]="${FLATPAK_ENV[SYSTEM_DIR]}/app"
-	fi
-done
+	# Set Flatpak environment variables depending on available installations
+	flatpak-installations | while read -r; do
+		if [[ "$REPLY" == user ]] && (( ! $+FLATPAK_ENV[USER_INSTALL] )); then
+			FLATPAK_ENV[USER_DIR]="${XDG_DATA_HOME}/flatpak"
+			FLATPAK_ENV[USER_INSTALL]="${FLATPAK_ENV[USER_DIR]}/app"
+		elif [[ "$REPLY" == system ]] && (( ! $+FLATPAK_ENV[SYSTEM_INSTALL] )); then
+			FLATPAK_ENV[SYSTEM_INSTALL]="${FLATPAK_ENV[SYSTEM_DIR]}/app"
+		fi
+	done
+fi
 
 
 # Update all Flatpak apps from all installations
 function flatpak-update {
 	# Fetch all remotes, sorted by priority
-	local -a fp_remotes=($(flatpak-remotes))
-	if (( ! ${#fp_remotes} )); then
-		print_fn -e "No remotes found"
+	local -a fp_installs=($(flatpak-installations))
+	if (( ! ${#fp_installs} )); then
+		print_fn -e "No configured installations found"
 		return 1
 	fi
 
 	# Iterate through all installations
-	local fp_remote SUDO
+	local fp_i SUDO
 	local -a args
-	for fp_remote in ${fp_remotes}; do
+	for fp_i in ${fp_installs}; do
 		args=()
 		SUDO=""
-		if [[ "$fp_remote" == system || "$fp_remote" == user ]]; then
-			args=(--$fp_remote)
-			[[ "$fp_remote" == system ]] && SUDO=sudo
-		elif [[ -e "/etc/flatpak/installations.d/$fp_remote" ]]; then
-			args=(--installation=$fp_remote)
+		if [[ "$fp_i" == system || "$fp_i" == user ]]; then
+			args=(--$fp_i)
+			[[ "$fp_i" == system ]] && SUDO=sudo
+		elif [[ -e "/etc/flatpak/installations.d/$fp_i" ]]; then
+			args=(--installation=$fp_i)
 		fi
 		$SUDO flatpak ${args} update -y
 	done
