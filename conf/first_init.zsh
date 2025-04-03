@@ -158,8 +158,8 @@ function setup_pacman {
 # Sets up Flatpak user repo and base packages
 function setup_flatpak {
 	local fp_install=user
-	flatpak-remotes | \grep -q user || flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-	if flatpak-remotes | \grep -q system; then
+	flatpak-installations | \grep -q user || flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+	if flatpak-installations | \grep -q system; then
 		if ask -Bd y -p "Flatpak: Would you like to remove the default system flathub repo?"; then
 			$SUDO flatpak --system remote-delete flathub
 		else
