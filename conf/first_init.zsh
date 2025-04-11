@@ -75,6 +75,9 @@ function setup_zsh {
 	local zshenv=$(echo "$ROOT"/etc/**/zshenv(N.))
 	[[ -z "$zshenv" ]] && zshenv="$ROOT"/etc/zsh/zshenv
 
+	if [[ ! -d "${zshenv:h}" ]]; then
+		print_fn -i "System zsh directory not found. Skipping"
+		return 0
 	# Add missing variables to zshenv
 	if [[ ! -f "$zshenv" ]]; then
 		NEEDS_RESTART=1
@@ -130,8 +133,9 @@ function setup_termux {
 # Sets up XDG configuration and dotdirs locations
 function setup_xdg {
 	# Disable xdg-user-dirs-update from firing on every login
-	if ! \grep -Eq '^enabled=True' /etc/xdg/user-dirs.conf; then
-		sudo sed -i 's;^enabled=True;enabled=False;' /etc/xdg/user-dirs.conf
+	if [[ ! -f "$XDG_CONFIG_HOME"/user-dirs.conf ]] || ! \grep -Eq '^enabled=True' "$XDG_CONFIG_HOME"/user-dirs.conf; then
+		touch "$XDG_CONFIG_HOME"/user-dirs.conf
+		sed -i 's;^enabled=True;enabled=False;' "$XDG_CONFIG_HOME"/user-dirs.conf
 	fi
 
 	# Relocate .config and .cache directories
@@ -194,7 +198,7 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
-typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_flatpak setup_de)
+typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de)
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
@@ -208,6 +212,7 @@ function main {
 		fn_to_run+=($ANDROID_FUNCTIONS)
 	else
 		fn_to_run+=($LINUX_FUNCTIONS)
+		command-has flatpak && fn_to_run+=(setup_flatpak)
 		has_systemd && fn_to_run+=(setup_systemd)
 		whatami Arch && n_to_run+=($ARCH_FUNCTIONS)
 	fi
