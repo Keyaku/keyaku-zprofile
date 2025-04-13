@@ -74,10 +74,8 @@ function setup_zsh {
 	# Set zshenv file path
 	local zshenv=$(echo "$ROOT"/etc/**/zshenv(N.))
 	[[ -z "$zshenv" ]] && zshenv="$ROOT"/etc/zsh/zshenv
+	[[ ! -d "${zshenv:h}" ]] && shenv="$ROOT"/etc/zshenv
 
-	if [[ ! -d "${zshenv:h}" ]]; then
-		print_fn -i "System zsh directory not found. Skipping"
-		return 0
 	# Add missing variables to zshenv
 	if [[ ! -f "$zshenv" ]]; then
 		NEEDS_RESTART=1

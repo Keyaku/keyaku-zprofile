@@ -120,28 +120,22 @@ function addpath {
 	local -i mode=0  # 0: append; 1: prepend
 	local -a append_paths=()
 	local -a prepend_paths=()
+	local arg
 
 	# Parse arguments
-	while (( $# )); do
-		case "$1" in
-		-a|--append)
-			mode=0
-			shift
-		;;
-		-p|--prepend)
-			mode=1
-			shift
-		;;
+	for arg; do
+		case "$arg" in
+		-a|--append)  mode=0 ;;
+		-p|--prepend) mode=1 ;;
 		*)
 			# Check if path exists and is not already in $path
-			if [[ -d "$1" ]] && ! haspath "$1"; then
+			if [[ -d "$arg" ]] && ! haspath "$arg"; then
 				if (( ! $mode )); then
-					append_paths+=("$1")
+					append_paths+=("$arg")
 				else
-					prepend_paths+=("$1")
+					prepend_paths+=("$arg")
 				fi
 			fi
-			shift
 		;;
 		esac
 	done
