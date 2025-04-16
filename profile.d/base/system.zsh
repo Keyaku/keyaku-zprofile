@@ -21,7 +21,7 @@ function gpu-list {
 	local cmd_name cmd_args
 	for cmd_name in ${(@k)all_cmds}; do
 		if ! command-has $cmd_name; then
-			unset all_cmds[$cmd_name]
+			unset "all_cmds[$cmd_name]"
 		fi
 	done
 	cmd_name=""
