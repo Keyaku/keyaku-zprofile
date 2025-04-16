@@ -22,50 +22,8 @@ setopt re_match_pcre
 ### Detect if this is an interactive login shell (interactive is implied in .zshrc)
 if [[ -o login ]]; then
 	### First-time initialization
-	if [[ ! -f "$ZDOTDIR/conf/.first_init" ]] || (( 1 != $(cat "$ZDOTDIR/conf/.first_init") )); then
+	if (( $UID >= 1000 )) && [[ ! -f "$ZDOTDIR/conf/.first_init" ]] || (( 1 != $(cat "$ZDOTDIR/conf/.first_init") )); then
 		zsh "$ZDOTDIR"/conf/first_init.zsh
-	fi
-else
-	# Load all custom functions
-	autoload -Uz "$ZSH_CUSTOM"/functions/{.,^.}**/zsource(.N) && zsource -a
-fi
-
-#####################################################################
-
-# TODO: Load user configuration pre-ohmyzsh
-# [[ -f "$ZSH_CUSTOM"/pre-omz.zshrc ]] && source "$ZSH_CUSTOM"/pre-omz.zshrc
-
-### Detect if this is an interactive login shell (interactive is implied in .zshrc)
-if [[ -o login ]]; then
-	### If on Android, sync with local storage Syncthing directory
-	if whatami Android; then
-		## Setup function to sync between Termux and local storage. Useful when synchronizing storage files (e.g. with SyncThing)
-		TERMUX_SYNC_DIR=~/storage/shared/Documents/Workspaces/Termux
-		if [[ -d "$TERMUX_SYNC_DIR" ]]; then
-			export TERMUX_SYNC_DIR
-			function termux-rsync {
-				local direction="${1:-both}"
-				local path_termux=~ path_ext="$TERMUX_SYNC_DIR"
-				local path_lists=$HOME/.local/src/android/Termux
-
-				[[ -d "$path_lists" ]] || path_lists=${path_ext}/.local/src/android/Termux
-				if [[ ! -d "$path_lists" ]]; then
-					print_fn -e "Could not find path lists directory."
-					return 1
-				fi
-
-				if [[ "$direction" == "in" || "$direction" == "both" ]]; then
-					rsync -Przc --no-t --exclude-from=$path_lists/android.exclude.in.txt ${path_ext}/. ${path_termux} || return 1
-				fi
-				if [[ "$direction" == "out" || "$direction" == "both" ]]; then
-					rsync -Przc --files-from=$path_lists/android.include.out.txt --exclude-from=$path_lists/android.exclude.out.txt ${path_termux} ${path_ext} || return 1
-				fi
-			}
-			## Sync changes
-			termux-rsync
-		else
-			unset TERMUX_SYNC_DIR
-		fi
 	fi
 
 	### Print fetch
@@ -76,7 +34,15 @@ if [[ -o login ]]; then
 			print_fn -e "%s\n" "'$fetch' is not installed."
 		fi
 	)
+else
+	# Load all custom functions
+	autoload -Uz "$ZSH_CUSTOM"/functions/{.,^.}**/zsource(.N) && zsource -a
 fi
+
+#####################################################################
+
+# TODO: Load user configuration pre-ohmyzsh
+# [[ -f "$ZSH_CUSTOM"/pre-omz.zshrc ]] && source "$ZSH_CUSTOM"/pre-omz.zshrc
 
 # Uncomment the following line to use case-sensitive completion.
 CASE_SENSITIVE="true"
