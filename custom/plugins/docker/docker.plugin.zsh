@@ -219,7 +219,7 @@ function docker-rootless-install {
 	echo "Exposing privileged ports..."
 	sudo setcap cap_net_bind_service=ep $(which rootlesskit)
 
-	ask_yn "Do you want Docker rootless to start at boot?" && {
+	ask --yn -k "Do you want Docker rootless to start at boot?" && {
 		systemctl --user enable docker
 		sudo loginctl enable-linger $(whoami)
 	}
