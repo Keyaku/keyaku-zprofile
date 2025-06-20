@@ -187,6 +187,7 @@ function setup_de {
 
 	fi
 	# TODO: Add other DEs
+	return 0
 }
 
 ### Function filters

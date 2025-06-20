@@ -35,7 +35,7 @@ fi
 # Filter out wildcard host sections.
 if [[ "$(echo "${SSH_HOME}/config"{,.d/*.conf}(N))" ]]; then
 	_ssh_hosts=($(
-		\grep -E '^Host[^*]*' "${SSH_HOME}/config"{,.d/*.conf} |\
+		\grep -E '^Host[^*]*' "${SSH_HOME}/config"{,.d/*.conf}(N) |\
 		awk '{for (i=2; i<=NF; i++) print $i}' |\
 		sort -u |\
 		grep -v '\*'
@@ -50,7 +50,7 @@ fi
 function ssh_rmhkey {
 	local ssh_host="$1"
 	[[ -z "$ssh_host" ]] && return
-	ssh-keygen -R $(\grep -A10 "$ssh_host" "$SSH_HOME"/config{,.d/*.conf} | sed -nE '/HostName/{s/.*HostName\s+(.+?)/\1/pi;q}')
+	ssh-keygen -R $(\grep -A10 "$ssh_host" "$SSH_HOME"/config{,.d/*.conf}(N) | sed -nE '/HostName/{s/.*HostName\s+(.+?)/\1/pi;q}')
 }
 compctl -k hosts ssh_rmhkey
 
