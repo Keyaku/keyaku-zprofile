@@ -15,8 +15,6 @@ if [[ "$(echo "$ZDOTDIR"/$^ZPROFILE_MODULES/(N^F))" ]]; then
 	echo "Initializing submodules..."
 	# Initialize submodules
 	git -C "$ZDOTDIR" submodule -q update --init --remote --recursive
-	# Switch to main branch and pull latest changes
-	git -C "$ZDOTDIR" submodule foreach 'defb=$(git remote show origin | sed -n "/HEAD branch/s/.*: //p"); git checkout -q $defb && git pull -q origin $defb'
 fi
 
 # Load function that loads all custom functions

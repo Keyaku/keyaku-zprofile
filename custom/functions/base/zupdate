@@ -37,12 +37,14 @@ f_verbosity="${(j::)f_verbosity//-}"
 (( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
 # Update main repo
+local repo_name="$(git remote -v | sed -En '/fetch/s#^.+?github\.com/\w+/(.+?)\s+.*$#\1#p')"
 git -C "${ZDOTDIR}" fetch -q
 local UPSTREAM='@{u}'
 local LOCAL=$(git -C "${ZDOTDIR}" rev-parse @)
 local REMOTE=$(git -C "${ZDOTDIR}" rev-parse "$UPSTREAM")
 local BASE=$(git -C "${ZDOTDIR}" merge-base @ "$UPSTREAM")
 
+(( $verbosity )) && >&2 printf '%s: ' "${repo_name}"
 if [[ $LOCAL == $REMOTE ]]; then
 	(( $verbosity )) && >&2 echo "Up-to-date"
 elif [[ $LOCAL == $BASE ]]; then
@@ -57,14 +59,15 @@ else
 fi
 
 # Update submodules
-git -C "${ZDOTDIR}" submodule -q update --init --recursive
+(( $verbosity )) && >&2 echo "Updating submodules..."
+git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote
 git -C "${ZDOTDIR}" submodule -q foreach --recursive 'git fetch -q'
 
-local OUTDATED_SUBMODULES=$(git -C "${ZDOTDIR}" submodule foreach --recursive 'git rev-list HEAD...@{u}' | \grep -v '^Entering')
-if [[ "${OUTDATED_SUBMODULES}" ]]; then
-	(( $verbosity )) && >&2 echo "Updating submodules..."
-	git -C "${ZDOTDIR}" submodule update --remote --recursive
-	retval=$?
-else
-	(( $verbosity )) && >&2 echo "All submodules are up-to-date."
-fi
+# FIXME: The code below breaks ohmyzsh for some reason.
+# local OUTDATED_SUBMODULES=$(git -C "${ZDOTDIR}" submodule foreach --recursive 'git rev-list HEAD...FETCH_HEAD' | \grep -v '^Entering')
+# if [[ "${OUTDATED_SUBMODULES}" ]]; then
+# 	(( $verbosity )) && >&2 echo "Updating submodules..."
+# 	git -C "${ZDOTDIR}" submodule update --remote --recursive
+# else
+# 	(( $verbosity )) && >&2 echo "All submodules are up-to-date."
+# fi
