@@ -37,7 +37,7 @@ f_verbosity="${(j::)f_verbosity//-}"
 (( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
 # Update main repo
-local repo_name="$(git -C "${ZDOTDIR}" remote -v | sed -En '/fetch/s#^.+?github\.com[/:]\w+/(.+?)\s+.*$#\1#p')"
+local repo_name="$(git -C "${ZDOTDIR}" remote -v | sed -En '/fetch/s#^.+?github\.com[/:]\w+(\.git)?/(.+?)\s+.*$#\2#p')"
 git -C "${ZDOTDIR}" fetch -q
 local UPSTREAM='@{u}'
 local LOCAL=$(git -C "${ZDOTDIR}" rev-parse @)
