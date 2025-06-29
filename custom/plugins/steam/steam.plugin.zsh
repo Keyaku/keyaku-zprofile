@@ -1,3 +1,4 @@
+(( $UID >= 1000 )) || return
 (( ${(v)#commands[(I)steam|com.valvesoftware.Steam]} )) || return
 
 ### Setting main variables for Steam paths
