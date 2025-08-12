@@ -533,7 +533,7 @@ DOCKER_CONTAINERS_CMD=(
 	caddy cloudflared mollysocket ntfy ollama
 )
 for container_name in ${DOCKER_CONTAINERS_CMD}; do
-	docker-alias "$container_name"
+	docker-has "$container_name" &&	docker-alias "$container_name"
 done
 unset DOCKER_CONTAINERS_CMD container_name
 
