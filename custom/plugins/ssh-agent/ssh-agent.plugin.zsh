@@ -8,10 +8,10 @@ function ssh-agent-start {
 	local RUNNING_AGENT="`ssh-agent-pids | wc -l | tr -d '[:space:]'`"
 	if (( ! $RUNNING_AGENT )); then
 		# Launch a new instance of the agent
-		ssh-agent -s | sed 's/echo.*//' &> $SSH_HOME/ssh-agent
+		ssh-agent -s | sed 's/echo.*//' &> "$SSH_HOME"/ssh-agent
 	fi
-	chmod 600 $SSH_HOME/ssh-agent
-	. $SSH_HOME/ssh-agent
+	chmod 600 "$SSH_HOME"/ssh-agent
+	. "$SSH_HOME"/ssh-agent
 }
 
 function ssh-agent-stop {
