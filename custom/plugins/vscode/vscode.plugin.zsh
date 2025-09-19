@@ -67,6 +67,12 @@ if (( ${(v)#commands[(I)com.visualstudio.code|com.vscodium.codium]} )); then
 		# Setup session bus
 		local -a VSCODE_DBUS_TALK=(
 		)
+		# Use KDE wallet in case of KDE Plasma
+		if (( ${+commands[plasmashell]} )) && [[ "$XDG_SESSION_DESKTOP" == KDE ]] && \
+			[[ ! -z "$(dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep -E 'org.kde.kwalletd\b')" ]]
+		then
+			VSCODE_DBUS_TALK+=("org.kde.kwalletd")
+		fi
 
 		local vs_dbus_talk
 		for vs_dbus_talk in ${VSCODE_DBUS_TALK}; do
