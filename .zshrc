@@ -13,7 +13,6 @@ export ZSH="$ZDOTDIR/ohmyzsh"
 
 # Changing some zsh variables
 ZSH_CUSTOM="$ZDOTDIR/custom"
-ZSH_COMPDUMP="$ZSH_CACHE_HOME/zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
 
 # Required setopts for this setup to work
 setopt extendedglob
@@ -109,35 +108,18 @@ fi
 
 # ohmyzsh plugins to load
 typeset -aU plugins=()
-# Plugins to load natively (to avoid massive overhead from _omz_source)
-typeset -aU native_plugins=()
 
 # TODO: Load personal plugins configuration
 # [[ -f "$ZSH_CUSTOM"/plugins/plugins.zsh ]] && source "$ZSH_CUSTOM"/plugins/plugins.zsh
 
 # ohmyzsh plugins
-plugins=(git python pip ufw)
+plugins=(python pip ufw)
 (( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
-
-# Plugins to load natively (to avoid omz's heavy overhead)
-native_plugins=("$ZSH_CUSTOM"/plugins/(*~example)/*.plugin.zsh(-.N:h:t))
-
-# Plugins to load via omz: all selected except those present in custom
-plugins=(${plugins:|native_plugins})
 
 # Prepare ohmyzsh specifically for this configuration
 zstyle ':omz:update' mode disabled  # disable automatic updates
 # Load ohmyzsh
 source "$ZSH"/oh-my-zsh.sh
-
-# Load native plugins
-typeset -aU unloaded_plugins
-for plugin ($native_plugins); do
-	source "$ZSH_CUSTOM/plugins/$plugin/$plugin.plugin.zsh" || unloaded_plugins+=($plugin)
-done
-# Filter unloaded plugins
-native_plugins=(${native_plugins:|unloaded_plugins})
-unset plugin
 
 # Bash modules & autocompletion (for programs which contain only bash completions)
 if [[ -d "$XDG_DATA_HOME"/bash-completion/completions ]]; then

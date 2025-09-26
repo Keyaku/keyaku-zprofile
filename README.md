@@ -39,7 +39,8 @@ These are:
 	3. `.zshrc` - Used for setting user's interactive shell configuration and executing commands, will be read when starting as an **_interactive shell_**.
 	4. `.zlogin` - Used for executing user's commands at ending of initial progress, will be read when starting as a **_login shell_**. Typically used to autostart command line utilities. Should not be used to autostart graphical sessions, as at this point the session might contain configuration meant only for an interactive shell.
 - Custom functions under `.zfunc/`.
-- Custom plugins under `custom/plugins`, loaded natively with `source` to avoid using ohmyzsh's `_omz_source` with its massive overhead, making a login shell as fast as possible.
+- My own set of plugins, named `extensions` to differentiate from custom plugins, under `extensions`. The main difference between this and putting them in `custom/plugins` is that they're loaded natively with `source` in order to avoid using ohmyzsh's `_omz_source` with its massive overhead, consequently making login shells start as fast as possible.
+These follow the same structure as `plugins`, including the `.plugin.zsh` filename extension; `.ext.zsh` is also accepted.
 - Various .zsh scripts under `profile.d/`, containing everything from base functionality that helps one's everyday use, down to setting up the environment of an app or program, or even of a specific OS.
 
 
