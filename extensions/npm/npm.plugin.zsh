@@ -25,7 +25,7 @@ unset _npm_pfx
 
 # Add npm completion
 if (( ${+functions[compdef]} )); then
-	command rm -f "${ZSH_CACHE_DIR:-$ZSH/cache}/npm_completion"
+	command rm -f "$ZSH_CACHE_DIR/npm_completion"
 
 	_npm_completion() {
 		local si=$IFS
