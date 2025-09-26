@@ -66,17 +66,6 @@ if (( ${+commands[appman]} )); then
 	export SANDBOXDIR=$HOME/.local/app/appman/sandboxes
 fi
 
-### Android debugging
-if (( ${+commands[adb]} )) || [[ -d "${XDG_DATA_HOME}/android" ]]; then
-	export ANDROID_HOME="${XDG_DATA_HOME}/android"
-	[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
-	export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
-
-	# Prevent adb from using user's home directory
-	alias adb="HOME=$ANDROID_HOME adb"
-fi
-
-
 ### Bundle (Ruby gems)
 if (( ${+commands[bundle]} )); then
 	export BUNDLE_USER_CACHE="${XDG_CACHE_HOME}"/bundle
@@ -89,21 +78,10 @@ if (( ${+commands[cargo]} )); then
 	export CARGO_HOME="$XDG_DATA_HOME"/cargo
 fi
 
-### Editors
-if (( ${+commands[vim]} )); then
-	export MYVIMRC="${XDG_CONFIG_HOME}/vim/vimrc"
-fi
-
 ### Less (is more)
 if (( ${+commands[less]} )); then
 	export LESSHISTFILE="${XDG_CACHE_HOME}/less/history"
 	export LESS=' -R '
-fi
-
-### Git
-if (( ${+commands[git]} )); then
-	export GIT_HOME=$HOME/.local/git
-	[[ -d "$GIT_HOME" ]] || mkdir -p "$GIT_HOME"
 fi
 
 ### Golang
@@ -112,9 +90,6 @@ if (( ${+commands[go]} )); then
 fi
 
 ### GNUPG & security tools
-if (( ${+commands[gpg]} )); then
-	export GNUPGHOME="${XDG_DATA_HOME}/gnupg"
-fi
 export PASSWORD_STORE_DIR="${XDG_DATA_HOME}/password-store"
 
 ### GTK
@@ -123,11 +98,6 @@ export GTK_USE_PORTAL=1
 
 ### Mesa
 export MESA_SHADER_CACHE_DIR="${XDG_CACHE_HOME}/mesa_shader_cache"
-
-### NPM (Node.js)
-if (( ${+commands[npm]} )); then
-	export NPM_CONFIG_USERCONFIG="${XDG_CONFIG_HOME}"/npm/.npmrc
-fi
 
 ### Perl
 if (( ${+commands[perl]} )); then

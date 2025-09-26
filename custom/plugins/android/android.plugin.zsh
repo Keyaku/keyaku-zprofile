@@ -1,8 +1,20 @@
 # if NOT on Android
 if ! whatami Android; then
-	(( ${+commands[adb]} )) || return
-	# Start Shizuku on connected device (non-root)
-	alias shizuku-start='adb shell sh /storage/emulated/0/Android/data/moe.shizuku.privileged.api/start.sh'
+	if (( ${+commands[adb]} )) || [[ -d "${XDG_DATA_HOME}/android" ]]; then
+		# Start Shizuku on connected device (non-root)
+		alias shizuku-start='adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh'
+
+		# Android debugging
+		export ANDROID_HOME="${XDG_DATA_HOME}/android"
+		[[ -d "$ANDROID_HOME" ]] || mkdir -p "$ANDROID_HOME"
+		export ANDROID_USER_HOME="${ANDROID_HOME}/.android"
+
+		if (( ${+commands[adb]} )); then
+			# Prevent adb from using user's home directory
+			alias adb="HOME=$ANDROID_HOME ${commands[adb]}"
+			alias fastboot="HOME=$ANDROID_HOME ${commands[fastboot]}"
+		fi
+	fi
 # if actually on Android (Termux)
 elif (( ${+TERMUX_VERSION} )); then
 	# Silence Message of the Day (motd)
