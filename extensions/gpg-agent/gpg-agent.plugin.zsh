@@ -1,6 +1,6 @@
 (( ${+commands[gpg-agent]} )) || return
 
-GNUPGHOME="${GNUPGHOME:-XDG_DATA_HOME/gnupg}"
+export GNUPGHOME="${GNUPGHOME:-$XDG_DATA_HOME/gnupg}"
 [[ -d "$GNUPGHOME" ]] || mkdir -p "$GNUPGHOME"
 
 # Load available plugin from ohmyzsh

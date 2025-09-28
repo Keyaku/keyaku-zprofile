@@ -1,6 +1,7 @@
 (( ${(v)#commands[(I)gpg|gpgconf]} )) || return
 
 export GNUPGHOME="${GNUPGHOME:-$XDG_DATA_HOME/gnupg}"
+[[ -d "$GNUPGHOME" ]] || mkdir -p "$GNUPGHOME"
 
 function gpg-fix-perms {
 	local homedir=${1:-$GNUPGHOME}
