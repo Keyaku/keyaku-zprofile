@@ -113,7 +113,7 @@ typeset -aU plugins=()
 # [[ -f "$ZSH_CUSTOM"/plugins/plugins.zsh ]] && source "$ZSH_CUSTOM"/plugins/plugins.zsh
 
 # ohmyzsh plugins
-plugins=(python pip ufw)
+plugins=(python pip ufw git)
 (( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
 
 # Prepare ohmyzsh specifically for this configuration

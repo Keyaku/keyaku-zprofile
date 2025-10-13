@@ -57,12 +57,14 @@ fi
 # To check if there was an intended use of this command
 local -r flags_set="${f_ext}${f_func}${f_prof}${f_opts}"
 
+### TODO: Discard arguments as they're found
+
 ## Concerning profiles
 local -aU _profiles=()
 
 # Load all profiles if specified
 if [[ "$f_prof" ]]; then
-	_profiles=( "$ZDOTDIR/profile.d"/{.*,^.}/**/*.zsh(-DN.) )
+	_profiles=( "$ZDOTDIR/profile.d"/**/*.zsh(-.DN) )
 else
 	# Load login/interactive _profiles if specified
 	(( ${f_opts[(I)-i]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$ZDOTDIR/profile.d") )
@@ -70,10 +72,10 @@ else
 
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
-		# Match any files in $PWD
-		_profiles+=(${${@%%.zsh}:A}(.zsh)#(.N))
+		# FIXME: Match any files in $PWD
+		# _profiles+=(${${@%%.zsh}:A}.zsh(-.N))
 		# Match any file under profile.d
-		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-DN.) )
+		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-.DN) )
 	fi
 fi
 
@@ -81,7 +83,7 @@ fi
 local -aU _functions=()
 
 # List of function paths, sorted alphabetically, dotdirectories first
-local -aU func_dirs=("$ZSH_CUSTOM"/functions/{.,^.}**{,/**}(-/FDN))
+local -aU func_dirs=("$ZSH_CUSTOM"/functions/**/{,/**}(-/FDN))
 
 # Load all functions if specified
 if [[ "$f_func" ]]; then
@@ -91,7 +93,7 @@ else
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
 		# Match any file under $ZSH_CUSTOM/functions
-		_functions+=( "$ZSH_CUSTOM"/functions/**/(${(j:|:)@}){,/**/*}(-DN.) )
+		_functions+=( "$ZSH_CUSTOM"/functions/**/(${(j:|:)@})*{,/**/*}(-DN.) )
 	fi
 fi
 
@@ -111,9 +113,9 @@ if (( 0 == ${num_sources} )); then
 	local retval=$?
 	if (( 1 <= $verbosity )); then
 		if (( ! $retval )); then
-			print_fn -i "Nothing to source"
+			printf "${funcstack[-1]}: %s\n" "Nothing to source"
 		else
-			print_fn -e "No valid files found with the specified flags"
+			printf "${funcstack[-1]}: %s\n" "No valid files found with the specified flags"
 		fi
 	fi
 	return $retval
