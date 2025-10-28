@@ -8,16 +8,16 @@ function xdg-migrate {
 		"Usage: ${funcstack[1]} [OPTION...] SRC_PATH DST_PATH"
 		"\t-h, --help : Displays this message"
 		"\t-d, --dry-run : Do not execute anything; just print"
+		"\t-s, --symbolic : Create a symbolic link instead of migrating"
 		# "\t-e, --env ENV_VAR : Pick environment variable. May help finding respective directories"
-		# "\t-s, --symbolic : Create a symbolic link instead of moving the directory"
 	)
 
 	## Setup func opts
-	local -i invalid_args=0
-	local f_help f_dryrun f_env
+	local f_help f_dryrun f_sym
 	zparseopts -D -E -K -- \
 		{h,-help}=f_help \
 		{d,-dry-run}=f_dryrun \
+		{s,-symbolic}=f_symbolic \
 		|| return 1
 
 
@@ -48,27 +48,43 @@ function xdg-migrate {
 	# TODO: check envvar against XDG table
 
 	## Help/usage message
-	if [[ "${f_help}" ]] || (( ${invalid_args} )); then
+	if [[ "${f_help}" ]]; then
 		>&2 print -l $usage
 		[[ "${f_help}" ]]; return $?
 	fi
 
+	local -i retval=0
+	## If symlink was requested
+	if [[ "${f_sym}" ]]; then
+		echo "Creating symbolic link from ${reqs[src]} to ${reqs[dst]}..."
+		if [[ -L "${reqs[src]}" ]]; then
+			print_fn -e "Path '${reqs[src]}' exists and already is a symbolic link"
+			retval=1
+		elif [[ -e "${reqs[dst]}" ]]; then
+			print_fn -e "Path '${reqs[dst]}' exists. Aborting"
+			retval=1
+		else
+			$f_dryrun ln -s "${reqs[src]}" "${reqs[dst]}"
+			retval=$?
+		fi
 	## If source is a directory
-	if [[ -d "${reqs[src]}" ]]; then
+	elif [[ -d "${reqs[src]}" ]]; then
 		echo "Migrating ${reqs[src]} to ${reqs[dst]}..."
 		if [[ -d "${reqs[dst]}" ]]; then
 			$f_dryrun rsync -Prazq "${reqs[src]}"/ "${reqs[dst]}" && rm -r "${reqs[src]}"
 		else
 			$f_dryrun mv "${reqs[src]}" "${reqs[dst]}"
 		fi
+		retval=$?
 	## If source is a file
 	elif [[ -f "${reqs[src]}" ]]; then
 		echo "Moving ${reqs[src]} to ${reqs[dst]}..."
 		[[ -d "${reqs[dst]}" ]] || mkdir -p "${reqs[dst]}"
-		$f_dryrun mv "${reqs[src]}" "${reqs[dst]}"/.
+		$f_dryrun mv "${reqs[src]}" "${reqs[dst]}"
+		retval=$?
 	else
 		print_fn -e "Something went wrong; '${reqs[src]}' not a valid file or directory"
-		return 128
+		retval=128
 	fi
 
 	return 0
