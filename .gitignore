@@ -19,6 +19,7 @@ custom/*.zshrc
 
 # zcompile cached files
 *.zwc
+*.zcompdump
 
 # Temporary files
 cache/

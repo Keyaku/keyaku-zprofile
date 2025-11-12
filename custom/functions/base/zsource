@@ -139,6 +139,22 @@ if (( 1 <= $verbosity )); then
 	fi
 fi
 
+###############################################################################
+# Load resulting files
+# -------------------------
+# Order of events:
+#
+# 1. functions:
+#     - all directories under $ZSH_CUSTOM/functions will be added to fpath in alphabetical order
+#     - autoload collected functions
+# 2. profiles:
+#     - source any or all .(z)sh files under $ZDOTDIR/profile.d/
+#     - abort command in case of error
+# 3. extensions:
+#     - source any or all .(z)sh files under $ZDOTDIR/extensions/
+#
+###############################################################################
+
 # Reload collected functions
 if (( ${#_functions} )); then
 	# Correct fpath with yet-to-be set paths from custom/functions
