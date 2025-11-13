@@ -38,9 +38,9 @@ It's structured as follows:
 	2. `.zprofile` - Used for executing user's commands at start, will be read when starting as a **_login shell_**. Typically used to autostart graphical sessions and to set session-wide environment variables.
 	3. `.zshrc` - Used for setting user's interactive shell configuration and executing commands, will be read when starting as an **_interactive shell_**.
 	4. `.zlogin` - Used for executing user's commands at ending of initial progress, will be read when starting as a **_login shell_**. Typically used to autostart command line utilities. Should not be used to autostart graphical sessions, as at this point the session might contain configuration meant only for an interactive shell.
-2. Custom functions under `.zfunc/`.
+2. Custom functions under `.custom/functions/`.
 3. Various .zsh scripts under `profile.d/`, containing everything from base functionality that helps one's everyday use, down to setting up the environment of an app or program, or even of a specific OS.
-4. My own set of plugins, named `extensions` to differentiate from custom plugins, under `extensions`. The main difference between this and putting them in `custom/plugins` is that they're loaded natively with `source` in order to avoid using ohmyzsh's `_omz_source` with its massive overhead, consequently making login shells start as fast as possible.
+4. My own set of plugins, named `extensions` to differentiate from custom plugins, under `extensions/`. The main difference between this and putting them in `custom/plugins/` is that they're loaded natively with `source` in order to avoid using ohmyzsh's `_omz_source` with its massive overhead, consequently making login shells start as fast as possible.
 These follow the same structure as `plugins`, including the `.plugin.zsh` filename extension; `.ext.zsh` is also accepted.
 
 
