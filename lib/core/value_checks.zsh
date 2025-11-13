@@ -34,7 +34,7 @@ function is_array {
 }
 
 # Check if arguments are of type associative array
-function is_dict {
+function is_associative_array {
 	local arg
 	(( $# )) && for arg; do
 		[[ -v "$arg" && ${(Pt)arg} == *association* ]] || return $?
@@ -49,8 +49,6 @@ function is_dict {
 
 # Compares two dotted versions
 function vercmp {
-	check_argc 2 2 $#
-
 	## If both arguments are equal
 	[[ $1 == $2 ]] && return 0
 
@@ -104,7 +102,7 @@ function is_ip_address {
 		is_ipv4="-4"
 	# If both are defined, abort
 	elif [[ -n "$is_ipv4" && -n "$is_ipv6" ]]; then
-		print_fn -e "-4 and -6 are mutually exclusive"
+		print -u2 "-4 and -6 are mutually exclusive"
 		return 2
 	fi
 
@@ -120,7 +118,6 @@ function is_ip_address {
 
 # Check if argument is IPv4 address or a hostname stored in /etc/hosts
 function is_hostname {
-	check_argc 1 1 $#
 	is_ip_address "$1" && return 0
 
 	local ip="${1%:*}"
@@ -132,7 +129,6 @@ function is_hostname {
 
 # Check if argument is a valid date
 function is_valid_date {
-	check_argc 1 2 $#
 	local argdate="$1" fmt="${2:-%Y-%m}"
 
 	case $(count_occurrences $fmt '-') in
@@ -150,7 +146,7 @@ function is_valid_date {
 # Check if defined array $1 contains value(s) ${@:2}
 function array_has {
 	if ! is_array "$1"; then
-		print_fn -e "not an array: '$1'"
+		print -u2 "not an array: '$1'"
 		return 1
 	fi
 
@@ -161,9 +157,9 @@ function array_has {
 }
 
 # Check if defined associative array $1 contains key(s) ${@:2}
-function dict_has {
-	if ! is_dict "$1"; then
-		print_fn -e "not an associative array: '$1'"
+function array_keys_has {
+	if ! is_associative_array "$1"; then
+		print -u2 "not an associative array: '$1'"
 		return 1
 	fi
 

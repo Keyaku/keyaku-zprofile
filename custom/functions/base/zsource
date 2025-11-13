@@ -1,4 +1,4 @@
-# Reloads profiles and/or functions under $ZDOTDIR/custom and $ZDOTDIR/profile.d
+# Reloads profiles and/or functions under $ZDOTDIR/custom and $ZDOTDIR/lib
 
 emulate -L zsh
 setopt extendedglob
@@ -8,14 +8,14 @@ setopt extendedglob
 local -r usage=(
 	"Usage: ${funcstack[1]} [OPTION...] [FILE...] [DIR...]"
 	"Extension to shell built-in command 'source'."
-	"Presumes \$ZDOTDIR/profile.d as default prefix."
+	"Presumes \$ZDOTDIR/lib as default prefix."
 	""
 	"\t[-h|--help] : Print this help message"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	"\t[-a|--all] : Reload all profiles and functions. Same as using -efp"
 	"\t[-f|--functions] : Reload all functions located under $ZSH_CUSTOM/functions"
 	"\t[-e|--extensions] : Reload all extensions located under $ZDOTDIR/extensions"
-	"\t[-p|--profiles] : Reload all profiles located under $ZDOTDIR/profile.d. Supercedes -l and -i"
+	"\t[-p|--profiles] : Reload all profiles located under $ZDOTDIR/lib. Supercedes -l and -i"
 	"\t[-l|--login] : Reload all files containing block for [[ -o login ]]. Stackable on the list of profiles"
 	"\t[-i|--interactive] : Reload all files containing block for [[ -o interactive ]]. Stackable on the list of profiles"
 )
@@ -64,18 +64,18 @@ local -aU _profiles=()
 
 # Load all profiles if specified
 if [[ "$f_prof" ]]; then
-	_profiles=( "$ZDOTDIR/profile.d"/**/*.zsh(-.DN) )
+	_profiles=( "$ZDOTDIR/lib"/**/*.zsh(-.DN) )
 else
 	# Load login/interactive _profiles if specified
-	(( ${f_opts[(I)-i]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$ZDOTDIR/profile.d") )
-	(( ${f_opts[(I)-l]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o interactive \]\]?' "$ZDOTDIR/profile.d") )
+	(( ${f_opts[(I)-i]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$ZDOTDIR/lib") )
+	(( ${f_opts[(I)-l]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o interactive \]\]?' "$ZDOTDIR/lib") )
 
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
 		# FIXME: Match any files in $PWD
 		# _profiles+=(${${@%%.zsh}:A}.zsh(-.N))
-		# Match any file under profile.d
-		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-.DN) )
+		# Match any file under lib
+		_profiles+=( "$ZDOTDIR/lib"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-.DN) )
 	fi
 fi
 
@@ -125,7 +125,7 @@ fi
 if (( 1 <= $verbosity )); then
 	if (( ${#_profiles} )); then
 		local s_profiles=(${_profiles//"${ZDOTDIR}"/\$ZDOTDIR})
-		(( 1 == $verbosity )) && s_profiles=(${s_profiles//"\$ZDOTDIR\/profile.d\/"})
+		(( 1 == $verbosity )) && s_profiles=(${s_profiles//"\$ZDOTDIR\/lib\/"})
 		(( 2 <= $verbosity )) && printf "%s\n" "Sourcing the following profiles:"
 		(( 1 <= $verbosity )) && printf "%s\n" ${s_profiles}
 	fi
@@ -148,7 +148,7 @@ fi
 #     - all directories under $ZSH_CUSTOM/functions will be added to fpath in alphabetical order
 #     - autoload collected functions
 # 2. profiles:
-#     - source any or all .(z)sh files under $ZDOTDIR/profile.d/
+#     - source any or all .(z)sh files under $ZDOTDIR/lib/
 #     - abort command in case of error
 # 3. extensions:
 #     - source any or all .(z)sh files under $ZDOTDIR/extensions/

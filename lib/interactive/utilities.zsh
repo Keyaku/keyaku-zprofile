@@ -54,7 +54,7 @@ function gpu-list {
 		if [[ "$cmd_name" ]]; then
 			print_fn -e "Arguments discarded: You may pick just 1 tool"
 			return 1
-		elif dict_has all_cmds "$1"; then
+		elif array_keys_has all_cmds "$1"; then
 			cmd_name="$1"
 		else
 			print_fn -w "Invalid or unsupported tool: '$1'"
@@ -68,7 +68,7 @@ function gpu-list {
 	if [[ -z "$cmd_name" ]]; then
 		print_fn -e "No tool provided"
 		return 1
-	elif ! dict_has all_cmds "$cmd_name"; then
+	elif ! array_keys_has all_cmds "$cmd_name"; then
 		print_fn -e "Invalid or unsupported tool: '$cmd_name'"
 		return 2
 	fi
@@ -79,10 +79,6 @@ function gpu-list {
 
 
 ### System tools
-function kill_zombies {
-	kill -HUP $(ps -A -ostat,ppid | awk '/[zZ]/{ print $2 }')
-}
-
 # Get total size of given directory
 function du_hast {
 	du -hs $@ | sort -rh
@@ -213,7 +209,7 @@ function pkgmgr-binpath {
 	local retval=0
 	local pkgmgr="$(pkgmgr-get)"
 
-	if ! dict_has PKGMGR_LIST "$pkgmgr"; then
+	if ! array_keys_has PKGMGR_LIST "$pkgmgr"; then
 		print_fn -e "Case for '$pkgmgr' not implemented yet"
 		return 1
 	fi
@@ -226,21 +222,3 @@ function pkgmgr-binpath {
 
 	return $retval
 }
-
-### Systemd
-function has_systemd {
-	# (( ${+commands[systemctl]} )) && systemctl -q is-system-running
-	[[ -r /run/systemd/sessions ]] && [[ "$(echo /run/systemd/sessions/<->##(N))" ]]
-}
-
-if has_systemd; then
-	### Systemd specific
-	function systemctl-service-path {
-		systemctl cat $@ 2>/dev/null | sed -En 's~# (.+?\.service)~\1~p'
-	}
-
-	alias systemctl-show-unitpath='systemctl show -p UnitPath --value'
-
-	### Udev control
-	alias udev-reload='sudo udevadm control --reload-rules && sudo udevadm trigger && sudo systemctl restart systemd-udevd.service'
-fi
