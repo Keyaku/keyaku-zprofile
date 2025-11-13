@@ -32,15 +32,16 @@ For more info on each entry, I use [xdg-ninja](https://github.com/b3nj5m1n/xdg-n
 ### Contents
 
 This repo contains the fundamental profile files which allow me to use my Unix/Linux system with as little hassle as possible.  
-These are:
-- [ZSH startup profiles](https://wiki.archlinux.org/title/Zsh#Startup/Shutdown_files) under `$ZDOTDIR/`, sorted in order which they are loaded:
+It's structured as follows:
+1. [ZSH startup profiles](https://wiki.archlinux.org/title/Zsh#Startup/Shutdown_files) under `$ZDOTDIR/`, sorted in order which they are loaded:
 	1. `.zshenv` - Used for setting user's environment variables; it should not contain commands that produce output or assume the shell is attached to a TTY. When this file exists it will **_always_** be read.
 	2. `.zprofile` - Used for executing user's commands at start, will be read when starting as a **_login shell_**. Typically used to autostart graphical sessions and to set session-wide environment variables.
 	3. `.zshrc` - Used for setting user's interactive shell configuration and executing commands, will be read when starting as an **_interactive shell_**.
 	4. `.zlogin` - Used for executing user's commands at ending of initial progress, will be read when starting as a **_login shell_**. Typically used to autostart command line utilities. Should not be used to autostart graphical sessions, as at this point the session might contain configuration meant only for an interactive shell.
-- Custom functions under `.zfunc/`.
-- Custom plugins under `custom/plugins`, loaded natively with `source` to avoid using ohmyzsh's `_omz_source` with its massive overhead, making a login shell as fast as possible.
-- Various .zsh scripts under `profile.d/`, containing everything from base functionality that helps one's everyday use, down to setting up the environment of an app or program, or even of a specific OS.
+2. Custom functions under `.zfunc/`.
+3. Various .zsh scripts under `profile.d/`, containing everything from base functionality that helps one's everyday use, down to setting up the environment of an app or program, or even of a specific OS.
+4. My own set of plugins, named `extensions` to differentiate from custom plugins, under `extensions`. The main difference between this and putting them in `custom/plugins` is that they're loaded natively with `source` in order to avoid using ohmyzsh's `_omz_source` with its massive overhead, consequently making login shells start as fast as possible.
+These follow the same structure as `plugins`, including the `.plugin.zsh` filename extension; `.ext.zsh` is also accepted.
 
 
 ## Practicality

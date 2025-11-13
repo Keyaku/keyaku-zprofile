@@ -10,7 +10,7 @@
 	shallow = true
 	ignore = all
 [submodule "custom/plugins/zsh-syntax-highlighting"]
-	path = custom/plugins/zsh-syntax-highlighting
+	path = extensions/zsh-syntax-highlighting
 	url = https://github.com/zsh-users/zsh-syntax-highlighting.git
 	shallow = true
 	ignore = all

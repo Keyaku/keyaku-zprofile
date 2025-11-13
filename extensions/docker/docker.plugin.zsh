@@ -1,7 +1,7 @@
 (( $+commands[docker] && ! $+commands[podman] )) || return
 
 # Standardized $0 handling
-# https://zdharma-continuum.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html
+# https://zdharma-continuum.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html#zero-handling
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 0="${${(M)0:#/*}:-$PWD/$0}"
 
@@ -17,6 +17,7 @@ fi
 	# `docker completion` is only available from 23.0.0 on
 	# docker version returns `Docker version 24.0.2, build cb74dfcd85`
 	# with `s:,:` remove the comma after the version, and select third word of it
+	autoload -Uz is-at-least
 	if is-at-least 23.0.0 ${${(s:,:z)"$(command docker --version)"}[3]}; then
 		command docker completion zsh | tee "$ZSH_CACHE_DIR/completions/_docker" > /dev/null
 	fi

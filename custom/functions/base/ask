@@ -3,14 +3,13 @@
 emulate -L zsh
 
 local -r usage=(
-	"Usage: $(get_funcname) [OPTION...] [(-p|--prompt) message]"
+	"Usage: $(get_funcname) [OPTION...] [(-p|--prompt) message] [-- \`read\` opts]"
 	"\t[-h|--help]"
 	"\t[-B|--yn|--yesno] : Prompt for a binary yes/no answer. This overrides -o|--opts with '-o y -o n'"
 	"\t[-k|--non-empty] : Prohibit empty answers"
 	"\t[-p|--prompt] : Defines question for the prompt"
 	"\t[-o|--opts] : Add possible answer(s)"
 	"\t[-d|--default] : Make argument the default answer if empty"
-	"\t[-s|--strict] : Paired with (-o|--options), will not allow any answer outside the available ones"
 )
 
 local -a valid_y=(yes ye y)
@@ -19,29 +18,27 @@ local -a valid_yn=(${valid_y[@]} ${valid_n[@]})
 local -a valid_yn_short=(y n)
 
 ## Setup parseopts
-local f_help f_yesno f_nonEmpty f_prompt f_options f_default f_strict
+local f_help f_yesno f_nonEmpty f_prompt f_options f_default
 zparseopts -D -E -F -K -- \
 	{h,-help}=f_help \
 	{B,-yn,-yesno}=f_yesno \
 	{k,-non-empty}=f_nonEmpty \
 	{p,-prompt}:=f_prompt \
 	{o,-opts}+:=f_options \
-	{d,-default}:=f_default \
-	{s,-strict}=f_strict
+	{d,-default}:=f_default
 
 ## Help/usage message
-if [[ "$f_help" ]]; then
+if (( ${#f_help} )); then
 	>&2 print -l $usage
-	[[ "$f_help" ]]; return $?
+	return ${#f_help}
 fi
 
 ## Parse arguments
 local v_prompt v_default v_options=()
-[[ "${f_prompt}" ]] && v_prompt="${f_prompt[-1]}"
+(( ${#f_prompt} )) && v_prompt="${f_prompt[-1]}"
 # If yesno was requested, override options and enable strict
-[[ "${f_yesno}" ]] && {
+(( ${#f_yesno} )) && {
 	f_options=(-o${^valid_yn})
-	f_strict=(-s)
 }
 
 [[ "${f_options}" ]] && {
@@ -57,7 +54,7 @@ local -a printed_opts=(${v_options})
 	fi
 	v_default="${f_default[-1]:l}"
 	# If going for yes/no, make sure the default is valid
-	if [[ "${f_yesno}" ]] && ! array_has valid_yn "$v_default"; then
+	if (( ${#f_yesno} )) && ! array_has valid_yn "$v_default"; then
 		print_fn -e "Invalid default value: '$v_default'"
 		return 1
 	fi
@@ -70,14 +67,15 @@ local -a printed_opts=(${v_options})
 		printed_opts=("${v_default:u}" ${printed_opts})
 	fi
 }
-# If strict was requested but there are no options, clear this flag
-if [[ "$f_strict" ]] && (( ! ${#v_options} )); then
-	f_strict=""
-fi
 
 ## Read extra arguments
+local -a extra_args=()
 while (( $# )); do
 	case $1 in
+	-- )
+		shift
+		extra_args=($@)
+	;;
 	-* ) print_fn -w "Invalid argument: '$1'"
 	;;
 	* )
@@ -94,7 +92,7 @@ done
 
 ## Prepare prompt message
 
-[[ "${f_yesno}" ]] && printed_opts=(${printed_opts//(yes|ye|no)/})
+(( ${#f_yesno} )) && printed_opts=(${printed_opts//(yes|ye|no)/})
 
 v_prompt="${v_prompt:+$v_prompt }${printed_opts:+[${(j:/:)printed_opts}]}"
 [[ "${v_prompt}" ]] && v_prompt="${v_prompt}\n"
@@ -105,24 +103,25 @@ local v_answer
 REPLY=""
 while [[ -z "${v_answer}" ]]; do
 	printf "${v_prompt}> "
-	read
+	read ${extra_args} || exit
 
-	if [[ "$f_nonEmpty" ]] && [[ -z "${REPLY}" ]]; then
-		echo "Answer cannot be empty."
-	elif [[ "${v_default}" ]]; then
-		v_answer="${v_default}"
-	elif [[ "$f_strict" ]] && ! array_has v_options "${REPLY:l}"; then
+	if [[ -z "${REPLY}" ]]; then
+		if [[ "$f_nonEmpty" ]]; then
+			echo "Answer cannot be empty."
+		elif [[ "${v_default}" ]]; then
+			v_answer="${v_default}"
+		fi
+	elif (( 0 < ${#v_options} )) && ! array_has v_options "${REPLY:l}"; then
 		printf "Invalid answer: '%s'\n" "${REPLY}"
 	else
 		v_answer="$REPLY"
-		break
 	fi
 done
 REPLY="$v_answer"
 
-if [[ "$f_yesno" ]]; then
+if (( ${#f_yesno} )); then
 	REPLY="${REPLY:l}"
-	array_has valid_y "${REPLY:l}"
+	array_has valid_y "$REPLY"
 	retval=$?
 fi
 

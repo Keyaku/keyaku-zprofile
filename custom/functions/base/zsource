@@ -12,8 +12,9 @@ local -r usage=(
 	""
 	"\t[-h|--help] : Print this help message"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
-	"\t[-a|--all] : Reload all profiles and functions. Same as using -pf"
+	"\t[-a|--all] : Reload all profiles and functions. Same as using -efp"
 	"\t[-f|--functions] : Reload all functions located under $ZSH_CUSTOM/functions"
+	"\t[-e|--extensions] : Reload all extensions located under $ZDOTDIR/extensions"
 	"\t[-p|--profiles] : Reload all profiles located under $ZDOTDIR/profile.d. Supercedes -l and -i"
 	"\t[-l|--login] : Reload all files containing block for [[ -o login ]]. Stackable on the list of profiles"
 	"\t[-i|--interactive] : Reload all files containing block for [[ -o interactive ]]. Stackable on the list of profiles"
@@ -21,12 +22,13 @@ local -r usage=(
 
 ## Setup parseopts (with no extra arguments)
 local void f_help f_verbosity
-local f_prof f_all f_opts f_func
+local f_all f_func f_ext f_prof f_opts
 zparseopts -a void -D -F -K -- \
 	{h,-help}=f_help \
 	v+=f_verbosity q+=f_verbosity \
 	{a,-all}=f_all \
 	{f,-functions}=f_func \
+	{e,-extensions}=f_ext \
 	{p,-profiles}=f_prof \
 	{l,-login}=f_opts \
 	{i,-interactive}=f_opts \
@@ -47,19 +49,22 @@ f_verbosity="${(j::)f_verbosity//-}"
 # Set appropriate flags if -a was given
 if [[ "$f_all" ]]; then
 	f_func=(-f)
+	f_ext=(-e)
 	f_prof=(-p)
 	f_opts=()
 fi
 
 # To check if there was an intended use of this command
-local -r flags_set="${f_func}${f_prof}${f_opts}"
+local -r flags_set="${f_ext}${f_func}${f_prof}${f_opts}"
+
+### TODO: Discard arguments as they're found
 
 ## Concerning profiles
 local -aU _profiles=()
 
 # Load all profiles if specified
 if [[ "$f_prof" ]]; then
-	_profiles=( "$ZDOTDIR/profile.d"/{.*,^.}/**/*.zsh(-DN.) )
+	_profiles=( "$ZDOTDIR/profile.d"/**/*.zsh(-.DN) )
 else
 	# Load login/interactive _profiles if specified
 	(( ${f_opts[(I)-i]} )) && _profiles+=( $(\grep -rEl '\[?\[ -o login \]\]?' "$ZDOTDIR/profile.d") )
@@ -67,10 +72,10 @@ else
 
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
-		# Match any files in $PWD
-		_profiles+=(${${@%%.zsh}:A}(.zsh)#(.N))
+		# FIXME: Match any files in $PWD
+		# _profiles+=(${${@%%.zsh}:A}.zsh(-.N))
 		# Match any file under profile.d
-		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-DN.) )
+		_profiles+=( "$ZDOTDIR/profile.d"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-.DN) )
 	fi
 fi
 
@@ -78,7 +83,7 @@ fi
 local -aU _functions=()
 
 # List of function paths, sorted alphabetically, dotdirectories first
-local -aU func_dirs=("$ZSH_CUSTOM"/functions/{.,^.}**{,/**}(-/FDN))
+local -aU func_dirs=("$ZSH_CUSTOM"/functions/**/{,/**}(-/FDN))
 
 # Load all functions if specified
 if [[ "$f_func" ]]; then
@@ -88,20 +93,29 @@ else
 	# Load any potential match from arguments, file or directory
 	if (( $# )); then
 		# Match any file under $ZSH_CUSTOM/functions
-		_functions+=( "$ZSH_CUSTOM"/functions/**/(${(j:|:)@}){,/**/*}(-DN.) )
+		_functions+=( "$ZSH_CUSTOM"/functions/**/(${(j:|:)@})*{,/**/*}(-DN.) )
 	fi
 fi
 
+## Concerning extensions
+local -aU _extensions=()
+if [[ "$f_ext" ]]; then
+	# FIXME: Remove '.plugin' extension
+	_extensions=("$ZDOTDIR"/extensions/(*~example)/*.(plugin|ext).zsh(-.N:t))
+fi
+
 # If no profiles or functions were set, do nothing
-if (( 0 == ${#_profiles} + ${#_functions} )); then
-	# Check if no functions, profiles or arguments were given (read: nothing to source)
-	[[ -z "${f_func}${f_prof}" ]] && (( ! $# ))
+local -ri num_sources=$((${#_profiles} + ${#_functions} + ${#_extensions}))
+
+if (( 0 == ${num_sources} )); then
+	# Check if no functions, profiles, extensions or arguments were given (read: nothing to source)
+	[[ -z "${flags_set}" ]] && (( ! $# ))
 	local retval=$?
 	if (( 1 <= $verbosity )); then
 		if (( ! $retval )); then
-			print_fn -i "Nothing to source"
+			printf "${funcstack[-1]}: %s\n" "Nothing to source"
 		else
-			print_fn -e "No valid files found with the specified flags"
+			printf "${funcstack[-1]}: %s\n" "No valid files found with the specified flags"
 		fi
 	fi
 	return $retval
@@ -119,7 +133,27 @@ if (( 1 <= $verbosity )); then
 		(( 2 <= $verbosity )) && printf "%s\n" "Loading the following functions:"
 		(( 1 <= $verbosity )) && printf "%s\n" ${_functions}
 	fi
+	if (( ${#_extensions} )); then
+		(( 2 <= $verbosity )) && printf "%s\n" "Loading the following extensions:"
+		(( 1 <= $verbosity )) && printf "%s\n" ${_extensions}
+	fi
 fi
+
+###############################################################################
+# Load resulting files
+# -------------------------
+# Order of events:
+#
+# 1. functions:
+#     - all directories under $ZSH_CUSTOM/functions will be added to fpath in alphabetical order
+#     - autoload collected functions
+# 2. profiles:
+#     - source any or all .(z)sh files under $ZDOTDIR/profile.d/
+#     - abort command in case of error
+# 3. extensions:
+#     - source any or all .(z)sh files under $ZDOTDIR/extensions/
+#
+###############################################################################
 
 # Reload collected functions
 if (( ${#_functions} )); then
@@ -151,4 +185,10 @@ for arg in $_profiles; do
 	fi
 done
 
-(( 0 < ${#_profiles} + ${#_functions} ))
+# Source resulting extensions
+# FIXME: Remove '.plugin' extension
+for arg in $_extensions; do
+	source "$ZDOTDIR/extensions/${arg:r:r}/${arg}"
+done
+
+(( 0 < ${num_sources} ))
