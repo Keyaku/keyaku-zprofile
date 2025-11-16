@@ -9,20 +9,13 @@
 # and to set session-wide environment variables.
 #####################################################################
 
-# Initialize submodules if ohmyzsh is not present or empty
-[[ "${ZPROFILE_MODULES}" ]] || ZPROFILE_MODULES=($(git -C "$ZDOTDIR" config --file .gitmodules --get-regexp path | awk '{ print $2 }'))
-if [[ "$(echo "$ZDOTDIR"/$^ZPROFILE_MODULES/(N^F))" ]]; then
-	echo "Initializing submodules..."
-	# Initialize submodules
-	git -C "$ZDOTDIR" submodule -q update --init --remote --recursive
-fi
+### Source path/session functions
+[[ -d "${ZDOTDIR}/lib/login" ]] && for zsh_file in "${ZDOTDIR}/lib/login"/*.zsh(N); do
+	source "$zsh_file"
+done
 
-# Load function that loads all custom functions
-# FIXME: In theory, this should not be present in .zprofile. Modify .zprofile to avoid this.
-setopt extendedglob
-autoload -Uz "${ZSH_CUSTOM:-$ZDOTDIR/custom}"/functions/{.,^.}**/zsource(N)
-zsource -a
-
-### Local bin
-[[ -d "$HOME/.local/bin" ]] || mkdir -p "$HOME/.local/bin"
-haspath "$HOME/.local/bin" || addpath -p "$HOME/.local/bin"
+### Source profile stage
+[[ -d "${ZDOTDIR}/profile" ]] && for zsh_file in "${ZDOTDIR}/profile"/*.zsh(N.); do
+	source "$zsh_file"
+done
+unset zsh_file

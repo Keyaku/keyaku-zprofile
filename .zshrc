@@ -14,15 +14,24 @@ export ZSH="$ZDOTDIR/ohmyzsh"
 # Changing some zsh variables
 ZSH_CUSTOM="$ZDOTDIR/custom"
 
+# Initialize submodules if ohmyzsh is not present or empty
+[[ "${ZPROFILE_MODULES}" ]] || ZPROFILE_MODULES=($(git -C "$ZDOTDIR" config --file .gitmodules --get-regexp path | awk '{ print $2 }'))
+if [[ "$(echo "$ZDOTDIR"/$^ZPROFILE_MODULES/(N^F))" ]]; then
+	echo "Initializing submodules..."
+	# Initialize submodules
+	git -C "$ZDOTDIR" submodule -q update --init --remote --recursive
+fi
+
 # Required setopts for this setup to work
 setopt extendedglob
 setopt re_match_pcre
 
 ### Detect if this is an interactive login shell (interactive is implied in .zshrc)
 if [[ -o login ]]; then
-	### First-time initialization
+	### First-time initialization check
 	if (( $UID >= 1000 )) && [[ ! -f "$ZDOTDIR/conf/.first_init" ]] || (( 1 != $(cat "$ZDOTDIR/conf/.first_init") )); then
-		zsh "$ZDOTDIR"/conf/first_init.zsh
+		print -u2 "Warning: The ZSH profile was not initialized. Run the following command to ensure everything works as expected:"
+		printf "\t%s\n" "zsh "$ZDOTDIR"/conf/first_init.zsh"
 	fi
 
 	### Print fetch
@@ -30,13 +39,13 @@ if [[ -o login ]]; then
 		if (( ${+commands[$fetch]} )); then
 			$fetch
 		else
-			print_fn -e "%s\n" "'$fetch' is not installed."
+			print -u2 "Info: '$fetch' is not installed."
 		fi
 	)
-else
-	# Load all custom functions
-	autoload -Uz "$ZSH_CUSTOM"/functions/{.,^.}**/zsource(.N) && zsource -a
 fi
+
+# Load all custom functions
+autoload -Uz "$ZSH_CUSTOM"/functions/{.,^.}**/zsource(.N) && zsource -a
 
 #####################################################################
 

@@ -55,7 +55,7 @@ _zsh_source_dir() {
 	fi
 
 	# Use glob qualifiers: N (null_glob), . (regular LIST_files), o (order by name)
-	local LIST_files=("${target_dir}/${pattern}"(N.on))
+	local LIST_files=("${target_dir}"/${~pattern}(N.on))
 
 	if (( ${#LIST_files} == 0 )); then
 		[[ -n "${ZSH_PROFILE_DEBUG}" ]] && print -u2 "Debug: No LIST_files matching ${pattern} in ${target_dir}"

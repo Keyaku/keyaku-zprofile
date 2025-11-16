@@ -31,7 +31,7 @@ $ZDOTDIR/
 │   └── 30-environment.zsh    # Other environment variables
 │
 ├── profile/                  # Stage 2: .zprofile content
-│   ├── 00-functions.zsh      # Session-wide functions (addpath, rmpath, etc.)
+│   ├── 00-functions.zsh      # Session-wide functions
 │   ├── 10-detection.zsh      # OS/environment detection
 │   └── 20-session-env.zsh    # Session-specific environment
 │

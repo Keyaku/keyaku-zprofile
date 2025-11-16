@@ -2,17 +2,17 @@
 typeset -agxU WHATAMI_LIST=()
 
 # Cache file location. Remove this file
-WHATAMI_CACHE_FILE="${ZSH_CACHE_HOME:-${XDG_CACHE_HOME:-$HOME/.local/cache}}/whatami_cache"
+WHATAMI_CACHE_FILE="${ZSH_CACHE_HOME:-${XDG_CACHE_HOME:-$HOME/.local/cache}/zsh}/whatami_cache"
 
 function whatami {
-	local -r usage="Usage: ${funcstack[1]} [DISTRO...]"
+	local -ra usage=("Usage: ${funcstack[1]} [DISTRO...]")
 
 	if (( ${@[(I)-*|--*]} )); then
 		if (( ${@[(I)-h|--help]} )); then
-			>&2 echo "$usage"
+			>&2 print -l $usage
 			return 0
 		else
-			print_fn -e "Unknown option: ${(v)@[(I)-*|--*]}"
+			print -u2 "Error: Unknown option: ${(v)@[(I)-*|--*]}"
 		fi
 	fi
 
