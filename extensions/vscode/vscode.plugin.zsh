@@ -52,9 +52,9 @@ if (( ${(v)#commands[(I)com.visualstudio.code|com.vscodium.codium]} )); then
 		(( ${+DOTNET_ROOT} )) && VSCODE_ENVVARS[DOTNET_ROOT]="$DOTNET_ROOT"
 
 		# Add Sonarlint path
-		case $(find ~/.var/app/"$flatpak_app"/data/*/extensions -maxdepth 1 -type d -name "*sonarlint*" -print -quit) in
-		'') (( ${+SONARLINT_USER_HOME} )) && VSCODE_ENVVARS[SONARLINT_USER_HOME]="${XDG_DATA_HOME}/sonarlint" ;;
-		esac
+		if "$flatpak_app" --list-extensions 2>/dev/null | \grep -q "sonarlint"; then
+			VSCODE_ENVVARS[SONARLINT_USER_HOME]="${XDG_DATA_HOME}/sonarlint" ;;
+		fi
 
 		local vs_envkey vs_envval
 		for vs_envkey vs_envval in ${(@kv)VSCODE_ENVVARS}; do

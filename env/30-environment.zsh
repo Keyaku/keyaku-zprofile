@@ -36,6 +36,7 @@ if (( ${+commands[go]} )); then
 fi
 
 ### GNUPG & security tools
+# FIXME: Replace hardcoded source commands
 source "${ZDOTDIR}"/extensions/gpg/gpg.plugin.zsh
 source "${ZDOTDIR}"/extensions/gpg-agent/gpg-agent.plugin.zsh
 export PASSWORD_STORE_DIR="${XDG_DATA_HOME}/password-store"
@@ -62,6 +63,8 @@ if (( ${+commands[cpan]} )); then
 	alias cpan='cpan -j ${PERL_CPANM_HOME}/CPAN/MyConfig.pm'
 fi
 
+### Sonarlint
+export SONARLINT_USER_HOME="${XDG_DATA_HOME}/sonarlint"
 
 ### SSH
 if (( ${+commands[ssh]} )); then
