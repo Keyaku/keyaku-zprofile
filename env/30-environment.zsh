@@ -37,7 +37,7 @@ fi
 
 ### GNUPG & security tools
 source "${ZDOTDIR}"/extensions/gpg/gpg.plugin.zsh
-source "${ZDOTDIR}"/extensions/gpg/gpg-agent.plugin.zsh
+source "${ZDOTDIR}"/extensions/gpg-agent/gpg-agent.plugin.zsh
 export PASSWORD_STORE_DIR="${XDG_DATA_HOME}/password-store"
 
 ### GTK
