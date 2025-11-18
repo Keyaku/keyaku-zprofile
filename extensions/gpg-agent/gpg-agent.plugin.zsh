@@ -9,9 +9,8 @@ if [[ ! -f "$GNUPGHOME/gpg-agent.conf" ]] || ! \grep -q 'pinentry-program' "$GNU
 fi
 
 # Start gpg-agent with systemd
-# FIXME: This is currently not enough to work with Flatpak VSCode. Launching Kleopatra seems to address it, but I need to resolve this here.
-if has_systemd && ! systemctl --user -q status gpg-agent &>/dev/null; then
-	systemctl --user -q enable --now gpg-agent
+if has_systemd && ! systemctl --user -q is-active gpg-agent.socket; then
+	systemctl --user -q start gpg-agent.socket
 fi
 
 # Load available plugin from ohmyzsh
