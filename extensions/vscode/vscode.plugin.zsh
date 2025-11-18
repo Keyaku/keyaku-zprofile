@@ -53,7 +53,7 @@ if (( ${(v)#commands[(I)com.visualstudio.code|com.vscodium.codium]} )); then
 
 		# Add Sonarlint path
 		if "$flatpak_app" --list-extensions 2>/dev/null | \grep -q "sonarlint"; then
-			VSCODE_ENVVARS[SONARLINT_USER_HOME]="${XDG_DATA_HOME}/sonarlint" ;;
+			VSCODE_ENVVARS[SONARLINT_USER_HOME]="${XDG_DATA_HOME}/sonarlint"
 		fi
 
 		local vs_envkey vs_envval
