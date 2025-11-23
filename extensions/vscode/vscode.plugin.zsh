@@ -1,8 +1,9 @@
 ### VScode (Flatpak)
 if (( ${(v)#commands[(I)com.visualstudio.code|com.vscodium.codium]} )); then
 	for _vscode in ${(k)commands[(I)com.visualstudio.code|com.vscodium.codium]}; do
+		_vscode_dir="$HOME"/.var/app/$_vscode
 		# Point Flatpak's .ssh config to user's config
-		(_vscode_dir="$HOME"/.var/app/$_vscode
+		(
 			_ssh_dir="$_vscode_dir"/.ssh
 			_ssh_configfile="$_ssh_dir"/config
 			# Prepare ssh_config
@@ -15,8 +16,17 @@ if (( ${(v)#commands[(I)com.visualstudio.code|com.vscodium.codium]} )); then
 				ln -s "${SSH_HOME:-$HOME/.ssh}" "$_vscode_dir/config/ssh"
 			fi
 		)
+		# Use VSCode's java binary if java isn't available
+		if (( ! ${+commands[java]} )); then
+			_java_path=("$HOME"/.var/app/com.vscodium.codium/data/codium/extensions/redhat.java*/jre/*/bin/java(.[1]))
+			if [[ -e "${_java_path[1]}" ]]; then
+				export JAVA_HOME="${_java_path[1]:h:h}"
+				addpath "$JAVA_HOME/bin"
+			fi
+			unset _java_path
+		fi
 	done
-	unset _vscode
+	unset _vscode_dir _vscode
 
 	# Sets VScode Flatpak's overrides
 	function vscode-flatpak-overrides {
