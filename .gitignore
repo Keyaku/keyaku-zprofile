@@ -1,28 +1,32 @@
-# Personal shell files
-.*history
-.*.z*
+# Backup files
+*.bak
+*.old
+*~
+.*.swp
+.*.swo
+
+# Generated files
 .dir_colors
 .first_init
-custom/plugins/plugins.zsh
-custom/*.zsh
-custom/*.zshrc
+.p10k.zsh
+
+# Local development
+.vscode/
+.idea/
+*.log
+
+# OS (Windows, macOS, Linux...) or DE (KDE, GNOME...) specific
+.DS_Store
+.directory
+Thumbs.db
+desktop.ini
 
 # Sync app files
 .st*
 
-# DE files (KDE, GNOME, etc.)
-.directory
-
-# editor configs
-.vscode/
-.idea/
-
 # zcompile cached files
 *.zwc
-*.zcompdump
-
-# Temporary files
-cache/
-log/
-*.swp
-.DS_Store
+*.zwc.old
+.zcompdump*
+.zsh_history
+.zsh_sessions/

@@ -83,7 +83,6 @@ Each directory corresponds to a ZSH startup stage. Files are numbered (00-, 10-,
 
 This solves the dependency problem elegantly:
 * Core functions go in `lib/core/` and are sourced early (from `.zshenv`)
-* Path functions go in `lib/path/` and are sourced in `.zprofile`
 * Functions can be categorized by purpose
 * Both stage-specific files AND extensions can depend on these
 
