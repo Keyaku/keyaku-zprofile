@@ -82,8 +82,12 @@ fi
 ## Concerning functions
 local -aU _functions=()
 
-# List of function paths, sorted alphabetically, dotdirectories first
-local -aU func_dirs=("$ZSH_CUSTOM"/functions/**/{,/**}(-/FDN))
+# List of function paths under functions/ (exclusive), sorted alphabetically, dotdirectories first
+# FIXME: omz adds $ZSH_CUSTOM/functions to $fpath at zshrc stage
+# |  WITHOUT checking if it's already in it. I should write a PR to them which
+# |  avoids that, but until then, I must consider how to add that one to $fpath
+# |  regardless of omz being enabled.
+local -aU func_dirs=("$ZSH_CUSTOM"/functions/*/**/(-/FDN:a))
 
 # Load all functions if specified
 if [[ "$f_func" ]]; then
