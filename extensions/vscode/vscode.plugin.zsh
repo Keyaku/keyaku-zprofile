@@ -18,9 +18,9 @@ if (( ${(v)#commands[(I)com.visualstudio.code|com.vscodium.codium]} )); then
 		)
 		# Use VSCode's java binary if java isn't available
 		if (( ! ${+commands[java]} )); then
-			_java_path=("$HOME"/.var/app/com.vscodium.codium/data/codium/extensions/redhat.java*/jre/*/bin/java(.[1]))
-			if [[ -e "${_java_path[1]}" ]]; then
-				export JAVA_HOME="${_java_path[1]:h:h}"
+			_java_path="$_vscode_dir"/data/codium/extensions/redhat.java*/jre/*/bin/java(.N[1])
+			if [[ -e "${_java_path}" ]]; then
+				export JAVA_HOME="${_java_path:h:h}"
 				addpath "$JAVA_HOME/bin"
 			fi
 			unset _java_path
@@ -75,8 +75,8 @@ if (( ${(v)#commands[(I)com.visualstudio.code|com.vscodium.codium]} )); then
 		done
 
 		# Setup session bus
-		local -a VSCODE_DBUS_TALK=(
-		)
+		local -a VSCODE_DBUS_TALK=()
+
 		# Use KDE wallet in case of KDE Plasma
 		if (( ${+commands[plasmashell]} )) && [[ "$XDG_SESSION_DESKTOP" == KDE ]] && \
 			[[ ! -z "$(dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep -E 'org.kde.kwalletd\b')" ]]
