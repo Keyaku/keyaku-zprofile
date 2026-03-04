@@ -117,11 +117,6 @@ done
 
 `.zprofile`:
 ```zsh
-# Source path/session functions
-for file in ${ZDOTDIR}/lib/path/*.zsh(N); do
-    source "$file"
-done
-
 # Source profile stage
 for file in ${ZDOTDIR}/profile/*.zsh(N.); do
     source "$file"

@@ -10,12 +10,7 @@
 #####################################################################
 
 ### Source path/session functions
-[[ -d "${ZDOTDIR}/lib/login" ]] && for zsh_file in "${ZDOTDIR}/lib/login"/*.zsh(N); do
-	source "$zsh_file"
-done
+_zsh_source_dir "${ZDOTDIR}/lib/login" "lib/login"
 
 ### Source profile stage
-[[ -d "${ZDOTDIR}/profile" ]] && for zsh_file in "${ZDOTDIR}/profile"/*.zsh(N.); do
-	source "$zsh_file"
-done
-unset zsh_file
+_zsh_source_dir "${ZDOTDIR}/profile" "profile"
