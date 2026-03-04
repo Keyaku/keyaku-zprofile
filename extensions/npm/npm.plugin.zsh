@@ -1,9 +1,5 @@
 (( ${+commands[npm]} )) || return
 
-# Set the npm user config envvar to the XDG specification
-export NPM_CONFIG_USERCONFIG="${XDG_CONFIG_HOME}"/npm/.npmrc
-[[ -f "$NPM_CONFIG_USERCONFIG" ]] || touch "$NPM_CONFIG_USERCONFIG"
-
 # Check if npm config contains a given configuration; if not, add preset configuration to it
 if ! \grep -Eq 'prefix = \${XDG_DATA_HOME}/npm' "$NPM_CONFIG_USERCONFIG"; then
 	diff -BNPZbrw --changed-group-format='%>' --unchanged-group-format='' --to-file "$ZDOTDIR/conf/npm/.npmrc" "$NPM_CONFIG_USERCONFIG" > "$XDG_CACHE_HOME"/zsh/npmrc.diff

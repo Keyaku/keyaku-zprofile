@@ -1,9 +1,6 @@
 (( ${+commands[gpg-agent]} )) || return
 
-[[ -z "$GNUPGHOME" || "$GNUPGHOME" != "${XDG_DATA_HOME:-$HOME/.local/share}"/gnupg ]] && \
-	export GNUPGHOME="${XDG_DATA_HOME:-$HOME/.local/share}"/gnupg
-[[ -d "$GNUPGHOME" ]] || mkdir -p "$GNUPGHOME"
-
+# Set pinentry if not set in gpg-agent.conf
 if [[ ! -f "$GNUPGHOME/gpg-agent.conf" ]] || ! \grep -q 'pinentry-program' "$GNUPGHOME/gpg-agent.conf"; then
 	echo "pinentry-program /usr/bin/pinentry" >> "$GNUPGHOME/gpg-agent.conf"
 fi

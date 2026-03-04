@@ -19,7 +19,7 @@ fi
 unfunction is_ssh_dir
 
 # Pick default value if unset
-SSH_HOME="${SSH_HOME:-"$HOME"/.ssh}"
+[[ -z "$SSH_HOME" ]] && source "ssh.env.zsh"
 
 # If $HOME/.ssh exists and is not defined as SSH_HOME, move its contents
 if [[ -d ~$USER/.ssh ]] && [[ "$SSH_HOME" != ~$USER/.ssh ]]; then
