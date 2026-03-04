@@ -122,10 +122,6 @@ for file in ${ZDOTDIR}/lib/path/*.zsh(N); do
     source "$file"
 done
 
-for file in ${ZDOTDIR}/lib/env/*.zsh(N); do
-    source "$file"
-done
-
 # Source profile stage
 for file in ${ZDOTDIR}/profile/*.zsh(N.); do
     source "$file"
