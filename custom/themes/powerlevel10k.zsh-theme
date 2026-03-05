@@ -1,1 +1,1 @@
-powerlevel10k/powerlevel10k.zsh-theme
+../../vendor/themes/powerlevel10k/powerlevel10k.zsh-theme

@@ -3,7 +3,7 @@
 #####################################################################
 
 # Path to oh-my-zsh installation.
-export ZSH="$ZDOTDIR/ohmyzsh"
+export ZSH="$ZDOTDIR/vendor/ohmyzsh"
 
 # Uncomment the following line to use case-sensitive completion.
 CASE_SENSITIVE="true"
