@@ -48,9 +48,6 @@ fi
 #####################################################################
 ### Plugins
 
-# ohmyzsh plugins to load
-typeset -aU plugins=()
-
 # ohmyzsh plugins
 plugins=(python pip ufw git flatpak)
 (( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
