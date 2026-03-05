@@ -46,13 +46,6 @@ fi
 # ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
 
 #####################################################################
-### Plugins
-
-# ohmyzsh plugins
-plugins=(python pip ufw git flatpak)
-(( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
-
-#####################################################################
 ### Source OMZ
 
 # Prepare ohmyzsh specifically for this configuration

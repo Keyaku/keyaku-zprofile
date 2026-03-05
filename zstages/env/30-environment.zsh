@@ -12,5 +12,3 @@ for zshfile in ${ZDOTDIR}/extensions/*/*.env.zsh(N); do
     source "$zshfile"
 done
 unset zshfile
-
-# FIXME: Add pacman hook to reload the environment on package installation
