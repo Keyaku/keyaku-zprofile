@@ -22,13 +22,8 @@ _zsh_source_dir "${ZDOTDIR}/lib/interactive" "lib/interactive"
 # Source interactive stage
 _zsh_source_dir "${ZDOTDIR}/zstages/rc" "rc"
 
-# ZSH modules
-zmodload zsh/zutil # zparseopts
-
 # Preferred editor
 export EDITOR='vim'
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
 [[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
-export ZSHRC_DONE=1
-(( ${+ZDOTDIR} )) # Safety 0 return value
