@@ -1,5 +1,5 @@
 # if actually on Android (Termux)
-if (( ${+TERMUX_VERSION} )); then
+if (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.termux/files/usr" ]]; then
 	# Silence Message of the Day (motd)
 	if [[ -f "$HOME"/../usr/etc/motd ]]; then
 		mv "$HOME"/../usr/etc/motd{,.old}
