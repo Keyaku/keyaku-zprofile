@@ -20,7 +20,7 @@ autoload -Uz "$ZSH_CUSTOM"/functions/{,.}**/zsource(.N) && zsource -ef
 _zsh_source_dir "${ZDOTDIR}/lib/interactive" "lib/interactive"
 
 # Source interactive stage
-_zsh_source_dir "${ZDOTDIR}/rc" "rc"
+_zsh_source_dir "${ZDOTDIR}/zstages/rc" "rc"
 
 # ZSH modules
 zmodload zsh/zutil # zparseopts

@@ -13,4 +13,4 @@
 _zsh_source_dir "${ZDOTDIR}/lib/login" "lib/login"
 
 ### Source profile stage
-_zsh_source_dir "${ZDOTDIR}/profile" "profile"
+_zsh_source_dir "${ZDOTDIR}/zstages/profile" "profile"

@@ -79,7 +79,7 @@ _zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
 # Environment variables, XDG paths, etc.
 # Files are loaded in numeric order (00-, 10-, 20-, ...)
 # ============================================================================
-_zsh_source_dir "${ZDOTDIR}/env" "env"
+_zsh_source_dir "${ZDOTDIR}/zstages/env" "env"
 
 # Benchmark output for .zshenv stage
 if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
