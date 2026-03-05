@@ -1,8 +1,5 @@
 (( ${+commands[dotnet]} )) || return
 
-# Add dotnet to plugins
-plugins+=(dotnet)
-
 # Set DOTNET_ROOT if it's not already set
 if (( ! ${+DOTNET_ROOT} )); then
 	# Use Homebrew's .NET installation
