@@ -9,6 +9,11 @@
 # When this file exists, it will _always_ be read.
 #####################################################################
 
+# Standardized $0 handling
+# https://zdharma-continuum.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html#zero-handling
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+0="${${(M)0:#/*}:-$PWD/$0}"
+
 # Enable debug mode if ZSH_PROFILE_DEBUG is set
 [[ -n "${ZSH_PROFILE_DEBUG}" ]] && setopt XTRACE
 
@@ -81,11 +86,11 @@ _zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
 # ============================================================================
 _zsh_source_dir "${ZDOTDIR}/zstages/env" "env"
 
-# Benchmark output for .zshenv stage
+# Benchmark output for this stage
 if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
 	local t_end=$EPOCHREALTIME
 	local total=$(( t_end - _zsh_profile_start_time ))
-	print -u2 "[TOTAL] .zshenv stage took ${total}s"
+	print -u2 "[TOTAL] ${0:t} stage took ${total}s"
 fi
 
 # vim: ft=zsh ts=4 sw=4 et
