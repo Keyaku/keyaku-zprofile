@@ -59,12 +59,3 @@ plugins=(python pip ufw git flatpak)
 zstyle ':omz:update' mode disabled  # disable automatic updates
 # Load ohmyzsh
 source "$ZSH"/oh-my-zsh.sh
-
-#####################################################################
-###
-
-# ZSH modules
-zmodload zsh/zutil # zparseopts
-
-# Preferred editor
-export EDITOR='vim'
