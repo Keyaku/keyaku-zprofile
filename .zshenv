@@ -8,7 +8,6 @@
 # or assume the shell is attached to a TTY.
 # When this file exists, it will _always_ be read.
 #####################################################################
-ZSH_PROFILE_BENCHMARK=1
 
 # Enable debug mode if ZSH_PROFILE_DEBUG is set
 [[ -n "${ZSH_PROFILE_DEBUG}" ]] && setopt XTRACE
