@@ -33,7 +33,7 @@ if [[ -L "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
 	# Initialization code that may require console input (password prompts, [y/n]
 	# confirmations, etc.) must go above this block; everything else may go below.
 	if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-		source "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
+		_zsh_source_file "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
 	fi
 else
 	ZSH_THEME="robbyrussell"
@@ -51,4 +51,4 @@ fi
 # Prepare ohmyzsh specifically for this configuration
 zstyle ':omz:update' mode disabled  # disable automatic updates
 # Load ohmyzsh
-source "$ZSH"/oh-my-zsh.sh
+_zsh_source_file "$ZSH"/oh-my-zsh.sh

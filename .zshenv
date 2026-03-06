@@ -22,7 +22,7 @@ fi
 # Helper function for safe sourcing with error handling
 _zsh_source_file() {
 	local zsh_file=$1
-	local stage=${2:-unknown}
+	local stage=${2:-${1:t}}
 
 	if [[ ! -f "$zsh_file" ]]; then
 		print -u2 "Warning: File not found: $zsh_file"

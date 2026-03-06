@@ -8,7 +8,4 @@
 ##############################################################################
 
 # Source environment files from extensions
-for zshfile in ${ZDOTDIR}/extensions/*/*.env.zsh(N); do
-    source "$zshfile"
-done
-unset zshfile
+_zsh_source_dir ${ZDOTDIR}/extensions "extensions/*.env.zsh" '*/*.env.zsh'

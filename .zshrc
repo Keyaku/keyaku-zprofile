@@ -21,7 +21,10 @@ setopt re_match_pcre
 
 # Load all custom functions
 export ZSH_CUSTOM="$ZDOTDIR/custom"
-autoload -Uz "$ZSH_CUSTOM"/functions/{,.}**/zsource(.N) && zsource -ef
+autoload -Uz "$ZSH_CUSTOM"/functions/{,.}**/zsource(.N) && zsource -f
+
+# Source all extensions
+_zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh'
 
 # Source interactive library functions
 _zsh_source_dir "${ZDOTDIR}/lib/interactive" "lib/interactive"
@@ -33,7 +36,7 @@ _zsh_source_dir "${ZDOTDIR}/zstages/rc" "rc"
 export EDITOR='vim'
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
-[[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]] && source "$ZDOTDIR"/.p10k.zsh
+[[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]] && _zsh_source_file "$ZDOTDIR"/.p10k.zsh
 
 # Benchmark output for this stage
 if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then

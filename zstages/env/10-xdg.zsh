@@ -10,7 +10,7 @@ export XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
 
 # Load user-dirs if available
 if [[ -s $XDG_CONFIG_HOME/user-dirs.dirs ]]; then
-	source "$XDG_CONFIG_HOME/user-dirs.dirs"
+	_zsh_source_file "$XDG_CONFIG_HOME/user-dirs.dirs"
 # user-dirs fallback (only if running a DE. Otherwise, not much interest in having these set)
 elif [[ -n "$XDG_CURRENT_DESKTOP" ]]; then
 	[[ -z $XDG_DESKTOP_DIR && -d $HOME/Desktop ]] && export XDG_DESKTOP_DIR=$HOME/Desktop

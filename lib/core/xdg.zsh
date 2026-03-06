@@ -67,7 +67,7 @@ function xdg-migrate {
 			$f_dryrun ln -s "${reqs[src]}" "${reqs[dst]}"
 			retval=$?
 		fi
-	## If source is a directory
+	## If src is a directory
 	elif [[ -d "${reqs[src]}" ]]; then
 		echo "Migrating ${reqs[src]} to ${reqs[dst]}..."
 		if [[ -d "${reqs[dst]}" ]]; then
@@ -76,7 +76,7 @@ function xdg-migrate {
 			$f_dryrun mv "${reqs[src]}" "${reqs[dst]}"
 		fi
 		retval=$?
-	## If source is a file
+	## If src is a file
 	elif [[ -f "${reqs[src]}" ]]; then
 		echo "Moving ${reqs[src]} to ${reqs[dst]}..."
 		[[ -d "${reqs[dst]}" ]] || mkdir -p "${reqs[dst]}"
