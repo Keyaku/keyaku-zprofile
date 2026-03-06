@@ -1,4 +1,6 @@
-### Dialog prompts
+# ============================================================================
+# Dialog prompts
+# ============================================================================
 
 # Get the first installed dialog prompt from list
 function get-prompt {

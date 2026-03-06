@@ -1,8 +1,12 @@
+# ============================================================================
+# Various utilities
+# ============================================================================
+
 ### Network tools
 # Define listen_ports as one of these, in order of preference
-if command-has netstat; then
+if (( ${+commands[netstat]} )); then
 	alias listen_ports="netstat -ltpn"
-elif command-has lsof; then
+elif (( ${+commands[lsof]} )); then
 	alias listen_ports="sudo lsof -P 2>/dev/null | sed '1p;/LISTEN/!d'"
 else
 	alias listen_ports="echo 'netstat or lsof required but not installed'"
