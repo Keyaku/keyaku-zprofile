@@ -8,11 +8,7 @@
 # or assume the shell is attached to a TTY.
 # When this file exists, it will _always_ be read.
 #####################################################################
-
-# Standardized $0 handling
-# https://zdharma-continuum.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html#zero-handling
-0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
-0="${${(M)0:#/*}:-$PWD/$0}"
+ZSH_PROFILE_BENCHMARK=1
 
 # Enable debug mode if ZSH_PROFILE_DEBUG is set
 [[ -n "${ZSH_PROFILE_DEBUG}" ]] && setopt XTRACE
@@ -90,7 +86,7 @@ _zsh_source_dir "${ZDOTDIR}/zstages/env" "env"
 if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
 	local t_end=$EPOCHREALTIME
 	local total=$(( t_end - _zsh_profile_start_time ))
-	print -u2 "[TOTAL] ${0:t} stage took ${total}s"
+	print -u2 "[TOTAL] $(is_sourced_by) stage took ${total}s"
 fi
 
 # vim: ft=zsh ts=4 sw=4 et
