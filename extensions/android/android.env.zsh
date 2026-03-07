@@ -37,6 +37,6 @@ if ! whatami Android; then
 		fi
 	fi
 # if actually on Android (Termux)
-elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.termux/files/usr" ]]; then
+elif [[ -v TERMUX_VERSION && "${TERMUX__PREFIX:P}" == "/data/data/com.termux/files/usr" ]]; then
 	export XDG_RUNTIME_DIR="${${:-$TERMUX__PREFIX/var/run/$UID}:P}"
 fi

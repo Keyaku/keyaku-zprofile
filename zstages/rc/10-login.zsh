@@ -8,10 +8,9 @@ if (( $UID >= 1000 )) && [[ ! -f "$ZDOTDIR/conf/.first_init" ]] || (( 1 != $(cat
 fi
 
 ### Print fetch
-(fetch=fastfetch
-	if (( ${+commands[$fetch]} )); then
-		$fetch
-	else
-		print -u2 "Info: '$fetch' is not installed."
-	fi
-)
+local fetch="fastfetch"
+if (( ${+commands[$fetch]} )); then
+	$fetch
+else
+	print -u2 "Info: '$fetch' is not installed."
+fi
