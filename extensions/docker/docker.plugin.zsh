@@ -101,7 +101,7 @@ function docker-set-env {
 		addpath -p "$DOCKER_BIN"
 
 		### Check if systemd service is running but is not in rootless context
-		if systemctl --user is-active -q docker && [[ "$(docker context show)" != "rootless" ]]; then
+		if systemctl --user is-enabled -q docker && [[ "$(docker context show)" != "rootless" ]]; then
 			unset DOCKER_HOST DOCKER_CONTEXT # Can only set rootless context with such variable(s) as unset
 			docker context use rootless >/dev/null || {
 				# In case of failure, set DOCKER_HOST
@@ -178,7 +178,7 @@ function docker-rootless-install {
 		mkdir -p "$DOCKER_BIN"
 	fi
 	echo "Fetching and executing Docker rootless install script..."
-	curl -fsSL https://get.docker.com/rootless | DOCKER_BIN="${DOCKER_BIN}" sh || return $?
+	curl -fsSL https://get.docker.com/rootless | DOCKER_BIN="${DOCKER_BIN}" sh $@ || return $?
 	docker-set-env
 
 	echo "Exposing privileged ports..."
@@ -235,9 +235,13 @@ function docker-rootless-uninstall {
 		return 1
 	fi
 
-	if systemctl --user is-active -q docker; then
+	# Change context before disabling
+	docker context use default
+	docker context rm rootless >/dev/null
+
+	if systemctl --user is-enabled -q docker; then
 		echo "Stopping docker service..."
-		systemctl --user stop docker
+		systemctl --user disable --now docker
 	fi
 	if [[ "$f_daemon" && -f "${DOCKER_BIN}"/dockerd ]]; then
 		echo "Deleting docker daemon..."
@@ -247,6 +251,10 @@ function docker-rootless-uninstall {
 		rmpath "${DOCKER_BIN}"
 		[[ "$f_full" ]] && rm -rf "${DOCKER_BIN}"
 	fi
+
+	docker-set-env
+
+	ask --yn -k "Disable login linger for $USER?" && sudo loginctl disable-linger $USER
 }
 
 # Check if docker is running and if the given container exists
