@@ -1,2 +1,2 @@
-export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtkrc-2.0"
+export GTK2_RC_FILES="$XDG_CONFIG_HOME"/gtk-2.0/gtkrc
 export GTK_USE_PORTAL=1
