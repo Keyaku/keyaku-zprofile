@@ -45,27 +45,8 @@ function flatpak-has {
 
 # Prints Flatpak installations
 function flatpak-installations {
-	flatpak remotes --columns=priority,name,options | sort -r | awk '{split($NF, a, ","); print a[1]}' | sort -u
+	flatpak remotes --columns=priority,name,options | awk '{split($NF, a, ","); print a[1]}' | sort -u -r
 }
-
-### Flatpak environment variables
-if (( ! $+FLATPAK_ENV )); then
-	typeset -Ag FLATPAK_ENV=(
-		[USER_APPDATA]="$HOME/.var/app"
-		[SYSTEM_DIR]="/var/lib/flatpak"
-	)
-
-	# Set Flatpak environment variables depending on available installations
-	flatpak-installations | while read -r; do
-		if [[ "$REPLY" == user ]] && (( ! $+FLATPAK_ENV[USER_INSTALL] )); then
-			FLATPAK_ENV[USER_DIR]="${XDG_DATA_HOME}/flatpak"
-			FLATPAK_ENV[USER_INSTALL]="${FLATPAK_ENV[USER_DIR]}/app"
-		elif [[ "$REPLY" == system ]] && (( ! $+FLATPAK_ENV[SYSTEM_INSTALL] )); then
-			FLATPAK_ENV[SYSTEM_INSTALL]="${FLATPAK_ENV[SYSTEM_DIR]}/app"
-		fi
-	done
-fi
-
 
 # Update all Flatpak apps from all installations
 function flatpak-update {
