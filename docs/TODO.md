@@ -10,6 +10,16 @@ See [STRUCTURE_GOALS](./STRUCTURE_GOALS.md).
 
 ## `.zsh` code tasks
 
+### User configuration
+
+At the moment, the setup for this configuration is specifically targeted to my needs, which do not represent the use cases for everyone.
+As such, the `first_init.zsh` script should be ammended to prompt the user for their own preferences and set them accordingly, and the `extensions/` to avoid quietly setting things up that might not be aligned to a user's preference.
+
+In short:
+* [ ] Add prompts for each `setup_*` function in `first_init.zsh`.
+* [ ] Avoid quiet operations in `extensions`.
+* [ ] Potentially have a global array akin to `plugins` to load selected extensions to load. This might not be necessary since the extensions _usually_ have a first line that checks for context clues (e.g. availability of one or more commands), which bars them to load if not necessary, improving performance. However, some people might not even want their `extensions/` to load for any reason whatsoever, and this must be respected.
+
 ### Main profiles (`.zshenv`, `.zprofile`, `.zshrc`, `.zlogin`)
 
 * [ ] Reorganize `.zshenv`, `.zprofile`, `.zshrc`, `.zlogin` to have their intended profiling (and not the currently existing spaghetti). In other words, ensure each file respects their intended `[[ -o login ]]` and/or `[[ -o interactive ]]` behaviors.

@@ -9,6 +9,10 @@
 # When this file exists, it will _always_ be read.
 #####################################################################
 
+# Uncomment the following lines to enable the benchmark or debug flags
+# ZSH_PROFILE_BENCHMARK=1
+# ZSH_PROFILE_DEBUG=1
+
 # Enable debug mode if ZSH_PROFILE_DEBUG is set
 [[ -n "${ZSH_PROFILE_DEBUG}" ]] && setopt XTRACE
 
