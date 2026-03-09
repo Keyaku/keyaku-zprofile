@@ -6,7 +6,7 @@ if (( ! ${+DOTNET_ROOT} )); then
 	if (( ${+HOMEBREW_PREFIX} )) && [[ -d "$HOMEBREW_CELLAR/dotnet" ]]; then
 		export DOTNET_ROOT="${HOMEBREW_PREFIX}/opt/dotnet/libexec"
 	# Use user installation
-	elif [[ "${XDG_DATA_HOME}/dotnet" ]]; then
+	elif [[ -d "${XDG_DATA_HOME}/dotnet" ]]; then
 		export DOTNET_ROOT="${XDG_DATA_HOME}/dotnet"
 	fi
 fi
