@@ -1,17 +1,20 @@
 # Checker for argument counting in a function
 function check_argc {
-	set -o err_return
-
 	local -r usage=(
-		"Usage: ${funcstack[1]} minargs maxargs numargs"
-		"\tminargs  - (0 <= int)            : minimum number of arguments"
-		"\tmaxargs  - (0 <= minargs <= int) : maximum number of arguments"
+		"Usage: ${funcstack[1]} numargs minargs [maxargs]"
 		"\tnumargs  - (int)                 : \$# of the running function"
+		"\tminargs  - (0 <= int)            : minimum number of arguments"
+		"\tmaxargs  - (0 <= minargs <= int) : maximum number of arguments. Defaults to ARG_MAX"
 	)
-	local -ir ARG_MAX=$(getconf ARG_MAX)
+
+	(( 2 <= $# && $# <= 3 )) || {
+		print_fn -e "Invalid number of arguments."
+		>&2 print -l $usage
+		return 1
+	}
 
 	# Check if arguments are valid, meaning they're all positive integers
-	[[ $* =~ ^([0-9]+[[:space:]]+){2}[0-9]+$ ]] || {
+	[[ $1 == <-> && $2 == <-> && ${3:-0} == <-> ]] || {
 		print_fn -e "Invalid arguments."
 		>&2 print -l $usage
 		return 1
@@ -20,18 +23,18 @@ function check_argc {
 	# $1 - minimum number of args
 	# $2 - maximum number of args
 	# $3 - arg count
-	local -i minargs=$1 maxargs=$2 argc=$3
-	(( 0 == $maxargs )) && maxargs=$ARG_MAX
+	(( $+_ARGC_ARG_MAX )) || typeset -gir _ARGC_ARG_MAX=$(getconf ARG_MAX 2>/dev/null || echo 255)
+	local -i argc=$1 minargs=$2 maxargs=${3:-$_ARGC_ARG_MAX}
 
 	# Check if args of this function are correct
-	(( 2 <= $# && 0 <= $minargs && $minargs <= $maxargs )) || {
+	(( 0 <= $minargs && $minargs <= $maxargs )) || {
 		>&2 print -l $usage
 		return 1
 	}
 
 	# Check if the number of arguments is correct
 	(( $minargs <= $argc && $argc <= $maxargs )) || {
-		print_fn -ec "Argument mismatch: [$minargs-${maxargs//$ARG_MAX/no_limit}] required, $argc given."
+		print_fn -ec "Argument mismatch: [$minargs-${maxargs//$_ARGC_ARG_MAX/no_limit}] required, $argc given."
 		return 1
 	}
 }
@@ -39,12 +42,12 @@ function check_argc {
 # Get function name relative to current function. Accepts int to reach higher levels if necessary
 function get_funcname {
 	local -i idx=2
-	# Test if argument is an integer and within bounds
+	# Test if argument is an integer and within bounds. Silently drops last frame since it's this function.
 	if [[ $1 == <-> ]] && (( 0 < $1 <= ($#funcstack - $idx + 1) )); then
 		idx=$((idx + $1))
 	fi
 
-	if [[ ! -z "${funcstack[$idx]}" ]]; then
+	if [[ -n "${funcstack[$idx]}" ]]; then
 		echo "${funcstack[$idx]}"
 	fi
 }
@@ -64,34 +67,34 @@ function is_sourced {
 function is_sourced_by {
 	setopt extendedglob
 
-	local -ra zprofiles=(.zshenv .zprofile .zshrc .zlogin .zlogout)
-	local zpatterns
+	local -i retval=0
 	local -i argc=$#
+	local zpatterns
+
+	if [[ -z "$ZDOTDIR" || ! -d "$ZDOTDIR" ]]; then
+		print_fn -e "ZDOTDIR is not set or does not exist."
+		return 1
+	elif ! [[ "${funcstack[-1]:h}" =~ "^${ZDOTDIR}" ]]; then
+		print_fn -e "ZDOTDIR is not set to a valid directory."
+		return 1
+	fi
 
 	# Specifiy zprofiles if arguments were given
 	if (( $argc )); then
-		while (( $# )); do
-			if test "$ZDOTDIR"/{,.}"${1:t}"(-.N); then
-				zpatterns="${zpatterns:+$zpatterns|}${1:t}"
+		local arg
+		for arg; do
+			if test "$ZDOTDIR"/{,.}"${arg:t}"(-.N); then
+				zpatterns="${zpatterns:+$zpatterns|}${arg:t}"
 			fi
-			shift
 		done
 
-		if [[ -z "$zpatterns" ]]; then
-			# No valid zprofile given
-			return 1
-		fi
-	# Otherwise, check for all zprofiles
-	else
-		zpatterns="${(j:|:)zprofiles}"
+		[[ -n "$zpatterns" && "${funcstack[-1]:t}" =~ "^\.?("${zpatterns}")$" ]]
+		retval=$?
 	fi
-
-	[[ "${funcstack[-1]:t}" =~ "^\.?("${zpatterns}")$" ]]
-	local retval=$?
 
 	# If no argument given, print the zprofile
 	if (( ! $retval && ! $argc )); then
-		echo "${funcstack[-1]:t}"
+		print "${funcstack[-1]:t}"
 	fi
 
 	return $retval
@@ -103,13 +106,15 @@ function _print_callstack {
 	local -i is_printing=0
 	local -i count idx_stack idx_trace
 
+	local -r can_skip="^(print_\w+|check_argc)$"
+
 	for ((count=1, idx_stack=2, idx_trace=1; idx_stack <= ${#funcstack}; idx_stack++, idx_trace++)); do
 		local src=(${(s[:])funcfiletrace[$idx_trace]})
 		local caller="${funcstack[$idx_stack]}"
 
 		# Only begin printing after certain conditions were met
 		if (( ! $is_printing )); then
-			# If caller is part of the print functions or check_argc, skip it
+			# If caller is one of the skippable functions, skip it
 			[[ "$caller" =~ "$can_skip" ]] && continue
 			# If callstack contains single function, skip it
 			(( ${#funcstack} < $idx_stack+$count )) && break
@@ -126,36 +131,18 @@ function _print_callstack {
 
 # Base function to print text formatted as "func:lineno: fmt [args]"
 function print_fn {
-	(( ${+functions[colors]} )) || autoload -Uz colors
-	[[ "$LS_COLORS" ]] || colors
+	(( ${+fg} )) || { autoload -Uz colors && colors; }
 
-	# auxiliary function to print color examples
-	function _usage_color_aux {
-		echo "Uses ${fg_bold[$1]}$1${reset_color} ${fg_no_bold[$1]}color${reset_color}"
-	}
-
-	# If caller is part of the print functions or check_argc, skip it
+	# If caller is one of the skippable functions, skip it
 	local -r can_skip="^(print_\w+|check_argc)$"
 
+	# Color names for use in fg_bold/fg_no_bold lookups
 	local -A lvl_color=(
 		[e]="red"    # error = red
 		[w]="yellow" # warning = yellow
 		[i]="green"  # info = green
 		[d]="white"  # debug = white
 	)
-
-	local -r usage=(
-		"Usage: ${funcstack[1]} LEVEL [OPTION...] FMT [ARGS...]"
-		"\t[-h|--help] : Print this help message"
-		"\t[-c|--callstack] : Print the callstack"
-		"\t[-T|--timestamp] : Prepend timestamp to the message based on current locale"
-		"\tLEVEL : One of the following levels:"
-		"\t\t-e|--error : $(_usage_color_aux ${lvl_color[e]}), suited for errors"
-		"\t\t-w|--warn[ing] : $(_usage_color_aux ${lvl_color[w]}), suited for warnings"
-		"\t\t-i|--info : $(_usage_color_aux ${lvl_color[i]}), suited for information"
-		"\t\t-d|--debug : $(_usage_color_aux ${lvl_color[d]}), suited for debug"
-	)
-	unfunction _usage_color_aux
 
 	## Setup func opts
 	local f_help f_level f_callstack f_timestamp
@@ -164,7 +151,7 @@ function print_fn {
 		{c,-callstack}=f_callstack \
 		{T,-timestamp}=f_timestamp \
 		{e,-error}=f_level \
-		{w,-warn{,ing}}=f_level \
+		{w,-warn}=f_level \
 		{i,-info}=f_level \
 		{d,-debug}=f_level \
 		|| return 1
@@ -177,6 +164,18 @@ function print_fn {
 
 	## Help/usage message
 	if ( (( ! $# )) && [[ -z "$f_callstack" ]] ) || [[ -z "$f_level" ]] || [[ "$f_help" ]]; then
+		local -a usage=(
+			"Usage: ${funcstack[1]} LEVEL [OPTION...] FMT [ARGS...]"
+			"\t[-h|--help] : Print this help message"
+			"\t[-c|--callstack] : Print the callstack"
+			"\t[-T|--timestamp] : Prepend timestamp to the message based on current locale"
+			"\tLEVEL : One of the following levels:"
+			"\t\t-e|--error : ${fg_bold[$lvl_color[e]]}red${reset_color} ${fg_no_bold[$lvl_color[e]]}color${reset_color}, suited for errors"
+			"\t\t-w|--warn : ${fg_bold[$lvl_color[w]]}yellow${reset_color} ${fg_no_bold[$lvl_color[w]]}color${reset_color}, suited for warnings"
+			"\t\t-i|--info : ${fg_bold[$lvl_color[i]]}green${reset_color} ${fg_no_bold[$lvl_color[i]]}color${reset_color}, suited for information"
+			"\t\t-d|--debug : ${fg_bold[$lvl_color[d]]}white${reset_color} ${fg_no_bold[$lvl_color[d]]}color${reset_color}, suited for debug"
+		)
+
 		[[ -z "$f_level" ]] && echo "Missing level argument"
 		>&2 print -l $usage
 		[[ "$f_help" ]]; return $?
@@ -191,12 +190,12 @@ function print_fn {
 	fi
 
 	# Avoid getting other print functions
-	while [[ "${funcstack[$idx+1]}" =~ "$can_skip" ]] && (( ${#funcstack} < $idx+1 )); do
+	while [[ "${funcstack[$idx+1]}" =~ "$can_skip" ]] && (( ${#funcstack} > $idx+1 )); do
 		(( idx++ ))
 	done
 
 	local src=(${(s[:])funcfiletrace[$idx]})
-	local fn_name="$(get_funcname $idx)"
+	local fn_name="${funcstack[$idx+1]}"
 	local fn_file="${src[1]:t}"
 	local -i fn_line=${src[2]}
 	local fn_fullname="${fn_name}"
@@ -221,7 +220,8 @@ function print_fn {
 	fi
 
 	# Print message via stderr as well
-	local message="$(printf "$1" ${@:2})"
+	local message
+	printf -v message "$1" ${@:2}
 	>&2 printf "${timestamp:+%-*s}${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s" ${timestamp} "$fn_fullname" $fn_line "$message"
 	if [[ "$f_callstack" ]]; then
 		[[ "$message" ]] && printf "\n"

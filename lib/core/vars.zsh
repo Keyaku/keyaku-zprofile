@@ -8,8 +8,7 @@ function assign {
 	if [[ ! -v "$1" ]]; then
 		print_fn -e "Argument is not a variable: '$1'"
 		return 1
-	# FIXME: doesn't work with arrays
-	elif is_array "$1" "$2"; then
+	elif is_array "$1"; then
 		print_fn -e "This function does not work with arrays!"
 		return 1
 	fi
@@ -22,10 +21,10 @@ function assign {
 ### Composite variable control
 ##############################################
 
-# Checks if a defined variable $1 with semicolon-delimited values contains a given value $2
+# Checks if a defined variable $1 with colon-delimited values contains a given value $2
 function hasvar {
 	# If parent function is not addvar or rmvar, impose argument restrictions
-	if ! [[ "$(get_funcname 1)" =~ (add|rm)var ]]; then
+	if ! [[ "${funcstack[3]}" == (add|rm)var ]]; then
 		(( 2 == $# )) || return 1
 	fi
 
@@ -34,33 +33,33 @@ function hasvar {
 	local varvalue="${(P)1}"
 	local val="$2"
 
-	[[ "$varvalue" =~ (^|:)"$val"/?(:|$) ]]
+	[[ ":${varvalue}:" == *":${val}:"* ]]
 }
 
 # Adds value(s) in defined variable $1 if not in there. If no adding took place, return false
 function addvar {
-	# $1 : name of variable
-	# $2 : 0 to prepend, 1 to append to variable
+	# $1 : name of variable OR prepend value
+	# $2 : (if prepend value set) name of variable
 	# $2+: vars to add
-	local retval=1
+
+	local -i prepend=0
+	[[ "$1" == (0|1) ]] && { prepend=$1; shift; }
+
+	local -i retval=1
 	local varname="$1"
 	shift
 
-	local prepend=0
-	while (( $# )); do
-		## Define prepending flag if arg is an int
-		if is_int $1; then
-			prepend=$1
+	local arg
+	for arg; do
 		## If given var exists & it's not set in variable
-		elif ! hasvar $varname "$1"; then
+		if ! hasvar $varname "$arg"; then
 			retval=0
 			if (( $prepend )); then
-				assign ${varname} "$1:${(P)varname}"
+				assign ${varname} "$arg:${(P)varname}"
 			else
-				assign ${varname} "${(P)varname}:$1"
+				assign ${varname} "${(P)varname}:$arg"
 			fi
 		fi
-		shift
 	done
 
 	return $retval
@@ -69,19 +68,21 @@ function addvar {
 # Removes value(s) from defined variable 1 if in there. If no removal took place, return false
 function rmvar {
 	# $1+: vars to remove
-	(( 0 <= $# )) || return 1
+	(( 0 < $# )) || return 1
 
-	local retval=1
+	local -i retval=1
 	local varname="$1"
 	shift
 
 	# Remove each item if existing in variable
-	while (( $# )); do
-		if hasvar "$varname" "$1"; then
-			assign ${varname} "$(echo ${(P)varname} | sed -E "s#(^|:)/bin/?(:|$)#\2#g")"
+	local arg
+	for arg; do
+		if hasvar "$varname" "$arg"; then
+			local -a parts=("${(s[:])${(P)varname}}")
+			parts=("${(@)parts:#$arg}")
+			assign ${varname} "${(j[:])parts}"
 			retval=0
 		fi
-		shift
 	done
 
 	return $retval
@@ -91,9 +92,8 @@ function rmvar {
 function check_envvars {
 	# $@: variable names
 	local -a missing_vars
-	while (( $# )); do
-		[[ ! -v "$1" && ! -z "$1" ]] || missing_vars+=("$1")
-		shift
+	for arg; do
+		[[ -v "$arg" && -n "${(P)arg}" ]] || missing_vars+=("$arg")
 	done
 
 	if (( ${#missing_vars} )); then
@@ -148,7 +148,7 @@ function addpath {
 
 # Remove argument from $path. Returns false if no value was removed
 function rmpath {
-	local -a removal=($@)
+	local -a removal=("$@")
 	local -a tmp=(${path})
 
 	# Use ZSH array filtering with parameter expansion

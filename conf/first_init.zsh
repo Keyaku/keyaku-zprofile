@@ -56,7 +56,7 @@ typeset -i NEEDS_RESTART=0
 
 # Installs system packages
 function install_pkgs {
-	local pkgs_needed=(rsync git zsh wget curl vim fastfetch)
+	local pkgs_needed=(rsync patch git zsh wget curl vim fastfetch)
 	if ! command -v ${pkgs_needed} &>/dev/null; then
 		if whatami Android; then
 			local pkgs_termux=(getconf mount-utils)

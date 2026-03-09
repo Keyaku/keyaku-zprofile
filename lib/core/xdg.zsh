@@ -14,30 +14,22 @@ function xdg-migrate {
 
 	## Setup func opts
 	local f_help f_dryrun f_sym
-	zparseopts -D -E -K -- \
+	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{d,-dry-run}=f_dryrun \
-		{s,-symbolic}=f_symbolic \
+		{s,-symbolic}=f_sym \
 		|| return 1
 
 
-	## Check positional arguments
-	local -A reqs=(
-		[src]=1
-		[dst]=1
-	)
-	if [[ -z "${f_help}" ]]; then
-		if (( $# != ${(k)#reqs} )); then
-			print_fn -e "${(k)#reqs} arguments required, $# given"
-			return 1
-		elif [[ ! -e "$1" ]]; then
-			print_fn -e "'$1': path not found or valid"
-			return 1
-		else
-			reqs[src]="$1"
-			reqs[dst]="$2"
-		fi
+	if [[ -n "$f_help" ]]; then
+		>&2 print -l $usage
+		return 0
 	fi
+
+	## Check positional arguments
+	check_argc $# 2 2 || return 1
+	[[ -e "$1" ]] || { print_fn -e "'$1': path not found or valid"; return 1; }
+	local src="$1" dst="$2"
 
 	## Parse arguments
 	if [[ "$f_dryrun" ]]; then
@@ -47,47 +39,41 @@ function xdg-migrate {
 
 	# TODO: check envvar against XDG table
 
-	## Help/usage message
-	if [[ "${f_help}" ]]; then
-		>&2 print -l $usage
-		[[ "${f_help}" ]]; return $?
-	fi
-
 	local -i retval=0
 	## If symlink was requested
 	if [[ "${f_sym}" ]]; then
-		echo "Creating symbolic link from ${reqs[src]} to ${reqs[dst]}..."
-		if [[ -L "${reqs[src]}" ]]; then
-			print_fn -e "Path '${reqs[src]}' exists and already is a symbolic link"
+		echo "Creating symbolic link from $src to $dst..."
+		if [[ -L "$src" ]]; then
+			print_fn -e "Path '$src' exists and already is a symbolic link"
 			retval=1
-		elif [[ -e "${reqs[dst]}" ]]; then
-			print_fn -e "Path '${reqs[dst]}' exists. Aborting"
+		elif [[ -e "$dst" ]]; then
+			print_fn -e "Path '$dst' exists. Aborting"
 			retval=1
 		else
-			$f_dryrun ln -s "${reqs[src]}" "${reqs[dst]}"
+			$f_dryrun ln -s "$src" "$dst"
 			retval=$?
 		fi
 	## If src is a directory
-	elif [[ -d "${reqs[src]}" ]]; then
-		echo "Migrating ${reqs[src]} to ${reqs[dst]}..."
-		if [[ -d "${reqs[dst]}" ]]; then
-			$f_dryrun rsync -Prazq "${reqs[src]}"/ "${reqs[dst]}" && rm -r "${reqs[src]}"
+	elif [[ -d "$src" ]]; then
+		echo "Migrating $src to $dst..."
+		if [[ -d "$dst" ]]; then
+			$f_dryrun rsync -Prazq "$src"/ "$dst" && $f_dryrun rm -r "$src"
 		else
-			$f_dryrun mv "${reqs[src]}" "${reqs[dst]}"
+			$f_dryrun mv "$src" "$dst"
 		fi
 		retval=$?
 	## If src is a file
-	elif [[ -f "${reqs[src]}" ]]; then
-		echo "Moving ${reqs[src]} to ${reqs[dst]}..."
-		[[ -d "${reqs[dst]}" ]] || mkdir -p "${reqs[dst]}"
-		$f_dryrun mv "${reqs[src]}" "${reqs[dst]}"
+	elif [[ -f "$src" ]]; then
+		echo "Moving $src to $dst..."
+		[[ -d "$dst" ]] || mkdir -p "$dst"
+		$f_dryrun mv "$src" "$dst"
 		retval=$?
 	else
-		print_fn -e "Something went wrong; '${reqs[src]}' not a valid file or directory"
+		print_fn -e "Something went wrong; '$src' not a valid file or directory"
 		retval=128
 	fi
 
-	return 0
+	return $retval
 }
 
 ### Update desktop entries
@@ -122,7 +108,7 @@ function xdg-home-check {
 		dotcount=${#dotfiles}
 	fi
 
-	printf "%s %s\n" "Number of dotfiles: $dotcount" "$([[ "$f_all" ]] && printf "(including .local)")"
+	printf "%s%s\n" "Number of dotfiles: $dotcount" "${f_all:+ (including .local)}"
 
 	if (( $dotcount )); then
 		## If simple mode, use printf's array unroll
@@ -130,7 +116,6 @@ function xdg-home-check {
 			printf " - %s\n" "${(@)dotfiles}"
 		# Otherwise, print detailed info
 		else
-			declare -A dotfiles_info
 			local dotfile
 			for dotfile in ${(@)dotfiles}; do
 				printf " - \033[1m\033[3m%-10s\033[0m : %s\n" "$dotfile" "$(file -b "$HOME/$dotfile")"

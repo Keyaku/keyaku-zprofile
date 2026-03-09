@@ -12,7 +12,8 @@ function whatami {
 			>&2 print -l $usage
 			return 0
 		else
-			print -u2 "Error: Unknown option: ${(v)@[(I)-*|--*]}"
+			print -u2 "Error: Unknown option: ${@[(r)-*|--*]}"
+			return 1
 		fi
 	fi
 
@@ -24,10 +25,12 @@ function whatami {
 			solaris*)        WHATAMI_LIST+=("Solaris") ;;
 			darwin*)         WHATAMI_LIST+=("macOS") ;;
 			*android)        WHATAMI_LIST+=("Android") ;;
-			linux*)          WHATAMI_LIST+=("Linux") ;;
+			linux*)
+				WHATAMI_LIST+=("Linux")
+				[[ -f /proc/version ]] && grep -qi "microsoft" /proc/version && WHATAMI_LIST+=("WSL")
+			;;
 			bsd*)            WHATAMI_LIST+=("BSD") ;;
 			msys* | cygwin*) WHATAMI_LIST+=("Windows") ;;
-			*microsoft*)     WHATAMI_LIST+=("WSL") ;;
 			*)               WHATAMI_LIST+=("${OSTYPE}") ;;
 			esac
 		fi
@@ -41,15 +44,18 @@ function whatami {
 		if (( ${+WHATAMI_LIST[(r)Linux]} )); then
 			if [[ -f /etc/os-release ]]; then
 				# Faster than lsb_release
-				local distro=$(sed -n 's/^ID=//p' /etc/os-release)
-				[[ "$distro" ]] && WHATAMI_LIST+=("${(C)distro}")
+				local distro
+				local line
+				while IFS='=' read -r key val; do
+					[[ "$key" == "ID" ]] && { distro="${val//\"/}"; break; }
+				done < /etc/os-release
 			elif (( ${+commands[lsb_release]} )); then
 				# Fallback to lsb_release
 				WHATAMI_LIST+=("$(lsb_release -si)")
 			fi
 
 			# Raspberry Pi check - use simple grep with limited pattern
-			if [[ -f /proc/cpuinfo ]] && \grep -q "BCM2" /proc/cpuinfo; then
+			if [[ -f /proc/cpuinfo ]] && grep -q "BCM2" /proc/cpuinfo; then
 				WHATAMI_LIST+=("pi")
 			fi
 		fi
@@ -57,7 +63,7 @@ function whatami {
 		# Save to cache file
 		if (( ${#WHATAMI_LIST} )); then
 			[[ -d "${WHATAMI_CACHE_FILE:h}" ]] || mkdir -p "${WHATAMI_CACHE_FILE:h}"
-			echo "${WHATAMI_LIST}" > "$WHATAMI_CACHE_FILE"
+			print -l "${WHATAMI_LIST}" > "$WHATAMI_CACHE_FILE"
 		fi
 	fi
 
@@ -71,5 +77,5 @@ function whatami {
 
 # Load if cache file exists
 if [[ -f "$WHATAMI_CACHE_FILE" ]]; then
-	WHATAMI_LIST=($(cat "$WHATAMI_CACHE_FILE"))
+	WHATAMI_LIST=("${(f)$(<$WHATAMI_CACHE_FILE)}")
 fi

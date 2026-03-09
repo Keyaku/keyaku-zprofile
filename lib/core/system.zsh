@@ -2,87 +2,104 @@
 function sleep_for {
 	local -r usage=(
 		"Usage: ${funcstack[1]} [OPTION...] [-t|--time=]<time_amount>"
-		"\t[-h|--help]"
-		"\t[-t|--time]"
-		"\t[-m|--msg|--message]"
+		"\t[-h|--help]                    : Print this help message"
+		"\t[-t|--time] <amount>           : Time to sleep in seconds"
+		"\t[-m|--msg|--message] <message> : Message to display. Default: 'Time left'"
+		"\t[-c|--clear]                   : Clear the countdown line on completion"
 	)
 
 	## Setup parseopts
-	local f_help f_amount f_msg
+	local f_help f_amount f_msg f_clear
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{t,-time}:=f_amount \
 		{m,-msg,-message}:=f_msg \
+		{c,-clear}=f_clear \
 		|| return $?
 
 	## Help/usage message
-	if (( ! $# )) || [[ "$f_help" ]]; then
+	if [[ -n "$f_help" ]]; then
 		>&2 print -l $usage
-		[[ "$f_help" ]]; return $?
+		return 0
 	fi
 
 	## Parse arguments
 	local -i amount=0
 	local msg
-	[[ "$f_amount" ]] && amount=${f_amount[-1]}
-	[[ "$f_msg" ]] && msg=${f_msg[-1]}
+	[[ -n "$f_amount" ]] && amount=${f_amount[-1]}
+	[[ -n "$f_msg" ]] && msg=${f_msg[-1]}
 
-	while (( $# )); do
-		case $1 in
-		* )
-			# if a number, consider it a time amount
-			if (( ! $amount )) && is_num $1; then
-				amount=$1
-			elif [[ -z "$msg" ]]; then
-				msg="$1"
-			else
-				print_fn -e "Unknown argument: '%s'\n" "$1"
-			fi
-		;;
-		esac
-		shift
+	# Consume remaining positional arguments
+	local arg
+	for arg; do
+		if (( ! $amount )) && [[ $arg == <-> ]]; then
+			amount=$arg
+		elif [[ -z "$msg" ]]; then
+			msg="$arg"
+		else
+			print_fn -e "Unknown argument: '%s'" "$arg"
+			return 1
+		fi
 	done
+
+	# Validate amount
+	check_argc $# 0 || return 1
+	(( amount > 0 )) || return 0
 
 	# Setting default message
 	msg="${msg:-Time left}"
 
+	zmodload zsh/datetime
+
+	local stop_fn
 	stop_fn() {
 		tput cnorm
 		trap - SIGINT SIGTERM
-		echo
+		unfunction stop_fn
+		[[ -z "${1+x}" && -n "$f_clear" ]] || echo
 		if [[ "${1+x}" ]]; then
 			kill -INT $$
 		fi
 	}
+
+	trap 'stop_fn 1' SIGINT SIGTERM
 	tput civis
 
-	trap "stop_fn 1 && return 1" SIGINT SIGTERM
-	local pid
-	while (( 0 < $amount )); do
-		printf "\r%s: %d\033[0K" "$msg" $amount
-		((amount--))
-		sleep 1
+	local -F start_time=$EPOCHREALTIME
+	local -F end_time=$(( start_time + amount ))
+	local -i remaining
+
+	while (( EPOCHREALTIME < end_time )); do
+		remaining=$(( end_time - EPOCHREALTIME ))
+		printf "\r%s: %d\033[0K" "$msg" $(( remaining + 1 ))
+		sleep $(( remaining - int(remaining) > 0 ? remaining - int(remaining) : 1 ))
 	done
+
+	if [[ -n "$f_clear" ]]; then
+		printf "\r\033[0K"
+	fi
 
 	stop_fn
 }
 
 # Kills/clears zombie processes
 function kill_zombies {
-	kill -HUP $(ps -A -ostat,ppid | awk '/[zZ]/{ print $2 }')
+	ps -A -ostat,ppid | awk '/[zZ]/{ print $2 }' | xargs -r kill -HUP
 }
 
 
 ### Systemd
 function has_systemd {
-	# (( ${+commands[systemctl]} )) && systemctl -q is-system-running
-	[[ -r /run/systemd/sessions ]] && [[ "$(echo /run/systemd/sessions/<->##(N))" ]]
+	local -a sessions=( /run/systemd/sessions/<->##(N-.) )
+	[[ "$(</proc/1/comm)" == "systemd" ]] \
+		&& [[ -d /run/systemd/system ]] \
+		&& (( ${#sessions} ))
 }
 
 if has_systemd; then
 	### Systemd specific
 	function systemctl-service-path {
-		systemctl cat $@ 2>/dev/null | sed -En 's~# (.+?\.service)~\1~p'
+		systemctl cat "$@" 2>/dev/null | sed -En 's~# (.+?\.service)~\1~p'
 	}
 
 	alias systemctl-show-unitpath='systemctl show -p UnitPath --value'
