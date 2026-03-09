@@ -21,12 +21,10 @@ if ! whatami Android; then
 			# Contrary to search results, do NOT set this path as ANDROID_SDK_ROOT. Set it as ANDROID_HOME:
 			export ANDROID_HOME="${ANDROID_ROOT}"/sdk
 			# Pick the latest NDK version found (tests non-empty directories)
-			ANDROID_NDK_ROOT="$(echo "$ANDROID_ROOT/sdk/ndk"/*(OnFN/[1]))"
-			if [[ "$ANDROID_NDK_ROOT" ]]; then
-				export ANDROID_NDK_ROOT
+			local -a ndk_dirs=("$ANDROID_ROOT/sdk/ndk"/*(OnFN/[1]))
+			if [[ -n "${ndk_dirs[1]}" ]]; then
+				export ANDROID_NDK_ROOT="${ndk_dirs[1]}"
 				addpath "$ANDROID_NDK_ROOT"
-			else
-				unset ANDROID_NDK_ROOT
 			fi
 
 			export GRADLE_USER_HOME="$XDG_DATA_HOME"/gradle

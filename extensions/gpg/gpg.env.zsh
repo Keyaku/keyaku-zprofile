@@ -1,4 +1,4 @@
-(( ${(v)#commands[(I)gpg|gpgconf]} )) || return
+(( ${+commands[gpg]} || ${+commands[gpgconf]} )) || return
 
 [[ -z "$GNUPGHOME" || "$GNUPGHOME" != "${XDG_DATA_HOME:-$HOME/.local/share}"/gnupg ]] && \
 	export GNUPGHOME="${XDG_DATA_HOME:-$HOME/.local/share}"/gnupg

@@ -1,4 +1,4 @@
-(( ${(v)#commands[(I)gpg|gpgconf]} )) || return
+(( ${+commands[gpg]} || ${+commands[gpgconf]} )) || return
 
 # Fix permissions of gpg homedir
 function gpg-fix-perms {

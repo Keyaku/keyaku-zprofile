@@ -1,4 +1,4 @@
-(( ${(v)#commands[(I)perl|cpan]} )) || return
+(( ${+commands[perl]} || ${+commands[cpan]} )) || return
 
 export PERL_LOCAL_LIB_ROOT="${XDG_DATA_HOME}/perl"
 export PERL_CPANM_HOME="${PERL_LOCAL_LIB_ROOT}/cpan"

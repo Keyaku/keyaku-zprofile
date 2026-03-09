@@ -1,5 +1,5 @@
 (( $UID >= 1000 )) || return
-(( ${(v)#commands[(I)steam|com.valvesoftware.Steam]} )) || return
+(( ${+commands[steam]} || ${+commands[com.valvesoftware.Steam]} )) || return
 
 # Locate app_id from name
 function steam-app-id {
@@ -140,6 +140,6 @@ function steam-app-proton {
 }
 
 ### Flatpak version
-if (( ${+commands[com.valvesoftware.Steam]} )) && (( ! ${(v)#commands[(I)steam|steam-native]})); then
-	alias steam='flatpak run com.valvesoftware.Steam'
+if (( ${+commands[com.valvesoftware.Steam]} )) && ! (( ${commands[steam]} || ${commands[steam-native]} )); then
+	alias steam='com.valvesoftware.Steam'
 fi

@@ -1,4 +1,4 @@
-(( ${(v)#commands[(I)cargo|rust|rustc|rustup]} )) || return
+(( ${+commands[rust]} || ${+commands[rustup]} || ${+commands[cargo]} )) || return
 
 export CARGO_HOME="$XDG_DATA_HOME"/cargo
 addpath "$CARGO_HOME"/bin
