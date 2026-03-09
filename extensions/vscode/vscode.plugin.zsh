@@ -26,6 +26,9 @@ if (( ${(v)#vsc_flatpaks} )); then
 			if [[ -e "${_java_path[1]}" ]]; then
 				export JAVA_HOME="${_java_path[1]:h:h}"
 				addpath "$JAVA_HOME/bin"
+				# Force reload java plugin, envvars, etc.
+				# TODO: This is a hack; probably use a hook or an array instead.
+				_zsh_source_dir ${ZDOTDIR}/extensions/java "extensions/java"
 			fi
 		fi
 	done
