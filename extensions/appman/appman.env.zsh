@@ -1,3 +1,3 @@
 (( ${+commands[appman]} )) || return
 
-export SANDBOXDIR=$HOME/.local/app/appman/sandboxes
+[[ -d $HOME/.local/app/appman ]] && export SANDBOXDIR=$HOME/.local/app/appman/sandboxes
