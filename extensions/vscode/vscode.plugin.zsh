@@ -22,9 +22,9 @@ if (( ${(v)#vsc_flatpaks} )); then
 
 		# Use VSCode's java binary if java isn't available
 		if (( ! ${+commands[java]} )); then
-			local _java_path="$_vscode_dir"/data/codium/extensions/redhat.java*/jre/*/bin/java(.N[1])
-			if [[ -e "${_java_path}" ]]; then
-				export JAVA_HOME="${_java_path:h:h}"
+			local _java_path=("$_vscode_dir"/data/codium/extensions/redhat.java*/jre/*/bin/java(.N[1]))
+			if [[ -e "${_java_path[1]}" ]]; then
+				export JAVA_HOME="${_java_path[1]:h:h}"
 				addpath "$JAVA_HOME/bin"
 			fi
 		fi
