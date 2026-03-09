@@ -10,8 +10,8 @@
 #####################################################################
 
 # Track loading time if ZSH_PROFILE_BENCHMARK is set
-typeset -g _zsh_profile_start_time
 if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
+	typeset -g _zsh_profile_start_time
 	zmodload zsh/datetime
 	_zsh_profile_start_time=$EPOCHREALTIME
 fi
