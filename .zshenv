@@ -28,23 +28,13 @@ _zsh_source_file() {
 	local zsh_file=$1
 	local stage=${2:-${1:t}}
 
-	if [[ ! -f "$zsh_file" ]]; then
-		print -u2 "Warning: File not found: $zsh_file"
-		return 1
-	elif [[ ! -r "$zsh_file" ]]; then
-		print -u2 "Warning: File not readable: $zsh_file"
-		return 1
-	fi
+	[[ -f "$zsh_file" ]] || { print -u2 "Warning: File not found: $zsh_file"; return 1; }
+	[[ -r "$zsh_file" ]] || { print -u2 "Warning: File not readable: $zsh_file"; return 1; }
 
-	if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
-		local t_start=$EPOCHREALTIME
-		source "$zsh_file"
-		local t_end=$EPOCHREALTIME
-		local elapsed=$(( t_end - t_start ))
-		print -u2 "[$stage] ${zsh_file:t} took ${elapsed}s"
-	else
-		source "$zsh_file"
-	fi
+	local t_start
+	[[ -n "$ZSH_PROFILE_BENCHMARK" ]] && t_start=$EPOCHREALTIME
+	source "$zsh_file"
+	[[ -n "$ZSH_PROFILE_BENCHMARK" ]] && print -u2 "[$stage] ${zsh_file:t} took $(( EPOCHREALTIME - t_start ))s"
 }
 
 # Helper function for sourcing directories
@@ -53,21 +43,11 @@ _zsh_source_dir() {
 	local stage=${2:-unknown}
 	local pattern=${3:-"*.zsh"}
 
-	if [[ ! -d "$target_dir" ]]; then
-		[[ -n "${ZSH_PROFILE_DEBUG}" ]] && print -u2 "Debug: Directory not found: $target_dir"
-		return 0
-	fi
+	[[ -d "$target_dir" ]] || return 1
 
 	# Use glob qualifiers: N (null_glob), . (regular LIST_files), o (order by name)
-	local LIST_files=("${target_dir}"/${~pattern}(N.on))
-
-	if (( ${#LIST_files} == 0 )); then
-		[[ -n "${ZSH_PROFILE_DEBUG}" ]] && print -u2 "Debug: No LIST_files matching ${pattern} in ${target_dir}"
-		return 0
-	fi
-
 	local zsh_file
-	for zsh_file in ${LIST_files}; do
+	for zsh_file in "${target_dir}"/${~pattern}(N.on); do
 		_zsh_source_file "$zsh_file" "$stage"
 	done
 }
