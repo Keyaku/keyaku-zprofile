@@ -98,7 +98,7 @@ function docker-set-env {
 		DOCKER_HOME="$HOME/.local/docker"
 
 		# Prepend binary directory to PATH
-		addpath 1 "$DOCKER_BIN"
+		addpath -p "$DOCKER_BIN"
 
 		### Check if systemd service is running but is not in rootless context
 		if systemctl --user is-enabled -q docker && [[ "$(docker context show)" != "rootless" ]]; then

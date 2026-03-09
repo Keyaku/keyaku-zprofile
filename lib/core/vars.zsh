@@ -115,30 +115,35 @@ function haspath {
 
 # Adds argument(s) to $path if not set and if they're existing directories. Returns false if no path was set
 function addpath {
-	local -i mode=0
-	[[ "$1" == (0|1) ]] && { mode=$1; shift; }
-
-	local -i retval=1
-	local -a added_paths=()
+	local -i mode=0  # 0: append; 1: prepend
+	local -a append_paths=()
+	local -a prepend_paths=()
 	local arg
 
 	# Parse arguments
 	for arg; do
-		# Check if path exists and is not already in $path
-		if [[ -d "$arg" ]] && ! haspath "$arg"; then
-			added_paths+=("$arg")
-		fi
+		case "$arg" in
+		-a|--append)  mode=0 ;;
+		-p|--prepend) mode=1 ;;
+		*)
+			# Check if path exists and is not already in $path
+			if [[ -d "$arg" ]] && ! haspath "$arg"; then
+				if (( ! $mode )); then
+					append_paths+=("$arg")
+				else
+					prepend_paths+=("$arg")
+				fi
+			fi
+		;;
+		esac
 	done
 
 	# Add paths
-	if (( ${mode} )); then
-		path=(${added_paths} ${path})
-	else
-		path+=(${added_paths})
-	fi
+	(( ${#prepend_paths} )) && path=(${prepend_paths} ${path})
+	(( ${#append_paths} ))  && path+=(${append_paths})
 
 	# Return success if any paths were added
-	(( 0 < ${#added_paths} ))
+	(( 0 < ${#prepend_paths} + ${#append_paths} ))
 }
 
 # Remove argument from $path. Returns false if no value was removed

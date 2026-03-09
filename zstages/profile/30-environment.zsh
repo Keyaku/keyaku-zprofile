@@ -9,7 +9,7 @@
 
 # Add user's local bin directory to path
 [[ -d "$HOME/.local/bin" ]] || mkdir -p "$HOME/.local/bin"
-haspath "$HOME/.local/bin" || addpath "$HOME/.local/bin"
+haspath "$HOME/.local/bin" || addpath -p "$HOME/.local/bin"
 
 # Source profile files from extensions
 _zsh_source_dir ${ZDOTDIR}/extensions "extensions/*.profile.zsh" '*/*.profile.zsh'

@@ -31,7 +31,7 @@ if ! whatami Android; then
 			#export _JAVA_OPTIONS+=-Djava.util.prefs.userRoot="$XDG_CONFIG_HOME"/java
 
 			# Prepend platform tools to override system installation
-			addpath 1 "${ANDROID_ROOT}/sdk/platform-tools"
+			addpath -p "${ANDROID_ROOT}/sdk/platform-tools"
 		fi
 	fi
 # if actually on Android (Termux)
