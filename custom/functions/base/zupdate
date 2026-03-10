@@ -2,10 +2,8 @@
 
 emulate -L zsh
 
-set -o err_return
-
 if [[ -d "${ZDOTDIR}/.git" ]]; then
-	command -v git &>/dev/null || return 1
+	(( ${+commands[git]} )) || return 1
 else
 	echo "No git repo found in ZDOTDIR (${ZDOTDIR}). This function does nothing."
 	return 1
@@ -36,15 +34,27 @@ local -i verbosity=1 # defaults to some verbosity
 f_verbosity="${(j::)f_verbosity//-}"
 (( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
-# Update main repo
-local repo_name="$(git -C "${ZDOTDIR}" remote -v | sed -En '/fetch/s#^.+?github\.com[/:]\w+/([^.]+?)(\.git)?\s+.*$#\1#p')"
-git -C "${ZDOTDIR}" fetch -q
-local UPSTREAM='@{u}'
-local LOCAL=$(git -C "${ZDOTDIR}" rev-parse @)
-local REMOTE=$(git -C "${ZDOTDIR}" rev-parse "$UPSTREAM")
-local BASE=$(git -C "${ZDOTDIR}" merge-base @ "$UPSTREAM")
+# Getting repo info
+local repo_name
+while IFS=$'=\t ' read -r key val; do
+	if [[ "$key" == "url" ]]; then
+		repo_name="${${val:t}%.git}"
+		break
+	fi
+done < "${ZDOTDIR}/.git/config"
 
-(( $verbosity )) && >&2 printf '%s: ' "${repo_name}"
+# Update main repo
+(( $verbosity )) && >&2 printf "Checking for updates..."
+git -C "${ZDOTDIR}" fetch -q || {
+	print_fn -e "Problem while executing git fetch"
+	return 1
+}
+local -a refs=("${(@f)$(git -C "${ZDOTDIR}" rev-parse @ @{u})}")
+local LOCAL="${refs[1]}"
+local REMOTE="${refs[2]}"
+local BASE=$(git -C "${ZDOTDIR}" merge-base @ @{u})
+
+(( $verbosity )) && >&2 printf '\r\033[0K%s: ' "${repo_name}"
 if [[ $LOCAL == $REMOTE ]]; then
 	(( $verbosity )) && >&2 echo "Up-to-date"
 elif [[ $LOCAL == $BASE ]]; then
@@ -61,13 +71,3 @@ fi
 # Update submodules
 (( $verbosity )) && >&2 echo "Updating submodules..."
 git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote
-git -C "${ZDOTDIR}" submodule -q foreach --recursive 'git fetch -q'
-
-# FIXME: The code below breaks ohmyzsh for some reason.
-# local OUTDATED_SUBMODULES=$(git -C "${ZDOTDIR}" submodule foreach --recursive 'git rev-list HEAD...FETCH_HEAD' | \grep -v '^Entering')
-# if [[ "${OUTDATED_SUBMODULES}" ]]; then
-# 	(( $verbosity )) && >&2 echo "Updating submodules..."
-# 	git -C "${ZDOTDIR}" submodule update --remote --recursive
-# else
-# 	(( $verbosity )) && >&2 echo "All submodules are up-to-date."
-# fi
