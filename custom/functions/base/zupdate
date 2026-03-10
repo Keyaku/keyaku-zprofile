@@ -59,7 +59,13 @@ if [[ $LOCAL == $REMOTE ]]; then
 	(( $verbosity )) && >&2 echo "Up-to-date"
 elif [[ $LOCAL == $BASE ]]; then
 	(( $verbosity )) && >&2 echo "Updating..."
-	git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}}
+	git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}} || return 1
+	# Recompile lib/ files
+	print "Recompiling lib/core/ files..."
+	for f in "${ZDOTDIR}"/lib/core/*.zsh(on); do
+		zcompile "$f" &
+	done
+	wait
 elif [[ $REMOTE == $BASE ]]; then
 	(( $verbosity )) && >&2 echo "There are unpushed changes"
 	return 2
@@ -70,4 +76,4 @@ fi
 
 # Update submodules
 (( $verbosity )) && >&2 echo "Updating submodules..."
-git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote
+git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
