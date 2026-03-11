@@ -89,7 +89,7 @@ fi
 
 # Update submodules
 if (( ${f_steps[(I)(-s|--submodules)]} )); then
-	(( $verbosity )) && printf '%s' "Updating submodules..."
+	(( $verbosity )) && printf '%s' "Initializing/updating submodules..."
 	git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
 	(( $verbosity )) && printf ' %s\n' "Done."
 fi
