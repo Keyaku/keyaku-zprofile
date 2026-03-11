@@ -95,7 +95,7 @@ function docker-set-env {
 	if [[ -f "$(systemctl-service-path --user docker)" ]]; then
 		### Set important environment variables
 		export DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
-		DOCKER_HOME="$HOME/.local/docker"
+		DOCKER_HOME="${DOCKER_CONFIG:-$XDG_CONFIG_HOME/docker}"
 
 		# Prepend binary directory to PATH
 		addpath 1 "$DOCKER_BIN"
