@@ -102,6 +102,8 @@ function is_sourced_by {
 
 # Function to print the callstack
 function _print_callstack {
+	(( ${+fg} )) || { autoload -Uz colors && colors; }
+
 	local color="$1"
 	local -i is_printing=0
 	local -i count idx_stack idx_trace
@@ -138,18 +140,21 @@ function print_fn {
 
 	# Color names for use in fg_bold/fg_no_bold lookups
 	local -A lvl_color=(
-		[e]="red"    # error = red
-		[w]="yellow" # warning = yellow
-		[i]="green"  # info = green
-		[d]="white"  # debug = white
+		[s]="green"    # success
+		[e]="red"      # error
+		[w]="yellow"   # warning
+		[i]="cyan"     # info
+		[d]="magenta"  # debug
 	)
 
 	## Setup func opts
-	local f_help f_level f_callstack f_timestamp
+	local f_help f_level f_callstack f_timestamp f_noheader
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{c,-callstack}=f_callstack \
 		{T,-timestamp}=f_timestamp \
+		{n,-no-header}=f_noheader \
+		{s,-success}=f_level \
 		{e,-error}=f_level \
 		{w,-warn}=f_level \
 		{i,-info}=f_level \
@@ -169,11 +174,13 @@ function print_fn {
 			"\t[-h|--help] : Print this help message"
 			"\t[-c|--callstack] : Print the callstack"
 			"\t[-T|--timestamp] : Prepend timestamp to the message based on current locale"
+			"\t[-n|--no-header] : Omits the 'file:function:line' header from the message"
 			"\tLEVEL : One of the following levels:"
-			"\t\t-e|--error : ${fg_bold[$lvl_color[e]]}red${reset_color} ${fg_no_bold[$lvl_color[e]]}color${reset_color}, suited for errors"
-			"\t\t-w|--warn : ${fg_bold[$lvl_color[w]]}yellow${reset_color} ${fg_no_bold[$lvl_color[w]]}color${reset_color}, suited for warnings"
-			"\t\t-i|--info : ${fg_bold[$lvl_color[i]]}green${reset_color} ${fg_no_bold[$lvl_color[i]]}color${reset_color}, suited for information"
-			"\t\t-d|--debug : ${fg_bold[$lvl_color[d]]}white${reset_color} ${fg_no_bold[$lvl_color[d]]}color${reset_color}, suited for debug"
+			"\t\t-s|--success : ${fg_bold[$lvl_color[s]]}${lvl_color[s]}${reset_color} ${fg_no_bold[$lvl_color[s]]}color${reset_color}, suited for success messages"
+			"\t\t-e|--error : ${fg_bold[$lvl_color[e]]}${lvl_color[e]}${reset_color} ${fg_no_bold[$lvl_color[e]]}color${reset_color}, suited for errors"
+			"\t\t-w|--warn : ${fg_bold[$lvl_color[w]]}${lvl_color[w]}${reset_color} ${fg_no_bold[$lvl_color[w]]}color${reset_color}, suited for warnings"
+			"\t\t-i|--info : ${fg_bold[$lvl_color[i]]}${lvl_color[i]}${reset_color} ${fg_no_bold[$lvl_color[i]]}color${reset_color}, suited for information"
+			"\t\t-d|--debug : ${fg_bold[$lvl_color[d]]}${lvl_color[d]}${reset_color} ${fg_no_bold[$lvl_color[d]]}color${reset_color}, suited for debug"
 		)
 
 		[[ -z "$f_level" ]] && echo "Missing level argument"
@@ -181,51 +188,59 @@ function print_fn {
 		[[ "$f_help" ]]; return $?
 	fi
 
-	local -i idx=1
-	if (( ${#funcstack} <= 1 )); then
-		idx=0
-		f_level="e"
-		unset f_callstack
-		set -- "should not be called directly"
-	fi
-
-	# Avoid getting other print functions
-	while [[ "${funcstack[$idx+1]}" =~ "$can_skip" ]] && (( ${#funcstack} > $idx+1 )); do
-		(( idx++ ))
-	done
-
-	local src=(${(s[:])funcfiletrace[$idx]})
-	local fn_name="${funcstack[$idx+1]}"
-	local fn_file="${src[1]:t}"
-	local -i fn_line=${src[2]}
-	local fn_fullname="${fn_name}"
-
-	if [[ "$fn_name" == "$fn_file" ]]; then
-		fn_fullname="$fn_file"
-	elif [[ "$fn_file" ]]; then
-		fn_fullname="$fn_file:$fn_name"
-	fi
-
-	# If fn_file is empty, this function is being called directly, so there's no line
-	[[ -z "$fn_file" ]] && unset fn_line
-
 	# Set color based on level
-	local color="${lvl_color[$f_level]}"
+	local p_color="${lvl_color[$f_level]}"
 
-	# Add timestamp if requested
-	local -a timestamp
-	if [[ "$f_timestamp" ]]; then
-		timestamp[2]="${fg_no_bold[$color]}$(date +'%c'):${reset_color}"
-		timestamp[1]=${#timestamp[2]}+1
+	# Prepare header => [timestamp]:function:lineno
+	local header
+	if [[ -z "$f_noheader" ]]; then
+		local -i idx=1
+		if (( ${#funcstack} <= 1 )); then
+			idx=0
+			f_level="e"
+			unset f_callstack
+			set -- "should not be called directly"
+		fi
+
+		# Avoid getting other print functions
+		while [[ "${funcstack[$idx+1]}" =~ "$can_skip" ]] && (( ${#funcstack} > $idx+1 )); do
+			(( idx++ ))
+		done
+
+		local src=(${(s[:])funcfiletrace[$idx]})
+		local fn_name="${funcstack[$idx+1]}"
+		local fn_file="${src[1]:t}"
+		local -i fn_line=${src[2]}
+		local fn_fullname="${fn_name}"
+
+		if [[ "$fn_name" == "$fn_file" ]]; then
+			fn_fullname="$fn_file"
+		elif [[ "$fn_file" ]]; then
+			fn_fullname="$fn_file:$fn_name"
+		fi
+
+		# If fn_file is empty, this function is being called directly, so there's no line
+		[[ -z "$fn_file" ]] && unset fn_line
+
+		# Add timestamp if requested
+		local -a timestamp
+		if [[ "$f_timestamp" ]]; then
+			timestamp[2]="${fg_no_bold[$p_color]}$(date +'%c'):${reset_color}"
+			timestamp[1]=${#timestamp[2]}+1
+		fi
+
+		printf -v header "${timestamp:+%-*s}${fg_bold[$p_color]}%s${fg_no_bold[$p_color]}:${fn_line:+"%d:"}${reset_color}" ${timestamp} "$fn_fullname" $fn_line
 	fi
 
-	# Print message via stderr as well
 	local message
 	printf -v message "$1" ${@:2}
-	>&2 printf "${timestamp:+%-*s}${fg_bold[$color]}%s${fg_no_bold[$color]}:${fn_line:+"%d:"}${reset_color} %s" ${timestamp} "$fn_fullname" $fn_line "$message"
+
+	# Print message via stderr as well
+	>&2 printf "${header:+%s }${fg_no_bold[$p_color]}%s${reset_color}" "$header" "$message"
+
 	if [[ "$f_callstack" ]]; then
 		[[ "$message" ]] && printf "\n"
-		_print_callstack $color
+		_print_callstack $p_color
 	fi
 	printf "\n"
 	(( $idx ))

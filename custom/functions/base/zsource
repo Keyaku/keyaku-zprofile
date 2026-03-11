@@ -34,12 +34,6 @@ zparseopts -a void -D -F -K -- \
 	{i,-interactive}=f_opts \
 	|| return 1
 
-## Help/usage message
-if [[ "$f_help" ]]; then
-	>&2 print -l $usage
-	[[ "$f_help" ]]; return $?
-fi
-
 ### Arg parsing
 # Verbosity
 local -i verbosity=0
@@ -56,6 +50,15 @@ fi
 
 # To check if there was an intended use of this command
 local -r flags_set="${f_ext}${f_func}${f_prof}${f_opts}"
+
+## Help/usage message
+if [[ -z ${flags_set} ]]; then
+	print_fn -e "not enough arguments"
+	return 1
+elif [[ "$f_help" ]]; then
+	>&2 print -l $usage
+	[[ "$f_help" ]]; return $?
+fi
 
 ### TODO: Discard arguments as they're found
 

@@ -56,9 +56,9 @@ local BASE=$(git -C "${ZDOTDIR}" merge-base @ @{u})
 
 (( $verbosity )) && >&2 printf '\r\033[0K%s: ' "${repo_name}"
 if [[ $LOCAL == $REMOTE ]]; then
-	(( $verbosity )) && >&2 echo "Up-to-date"
+	(( $verbosity )) && print_fn -ns "Up-to-date"
 elif [[ $LOCAL == $BASE ]]; then
-	(( $verbosity )) && >&2 echo "Updating..."
+	(( $verbosity )) && print_fn -ni "Updating..."
 	git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}} || return 1
 	# Recompile lib/ files
 	print "Recompiling lib/core/ files..."
@@ -67,13 +67,14 @@ elif [[ $LOCAL == $BASE ]]; then
 	done
 	wait
 elif [[ $REMOTE == $BASE ]]; then
-	(( $verbosity )) && >&2 echo "There are unpushed changes"
+	(( $verbosity )) && print_fn -ne "There are unpushed changes"
 	return 2
 else
-	(( $verbosity )) && >&2 echo "Current branch has diverged from remote"
+	(( $verbosity )) && print_fn -ne "Current branch has diverged from remote"
 	return 3
 fi
 
 # Update submodules
-(( $verbosity )) && >&2 echo "Updating submodules..."
+(( $verbosity )) && printf '%s' "Updating submodules..."
 git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
+(( $verbosity )) && printf ' %s\n' "Done."
