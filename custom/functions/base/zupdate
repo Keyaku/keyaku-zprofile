@@ -17,9 +17,13 @@ local -r usage=(
 
 ## Setup parseopts
 local f_help f_verbosity
+local -aU f_steps
 zparseopts -D -F -K -- \
 	{h,-help}=f_help \
 	v+=f_verbosity q+=f_verbosity \
+	{a,-all}=f_steps \
+	{r,-repo}=f_steps \
+	{s,-submodules}=f_steps \
 	|| return 1
 
 ## Help/usage message
@@ -34,7 +38,14 @@ local -i verbosity=1 # defaults to some verbosity
 f_verbosity="${(j::)f_verbosity//-}"
 (( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
-# Getting repo info
+# Steps
+if (( ${#f_steps[(I)(-a|--all)]} == 1 && ${#f_steps[(I)((-r|--repo)|(-s|--submodules))]} == 0 )) \
+	|| [[ -z "${f_steps}" ]]
+then
+	f_steps+=(-r -s)
+fi
+
+### Getting repo info
 local repo_name
 while IFS=$'=\t ' read -r key val; do
 	if [[ "$key" == "url" ]]; then
@@ -43,38 +54,42 @@ while IFS=$'=\t ' read -r key val; do
 	fi
 done < "${ZDOTDIR}/.git/config"
 
-# Update main repo
-(( $verbosity )) && >&2 printf "Checking for updates..."
-git -C "${ZDOTDIR}" fetch -q || {
-	print_fn -e "Problem while executing git fetch"
-	return 1
-}
-local -a refs=("${(@f)$(git -C "${ZDOTDIR}" rev-parse @ @{u})}")
-local LOCAL="${refs[1]}"
-local REMOTE="${refs[2]}"
-local BASE=$(git -C "${ZDOTDIR}" merge-base @ @{u})
+if (( ${f_steps[(I)(-r|--repo)]} )); then
+	# Update main repo
+	(( $verbosity )) && >&2 printf "Checking for updates..."
+	git -C "${ZDOTDIR}" fetch -q || {
+		print_fn -e "Problem while executing git fetch"
+		return 1
+	}
+	local -a refs=("${(@f)$(git -C "${ZDOTDIR}" rev-parse @ @{u})}")
+	local LOCAL="${refs[1]}"
+	local REMOTE="${refs[2]}"
+	local BASE=$(git -C "${ZDOTDIR}" merge-base @ @{u})
 
-(( $verbosity )) && >&2 printf '\r\033[0K%s: ' "${repo_name}"
-if [[ $LOCAL == $REMOTE ]]; then
-	(( $verbosity )) && print_fn -ns "Up-to-date"
-elif [[ $LOCAL == $BASE ]]; then
-	(( $verbosity )) && print_fn -ni "Updating..."
-	git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}} || return 1
-	# Recompile lib/ files
-	print "Recompiling lib/core/ files..."
-	for f in "${ZDOTDIR}"/lib/core/*.zsh(on); do
-		zcompile "$f" &
-	done
-	wait
-elif [[ $REMOTE == $BASE ]]; then
-	(( $verbosity )) && print_fn -ne "There are unpushed changes"
-	return 2
-else
-	(( $verbosity )) && print_fn -ne "Current branch has diverged from remote"
-	return 3
+	(( $verbosity )) && >&2 printf '\r\033[0K%s: ' "${repo_name}"
+	if [[ $LOCAL == $REMOTE ]]; then
+		(( $verbosity )) && print_fn -ns "Up-to-date"
+	elif [[ $LOCAL == $BASE ]]; then
+		(( $verbosity )) && print_fn -ni "Updating..."
+		git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}} || return 1
+		# Recompile lib/ files
+		print "Recompiling lib/core/ files..."
+		for f in "${ZDOTDIR}"/lib/core/*.zsh(on); do
+			zcompile "$f" &
+		done
+		wait
+	elif [[ $REMOTE == $BASE ]]; then
+		(( $verbosity )) && print_fn -ne "There are unpushed changes"
+		return 2
+	else
+		(( $verbosity )) && print_fn -ne "Current branch has diverged from remote"
+		return 3
+	fi
 fi
 
 # Update submodules
-(( $verbosity )) && printf '%s' "Updating submodules..."
-git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
-(( $verbosity )) && printf ' %s\n' "Done."
+if (( ${f_steps[(I)(-s|--submodules)]} )); then
+	(( $verbosity )) && printf '%s' "Updating submodules..."
+	git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
+	(( $verbosity )) && printf ' %s\n' "Done."
+fi
