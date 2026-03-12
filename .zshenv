@@ -1,4 +1,4 @@
-#####################################################################
+##############################################################################
 #                            .zshenv
 #
 # File loaded 1st.
@@ -7,7 +7,7 @@
 # it should not contain commands that produce output
 # or assume the shell is attached to a TTY.
 # When this file exists, it will _always_ be read.
-#####################################################################
+##############################################################################
 
 # Uncomment the following lines to enable the benchmark or debug flags
 # ZSH_PROFILE_BENCHMARK=1
@@ -16,12 +16,18 @@
 # Enable debug mode if ZSH_PROFILE_DEBUG is set
 [[ -n "${ZSH_PROFILE_DEBUG}" ]] && setopt XTRACE
 
+# ============================================================================
+# Benchmark Setup
+# ============================================================================
 # Track loading time if ZSH_PROFILE_BENCHMARK is set
 if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
-	typeset -g _zsh_profile_start_time
 	zmodload zsh/datetime
-	_zsh_profile_start_time=$EPOCHREALTIME
+	local t_zsh_start=$EPOCHREALTIME
 fi
+
+# ============================================================================
+# Helper functions
+# ============================================================================
 
 # Helper function for safe sourcing with error handling
 _zsh_source_file() {
@@ -54,22 +60,28 @@ _zsh_source_dir() {
 
 # ============================================================================
 # Stage 1: Load core library functions
-# These are fundamental utilities needed everywhere (command-has, print_fn, etc.)
 # ============================================================================
+# These are fundamental utilities needed everywhere.
+
 _zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
 
 # ============================================================================
-# Stage 2: Load environment configuration
-# Environment variables, XDG paths, etc.
-# Files are loaded in numeric order (00-, 10-, 20-, ...)
+# Stage 2: Load zshenv stage files
 # ============================================================================
+
 _zsh_source_dir "${ZDOTDIR}/zstages/env" "env"
 
+# ============================================================================
+# Benchmark Output
+# ============================================================================
 # Benchmark output for this stage
 if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
 	local t_end=$EPOCHREALTIME
-	local total=$(( t_end - _zsh_profile_start_time ))
-	print -u2 "[TOTAL] $(is_sourced_by) stage took ${total}s"
+	local t_total=$(( t_end - t_zsh_start ))
+	print -u2 "========================================="
+	print -u2 "[TOTAL] $(is_sourced_by) stage took ${t_total}s"
+	print -u2 "========================================="
+	print -u2 ""
 fi
 
 # vim: ft=zsh ts=4 sw=4 et
