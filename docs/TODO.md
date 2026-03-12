@@ -27,23 +27,24 @@ Essentially:
 ### Main profiles (`.zshenv`, `.zprofile`, `.zshrc`, `.zlogin`)
 
 * [ ] Reorganize `.zshenv`, `.zprofile`, `.zshrc`, `.zlogin` to have their intended profiling (and not the currently existing spaghetti). In other words, ensure each file respects their intended `[[ -o login ]]` and/or `[[ -o interactive ]]` behaviors.
-	* [ ] `.zshenv`:
-		* [ ] This should NOT output, ~nor modify anything~ at the very best create missing directories (and even so, this should be reconsidered). Just set user environment variables. Also, add all potential paths to `path` array/`PATH` variable (maybe via external file?).
-		* [ ] Remove all traces of environment variables for programs that do not come with a new installation (currently targeting Arch Linux with KDE Plasma). Every other envvar should be loaded externally.
-	* [ ] `.zprofile` should contain session-wide environment variables and execution.
-	* [ ] `.zshrc`:
-		* [ ] Remove personal clutter so that it contains the bare minimum for any user to pick up, loading anything else externally.
-	* [ ] `.zlogin`:
+	* [x] `.zshenv`:
+		* [x] This should NOT output, ~nor modify anything~ at the very best create missing directories (and even so, this should be reconsidered). Just set user environment variables. Also, add all potential paths to `path` array/`PATH` variable (maybe via external file?).
+		* [x] Remove all traces of environment variables for programs that do not come with a new installation (currently targeting Arch Linux with KDE Plasma). Every other envvar should be loaded externally.
+	* [x] `.zprofile` should contain session-wide environment variables and execution.
+	* [x] `.zshrc`:
+		* [x] Remove personal clutter so that it contains the bare minimum for any user to pick up, loading anything else externally.
+	* [x] `.zlogin`:
 		* [x] This should be restricted to configuration for a login interactive shell. It should NOT run or make any session-wide changes (read: move `first_init` elsewhere).
-		* [ ] Either move anything personal to external files, or add `.zlogin` to `.gitignore`. Preferably the former.
-* [ ] Load configuration for each app from a `profile.d` .zsh script (or plugin), and streamline which scripts to load on each profile file.
+		* [x] Either move anything personal to external files, or add `.zlogin` to `.gitignore`. Preferably the former.
+	* [ ] **Final step**: Move my own user-defined stuff (variables, aliases...) to an untracked directory, or to a separate branch that will be personal to me and won't affect the main branch.
 * [x] `zupdate`: Improve performance when detecting changes from remote git repo.
-* [ ] Create easy way to recompile `lib/core/` manually (which is recompiled), or detect that the compiled files are older than the `.zsh` files themselves.
+* [ ] Create easy way to recompile `lib/core/` manually (which is recompiled on `zupdate` if there are remote changes), or detect that the compiled files are older than the `.zsh` files themselves.
 * [ ] Fix `.zshrc` recompiling `compdef` when `.zshrc` is read with `-li` or not. Will improve performance. The problem seems to lie in how `$fpath` is aggregated.
 
 
 ### Bug fixes
 
+All cleaned up! But there'll be more to come.
 
 
 ### `custom/functions/`
@@ -56,7 +57,7 @@ Essentially:
 * [ ] Write function or code that receives an associative array for formatted "usage" printing, where keys = `shortopt|longopt`, and values = description of associated option.
 
 
-### `profile.d/`
+### `zstages/`
 
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
 	* [ ] Potentially use [metapac](https://github.com/ripytide/metapac).
