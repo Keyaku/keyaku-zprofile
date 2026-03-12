@@ -38,35 +38,19 @@ export ZSH_CUSTOM="$ZDOTDIR/custom"
 autoload -Uz "$ZSH_CUSTOM"/functions/{,.}**/zsource(.N) && zsource -f
 
 # ============================================================================
-# Stage 2: Load extensions
-# ============================================================================
-# Similar to plugins, but should be loaded before any plugin and/or
-# plugin loader (like OMZ).
-
-_zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh'
-
-# ============================================================================
-# Stage 3: Load interactive libraries
+# Stage 2: Load interactive libraries
 # ============================================================================
 # These are helper functions/utilities for interactive shells.
 # Load before stage files so they can use these utilities.
 
-# FIXME: This stage should take place *before* loading extensions.
 _zsh_source_dir "${ZDOTDIR}/lib/interactive" "lib/interactive"
 
 # ============================================================================
-# Stage 4: Load zshrc stage files
+# Stage 3: Load zshrc stage files
 # ============================================================================
 
 # Main configuration files for the interactive shell
 _zsh_source_dir "${ZDOTDIR}/zstages/rc" "rc"
-
-# FIXME: Move these user definitions to someplace more suited.
-# Preferred editor
-export EDITOR='vim'
-
-# powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
-[[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]] && _zsh_source_file "$ZDOTDIR"/.p10k.zsh
 
 # ============================================================================
 # Benchmark Output

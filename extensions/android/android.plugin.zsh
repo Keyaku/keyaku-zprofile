@@ -1,5 +1,11 @@
+if ! whatami Android; then
+	### Session type (X11, Wayland) configuration
+	if [[ -z "${XDG_SESSION_TYPE}" ]] && command-has loginctl; then
+		export XDG_SESSION_TYPE="$(loginctl show-session $(awk '/tty/ {print $1}' <(loginctl)) -p Type | awk -F= '{print $2}')"
+	fi
+
 # if actually on Android (Termux)
-if (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.termux/files/usr" ]]; then
+elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.termux/files/usr" ]]; then
 	# Silence Message of the Day (motd)
 	if [[ -f "$HOME"/../usr/etc/motd ]]; then
 		mv "$HOME"/../usr/etc/motd{,.old}
