@@ -79,5 +79,19 @@ function file_contents_in {
 	unfunction _file_contents_in_file _file_contents_in_dir
 }
 
+# For truly minimal overhead, fastcmp is a wrapper
+# around the builtin `sysread` to read file contents directly
+function fastcmp {
+	local content1 content2
+
+	# Read files directly into memory using ZSH builtins
+	# Limit file read size to 1MB. Anything above will be truncated
+	{ sysread -s 1048576 content1 < "$1"; } 2>/dev/null || return 2
+	{ sysread -s 1048576 content2 < "$2"; } 2>/dev/null || return 2
+
+	# Direct string comparison
+	[[ "$content1" == "$content2" ]]
+}
+
 # Prints a file's encoding
 alias file_encoding='file -bi'

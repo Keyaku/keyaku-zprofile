@@ -3,6 +3,7 @@
 #######################################
 
 export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+export ZSH_CUSTOM="$ZDOTDIR/custom"
 
 export ZSH_CACHE_HOME="$XDG_CACHE_HOME/zsh"
 [[ -d "$ZSH_CACHE_HOME" ]] || mkdir -p "$ZSH_CACHE_HOME"

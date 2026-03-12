@@ -18,18 +18,7 @@ if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
 fi
 
 # ============================================================================
-# Stage 1: Load custom functions (fpath setup)
-# ============================================================================
-# This needs to happen EARLY because:
-# 1. Stage files may depend on these functions.
-# 2. Functions are autoloaded (lazy), so this is just fpath setup.
-# 3. OMZ and extensions may also need these functions available.
-
-export ZSH_CUSTOM="$ZDOTDIR/custom"
-autoload -Uz "$ZSH_CUSTOM"/functions/{,.}**/zsource(.N) && zsource -f
-
-# ============================================================================
-# Stage 2: Load interactive libraries
+# Stage 1: Load interactive libraries
 # ============================================================================
 # These are helper functions/utilities for interactive shells.
 # Load before stage files so they can use these utilities.
@@ -37,7 +26,7 @@ autoload -Uz "$ZSH_CUSTOM"/functions/{,.}**/zsource(.N) && zsource -f
 _zsh_source_dir "${ZDOTDIR}/lib/interactive" "lib/interactive"
 
 # ============================================================================
-# Stage 3: Load zshrc stage files
+# Stage 2: Load zshrc stage files
 # ============================================================================
 
 # Main configuration files for the interactive shell
