@@ -9,11 +9,6 @@
 ##############################################################################
 
 # ============================================================================
-# Early return for non-interactive
-# ============================================================================
-[[ $- == *i* ]] || return
-
-# ============================================================================
 # Benchmark Setup
 # ============================================================================
 # Track loading time if ZSH_PROFILE_BENCHMARK is set
@@ -21,10 +16,6 @@ if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
 	zmodload zsh/datetime
 	local t_zsh_start=$EPOCHREALTIME
 fi
-
-# Required setopts for this setup to work
-setopt extendedglob
-setopt re_match_pcre
 
 # ============================================================================
 # Stage 1: Load custom functions (fpath setup)
@@ -63,6 +54,7 @@ if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
 	print -u2 "[TOTAL] $(is_sourced_by) stage took ${t_total}s"
 	print -u2 "========================================="
 	print -u2 ""
+	unset t_start t_end t_total
 fi
 
 # vim: ft=zsh ts=4 sw=4 et
