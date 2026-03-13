@@ -38,7 +38,7 @@ Essentially:
 		* [x] Either move anything personal to external files, or add `.zlogin` to `.gitignore`. Preferably the former.
 	* [ ] **Final step**: Move my own user-defined stuff (variables, aliases...) to an untracked directory, or to a separate branch that will be personal to me and won't affect the main branch.
 * [x] `zupdate`: Improve performance when detecting changes from remote git repo.
-* [ ] Create easy way to recompile `lib/core/` manually (which is recompiled on `zupdate` if there are remote changes), or detect that the compiled files are older than the `.zsh` files themselves.
+* [x] Create easy way to recompile `lib/core/` manually (which is recompiled on `zupdate` if there are remote changes), or detect that the compiled files are older than the `.zsh` files themselves.
 * [ ] Fix `.zshrc` recompiling `compdef` when `.zshrc` is read with `-li` or not. Will improve performance. The problem seems to lie in how `$fpath` is aggregated.
 
 
@@ -51,9 +51,6 @@ All cleaned up! But there'll be more to come.
 
 * [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
 * [ ] Create autocomplete for main functions.
-* [ ] `zsource`: 
-	* [ ] Allow sourcing any file like with `source`.
-	* [ ] Allow sending parameters with `/` as if indicating relative paths.
 * [ ] Write function or code that receives an associative array for formatted "usage" printing, where keys = `shortopt|longopt`, and values = description of associated option.
 
 
@@ -61,6 +58,5 @@ All cleaned up! But there'll be more to come.
 
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
 	* [ ] Potentially use [metapac](https://github.com/ripytide/metapac).
-* [ ] Wrap appropriate sections with `[[ -o login ]]`, `[[ -o interactive ]]` and/or `is_sourced_by` so that sourcing one of these files from main profiles sets only the according environment stuff.
 * [ ] Initialize password store with existing GPG key (e.g. `pass init GPGKEY`).
 * [ ] Create skeleton for a synchronization software (e.g. SyncThing) to do its thing for multi-platform configuration (SSH, vimrc, etc.).

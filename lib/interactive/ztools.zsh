@@ -2,198 +2,232 @@
 # Various useful ZSH tools
 # ============================================================================
 
-# Reloads profiles and/or functions under $ZDOTDIR/custom and $ZDOTDIR/lib
+# A global sourcing function
 function zsource {
+	emulate -L zsh
+	setopt extendedglob
+
 	local -r usage=(
-		"Usage: ${funcstack[1]} [OPTION...] [FILE...] [DIR...]"
+		"Usage: ${funcstack[1]} [OPTION...] [NAME...]"
 		"Extension to shell built-in command 'source'."
-		"Presumes \$ZDOTDIR/lib as default prefix."
 		""
-		"\t[-h|--help] : Print this help message"
-		"\t[-v] / [-q] : Increase / Decrease verbosity"
-		"\t[-a|--all] : Reload all profiles and functions. Same as using -efp"
-		"\t[-f|--functions] : Reload all functions located under $ZSH_CUSTOM/functions"
-		"\t[-e|--extensions] : Reload all extensions located under $ZDOTDIR/extensions"
-		"\t[-p|--profiles] : Reload all profiles located under $ZDOTDIR/lib. Supercedes -l and -i"
-		"\t[-l|--login] : Reload all files containing block for [[ -o login ]]. Stackable on the list of profiles"
-		"\t[-i|--interactive] : Reload all files containing block for [[ -o interactive ]]. Stackable on the list of profiles"
+		"\t[-h|--help]          : Print this help message"
+		"\t[-v] / [-q]          : Increase / Decrease verbosity"
+		"\t[-a|--all]           : Reload everything (except plugins)"
+		"\t[-L|--libraries]     : Reload all files under \$ZDOTDIR/lib/"
+		"\t[-l|--login]         : Reload zstages/profile/ and zstages/login/"
+		"\t[-i|--interactive]   : Reload zstages/rc/"
+		"\t[-f|--functions] [NAME...] : Reload all or named functions under \$ZSH_CUSTOM/functions/"
+		"\t[-e|--extensions] [NAME...] : Reload all or named extensions under \$ZDOTDIR/extensions/"
+		"\t[-p|--plugin] NAME... : Reload named plugin(s). Can be combined with -a"
 	)
 
-	## Setup parseopts (with no extra arguments)
-	local void f_help f_verbosity
-	local f_all f_func f_ext f_prof f_opts
-	zparseopts -a void -D -F -K -- \
-		{h,-help}=f_help \
-		v+=f_verbosity q+=f_verbosity \
-		{a,-all}=f_all \
-		{f,-functions}=f_func \
-		{e,-extensions}=f_ext \
-		{p,-profiles}=f_prof \
-		{l,-login}=f_opts \
-		{i,-interactive}=f_opts \
-		|| return 1
-
-	### Arg parsing
-	# Verbosity
+	# -------------------------------------------------------------------------
+	# Argument parsing
+	# -------------------------------------------------------------------------
+	local -i f_help=0 f_all=0 f_lib=0 f_login=0 f_interactive=0
+	local -i f_func=0 f_ext=0 f_plugin=0
 	local -i verbosity=0
-	f_verbosity="${(j::)f_verbosity//-}"
-	(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
+	local -A flag_names=([f]="" [e]="" [p]="")
+	local current_flag=""
 
-	# Set appropriate flags if -a was given
-	if [[ "$f_all" ]]; then
-		f_func=(-f)
-		f_ext=(-e)
-		f_prof=(-p)
-		f_opts=()
-	fi
+	local -a _args=("$@")
+	local -a _expanded=()
 
-	# To check if there was an intended use of this command
-	local -r flags_set="${f_ext}${f_func}${f_prof}${f_opts}"
+	# Expand aggregated flags (e.g. -Lli into -L -l -i)
+	for arg in $_args; do
+		if [[ "$arg" == -[^-]?* ]]; then
+			local char
+			for char in ${(s::)arg#-}; do
+				_expanded+=("-$char")
+			done
+		else
+			_expanded+=("$arg")
+		fi
+	done
 
-	## Help/usage message
-	if [[ "$f_help" ]]; then
+	for arg in $_expanded; do
+		case "$arg" in
+		-h|--help)        f_help=1;        current_flag="" ;;
+		-a|--all)         f_all=1;         current_flag="" ;;
+		-L|--libraries)   f_lib=1;         current_flag="" ;;
+		-l|--login)       f_login=1;       current_flag="" ;;
+		-i|--interactive) f_interactive=1; current_flag="" ;;
+		-f|--functions)   f_func=1;        current_flag="f" ;;
+		-e|--extensions)  f_ext=1;         current_flag="e" ;;
+		-p|--plugin)      f_plugin=1;      current_flag="p" ;;
+		-v)               (( verbosity++ )); current_flag="" ;;
+		-q)               (( verbosity-- )); current_flag="" ;;
+		-*)               print_fn -e "Unknown option: $arg"; return 1 ;;
+		*)
+			if [[ -n "$current_flag" ]]; then
+				flag_names[$current_flag]+="${flag_names[$current_flag]:+ }$arg"
+			else
+				print_fn -e "Unexpected argument: '$arg'"
+				return 1
+			fi
+		;;
+		esac
+	done
+
+	# -------------------------------------------------------------------------
+	# Check arguments
+	# -------------------------------------------------------------------------
+	# Help
+	if (( f_help )); then
 		>&2 print -l $usage
-		[[ "$f_help" ]]; return $?
-	elif [[ -z ${flags_set} ]]; then
+		return 0
+
+	# Check something was requested
+	elif (( ! f_all && ! f_lib && ! f_login && ! f_interactive && ! f_func && ! f_ext && ! f_plugin )); then
 		print_fn -e "not enough arguments"
 		return 1
 	fi
 
-	### TODO: Discard arguments as they're found
+	# Expand --all
+	if (( f_all )); then
+		f_lib=1; f_login=1; f_interactive=1; f_func=1; f_ext=1
+	fi
 
-	## Concerning profiles
+	# Plugin requires names
+	if (( f_plugin && ! ${#${(z)flag_names[p]}} )); then
+		print_fn -e "[-p|--plugin] requires at least one plugin name"
+		return 1
+	fi
+
+	# -------------------------------------------------------------------------
+	# Collect
+	# -------------------------------------------------------------------------
+	local -aU _libraries=()
 	local -aU _profiles=()
-
-	# Load all profiles if specified
-	if [[ "$f_prof" ]]; then
-		_profiles=( "$ZDOTDIR/lib"/**/*.zsh(-.DN) )
-	else
-		# Load any potential match from arguments, file or directory
-		if (( $# )); then
-			# FIXME: Match any files in $PWD
-			# _profiles+=(${${@%%.zsh}:A}.zsh(-.N))
-			# Match any file under lib
-			_profiles+=( "$ZDOTDIR/lib"/**/(${(j:|:)@%%.zsh}){,/**/*}.zsh(-.DN) )
-		fi
-	fi
-
-	## Concerning functions
 	local -aU _functions=()
-
-	# Load all functions if specified
-	if [[ "$f_func" ]]; then
-		# List of function paths under functions/ (exclusive), sorted alphabetically, dotdirectories first
-		# FIXME: omz adds $ZSH_CUSTOM/functions to $fpath at zshrc stage
-		# |  WITHOUT checking if it's already in it. I should write a PR to them which
-		# |  avoids that, but until then, I must consider how to add that one to $fpath
-		# |  regardless of omz being enabled.
-		local -aU func_dirs=("$ZSH_CUSTOM"/functions/*/**/(-/FDN:a))
-
-		# List of functions using previous directory search
-		_functions=( ${^func_dirs}/*(-.DN:t) )
-	else
-		# Load any potential match from arguments, file or directory
-		if (( $# )); then
-			# Match any file under $ZSH_CUSTOM/functions
-			_functions+=( "$ZSH_CUSTOM"/functions/**/(${(j:|:)@})*{,/**/*}(-DN.) )
-		fi
-	fi
-
-	## Concerning extensions
 	local -aU _extensions=()
-	if [[ "$f_ext" ]]; then
-		_extensions=("$ZDOTDIR"/extensions/(*~example)/*.(plugin|ext).zsh(-.N:t))
+	local -aU _plugins=()
+	local -aU func_dirs=()  # populated if f_func is set
+
+	# Libraries
+	if (( f_lib )); then
+		_libraries=("$ZDOTDIR"/lib/**/*.zsh(-.DN))
 	fi
 
-	# If no profiles or functions were set, do nothing
-	local -ri num_sources=$((${#_profiles} + ${#_functions} + ${#_extensions}))
+	# Login
+	if (( f_login )); then
+		_profiles+=(
+			"$ZDOTDIR"/zstages/profile/*.zsh(-.DN)
+			"$ZDOTDIR"/zstages/login/*.zsh(-.DN)
+		)
+	fi
 
-	if (( 0 == ${num_sources} )); then
-		# Check if no functions, profiles, extensions or arguments were given (read: nothing to source)
-		[[ -z "${flags_set}" ]] && (( ! $# ))
-		local retval=$?
-		if (( 1 <= $verbosity )); then
-			if (( ! $retval )); then
-				printf "${funcstack[-1]}: %s\n" "Nothing to source"
-			else
-				printf "${funcstack[-1]}: %s\n" "No valid files found with the specified flags"
+	# Interactive
+	if (( f_interactive )); then
+		_profiles+=("$ZDOTDIR"/zstages/rc/*.zsh(-.DN))
+	fi
+
+	# Functions
+	if (( f_func )); then
+		func_dirs=("$ZSH_CUSTOM"/functions/**/(-/FDN:a))
+		local -a func_names=(${(z)flag_names[f]})
+		if (( ${#func_names} )); then
+			# Filter out any names starting with '.'
+			func_names=(${func_names:#.*})
+			(( ${#func_names} )) && _functions=("$ZSH_CUSTOM"/functions/**/(${(j:|:)func_names})(-.DN:t))
+		else
+			_functions=(${^func_dirs}/[^.]*(-.DN:t))
+		fi
+	fi
+
+	# Extensions
+	if (( f_ext )); then
+		local -a ext_names=(${(z)flag_names[e]})
+		if (( ${#ext_names} )); then
+			_extensions=("$ZDOTDIR"/extensions/(${(j:|:)ext_names})/*.(plugin|ext).zsh(-.N))
+		else
+			_extensions=("$ZDOTDIR"/extensions/(*~example)/*.(plugin|ext).zsh(-.N))
+		fi
+	fi
+
+	# Plugins
+	if (( f_plugin )); then
+		local -a plugin_paths=("$ZSH_CUSTOM/plugins" "$ZSH/plugins")
+		local -a plugin_names=(${(z)flag_names[p]})
+		local p name
+		for name in $plugin_names; do
+			for p in $plugin_paths; do
+				if [[ -f "$p/$name/$name.plugin.zsh" ]]; then
+					_plugins+=("$p/$name/$name.plugin.zsh")
+					break
+				fi
+			done
+		done
+	fi
+
+	# Nothing found
+	local -i total=$(( ${#_libraries} + ${#_profiles} + ${#_functions} + ${#_extensions} + ${#_plugins} ))
+	if (( ! total )); then
+		(( verbosity >= 1 )) && print_fn -nw "No valid files found"
+		return 1
+	fi
+
+	# -------------------------------------------------------------------------
+	# Verbosity output
+	# -------------------------------------------------------------------------
+	if (( verbosity >= 2 )); then
+		local -a _all_sources=($_libraries $_profiles $_extensions $_plugins)
+		(( ${#_all_sources} )) && printf "%s\n" "Files to source:" ${_all_sources//"$ZDOTDIR"/\$ZDOTDIR}
+		(( ${#_functions} )) && printf "%s\n" "Functions to load:" $_functions
+	fi
+
+	# -------------------------------------------------------------------------
+	# Load
+	# -------------------------------------------------------------------------
+	_source_guard() {
+		local f
+		for f; do
+			if ! source "$f" 2>/dev/null && [[ ! -r "$f" ]]; then
+				print_fn -e "error sourcing '${f//$ZDOTDIR/\$ZDOTDIR}'"
+				return 1
 			fi
-		fi
-		return $retval
-	fi
+		done
+	}
 
-	# Shorten paths just for output
-	if (( 1 <= $verbosity )); then
-		if (( ${#_profiles} )); then
-			local s_profiles=(${_profiles//"${ZDOTDIR}"/\$ZDOTDIR})
-			(( 1 == $verbosity )) && s_profiles=(${s_profiles//"\$ZDOTDIR\/lib\/"})
-			(( 2 <= $verbosity )) && printf "%s\n" "Sourcing the following profiles:"
-			(( 1 <= $verbosity )) && printf "%s\n" ${s_profiles}
-		fi
-		if (( ${#_functions} )); then
-			(( 2 <= $verbosity )) && printf "%s\n" "Loading the following functions:"
-			(( 1 <= $verbosity )) && printf "%s\n" ${_functions}
-		fi
-		if (( ${#_extensions} )); then
-			(( 2 <= $verbosity )) && printf "%s\n" "Loading the following extensions:"
-			(( 1 <= $verbosity )) && printf "%s\n" ${_extensions}
-		fi
-	fi
+	# Libraries & Profiles
+	_source_guard $_libraries $_profiles
 
-	###############################################################################
-	# Load resulting files
-	# -------------------------
-	# Order of events:
-	#
-	# 1. functions:
-	#     - all directories under $ZSH_CUSTOM/functions will be added to fpath in alphabetical order
-	#     - autoload collected functions
-	# 2. profiles:
-	#     - source any or all .(z)sh files under $ZDOTDIR/lib/
-	#     - abort command in case of error
-	# 3. extensions:
-	#     - source any or all .(z)sh files under $ZDOTDIR/extensions/
-	#
-	###############################################################################
-
-	# Reload collected functions
+	# Functions
 	if (( ${#_functions} )); then
-		# Correct fpath with yet-to-be set paths from custom/functions
 		local -aU func_set=(${fpath:*func_dirs})
 		if (( ${#func_dirs} != ${#func_set} )); then
-			# Attempt to index paths right after $ZSH_CUSTOM/functions, or at the beginning if $ZSH_CUSTOM/functions is not yet set
 			local -i fc_idx=${fpath[(i)$ZSH_CUSTOM/functions]}
 			(( ${#fpath} < fc_idx )) && fc_idx=0
-
-			# Only add paths not present in fpath
-			fpath[${fc_idx}+1,0]=( ${func_dirs:|func_set} )
+			fpath[${fc_idx}+1,0]=(${func_dirs:|func_set})
 		fi
-
-		# Unload defined functions first
 		local fn
 		for fn in $_functions; do
 			(( ${+functions[$fn]} )) && unfunction "$fn"
 		done
-
-		# Autoload functions, suppressing alias expansion for functions and marking for zsh-style autoloading
-		autoload -Uz ${_functions}
+		autoload -Uz $_functions
 	fi
 
-	# Source resulting profiles
-	local arg
-	for arg in $_profiles; do
-		if ! source "$arg"; then
-			(( 1 <= $verbosity )) && print_fn -e "error when sourcing '${arg//"${ZDOTDIR}"/\$ZDOTDIR}'"
-			return 1
+	# Extensions & Plugins
+	_source_guard $_extensions $_plugins
+
+	# -------------------------------------------------------------------------
+	# Output
+	# -------------------------------------------------------------------------
+	if (( verbosity >= 1 )); then
+		local -i loaded=$(( ${#_libraries} + ${#_profiles} + ${#_functions} + ${#_extensions} + ${#_plugins} ))
+		print_fn -ni "$loaded file(s) loaded"
+		if (( verbosity > 1 )); then
+			(( ${#_libraries} )) && print_fn -ni "Libraries: ${#_libraries}"
+			(( ${#_profiles} )) && print_fn -ni "Profiles: ${#_profiles}"
+			(( ${#_functions} )) && print_fn -ni "Functions: ${#_functions}"
+			(( ${#_extensions} )) && print_fn -ni "Extensions: ${#_extensions}"
+			(( ${#_plugins} )) && print_fn -ni "Plugins: ${#_plugins}"
 		fi
-	done
+	fi
 
-	# Source resulting extensions
-	for arg in $_extensions; do
-		source "$ZDOTDIR/extensions/**/${arg}"
-	done
-
-	(( 0 < ${num_sources} ))
+	unfunction _source_guard
+	return 0
 }
 
 # Check for zprofile git repo changes
