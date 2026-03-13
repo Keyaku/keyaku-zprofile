@@ -32,7 +32,7 @@ function command-has {
 
 	## Arg parsing
 	if [[ "${logical[(I)-o]}" && "${logical[(I)-a]}" ]]; then
-		print_fn -e "-o and -a are mutually exclusive"
+		print_fn -e "Flags -o and -a are mutually exclusive"
 		return 1
 	fi
 

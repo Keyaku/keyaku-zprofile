@@ -217,7 +217,7 @@ function docker-rootless-uninstall {
 	fi
 
 	if [[ "$f_full" && "$f_daemon" ]]; then
-		print_fn -e "-d and -f flags are mutually exclusive"
+		print_fn -e "Flags -d and -f are mutually exclusive"
 		return 2
 	fi
 
