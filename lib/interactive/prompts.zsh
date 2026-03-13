@@ -22,7 +22,7 @@ function ask {
 
 	## Setup parseopts
 	local f_help f_yesno f_nonEmpty f_prompt f_options f_default
-	zparseopts -D -E -F -K -- \
+	zparseopts -D -E -K -- \
 		{h,-help}=f_help \
 		{B,-yn,-yesno}=f_yesno \
 		{k,-non-empty}=f_nonEmpty \
@@ -45,7 +45,10 @@ function ask {
 	}
 
 	[[ "${f_options}" ]] && {
-		v_options=(${f_options//(-o|--opts)/})
+		local i
+		for (( i=2; i<=${#f_options}; i+=2 )); do
+			v_options+=("${f_options[$i]}")
+		done
 	}
 	local -a printed_opts=(${v_options})
 
@@ -104,8 +107,8 @@ function ask {
 	local v_answer
 	REPLY=""
 	while [[ -z "${v_answer}" ]]; do
-		printf "${v_prompt}> "
-		read ${extra_args} || exit
+		printf '%s> ' "${v_prompt}"
+		read -r ${extra_args} || return 1
 
 		if [[ -z "${REPLY}" ]]; then
 			if [[ "$f_nonEmpty" ]]; then
@@ -137,11 +140,11 @@ function ask {
 
 # Get the first installed dialog prompt from list
 function get-prompt {
-	local PROMPT_TYPES=(kdialog dialog)
+	local PROMPT_TYPES=(kdialog dialog zenity)
 	local ptype
 
 	for ptype in ${PROMPT_TYPES[@]}; do
-		command -v $ptype &>/dev/null && {
+		(( ${+commands[$ptype]} )) && {
 			echo "$ptype"
 			return 0
 		}
@@ -208,9 +211,9 @@ function prompt-dir {
 	local startdir="${2:-$HOME}"
 
 	case $(get-prompt) in
-	kdialog ) cd ${startdir}
-		echo $(kdialog --getexistingdirectory)
-		cd - &>/dev/null
+	kdialog ) (cd "${startdir}"
+			kdialog --getexistingdirectory
+		)
 	;;
 	dialog ) echo $(dialog --dselect "${startdir}" 10 60 --stdout)
 	;;

@@ -31,6 +31,11 @@ function command-has {
 	fi
 
 	## Arg parsing
+	if [[ "${logical[(I)-o]}" && "${logical[(I)-a]}" ]]; then
+		print_fn -e "-o and -a are mutually exclusive"
+		return 1
+	fi
+
 	# Verbosity
 	local -i verbosity=0
 	f_verbosity="${(j::)f_verbosity//-}"
@@ -52,7 +57,8 @@ function command-has {
 	fi
 
 	# Fastest process to check for commands
-	local results=$((${(v)#commands[(I)($args)]} + ${#functions[(I)($args)]} + ${#aliases[(I)($args)]}))
+	# Count total matches across commands, functions and aliases
+	local results=$(( ${(v)#commands[(I)($args)]} + ${#functions[(I)($args)]} + ${#aliases[(I)($args)]} ))
 	{ [[ "${logical}" == (a|and) ]] && (( $# == $results )) } ||
 	{ [[ "${logical}" == (o|or) ]] && (( $results )) }
 }
@@ -88,11 +94,12 @@ function command-path {
 	fi
 
 	# This pattern implies that the path is absolute (i.e. begins with /)
-	local result=($(type -a ${(u)@} | sed -En '/.+? is '"'"'?\//s/.+? is //p'))
+	local result=(${(f)"$(whence -pa ${(u)@} 2>/dev/null)"})
 	[[ "${result}" ]] && {
-		local flags="Q"
-		[[ "$f_line" ]] && flags+="F"
-		# FIXME: Find way to do this without eval
-		eval "echo \${($flags)result}"
+		if [[ "$f_line" ]]; then
+			print -l $result
+		else
+			print ${(Q)result}
+		fi
 	}
 }
