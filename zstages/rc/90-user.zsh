@@ -1,12 +1,13 @@
 ##############################################################################
 # User login configuration
 #
-# TODO: Move this these configurations to a more suitable place.
+# TODO: Create a way to override this file (for user-specific configuration)
 ##############################################################################
-
-# Preferred editor
-export EDITOR='vim'
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.
 # For effective timings, this should be loaded last in the zshrc stage.
-[[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]] && _zsh_source_file "$ZDOTDIR"/.p10k.zsh
+if [[ "$ZSH_THEME" == "powerlevel10k" && -f "$ZDOTDIR"/.p10k.zsh ]]; then
+	[[ ! -f "$ZDOTDIR"/.p10k.zsh.zwc || "$ZDOTDIR"/.p10k.zsh -nt "$ZDOTDIR"/.p10k.zsh.zwc ]] \
+		&& zcompile "$ZDOTDIR"/.p10k.zsh
+	_zsh_source_file "$ZDOTDIR"/.p10k.zsh
+fi
