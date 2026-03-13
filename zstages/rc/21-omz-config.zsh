@@ -43,7 +43,7 @@ HIST_STAMPS="dd/mm/yyyy"
 (( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
 
 (( ${+commands[git]} )) && plugins+=(git)
-(( ${+commands[python]} || ${+commands[pip]} )) && plugins+=(python pip)
+(( ${+commands[python]} || ${+commands[pip]} )) && plugins+=(pip)
 (( ${+commands[ufw]} )) && plugins+=(ufw)
 (( ${+commands[flatpak]} )) && plugins+=(flatpak)
 

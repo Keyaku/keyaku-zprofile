@@ -16,9 +16,7 @@ if (( ${+commands[brew]} )); then
 fi
 
 ### Python
-if [[ -f "$XDG_DATA_HOME"/pyvenv/pyvenv.cfg ]]; then
-	vrun "$XDG_DATA_HOME"/pyvenv >/dev/null
-fi
+[[ -f "$XDG_DATA_HOME"/pyvenv/pyvenv.cfg ]] && . "$XDG_DATA_HOME/pyvenv/bin/activate"
 
 ### Steam
 if (( ${+commands[steam]} )); then
