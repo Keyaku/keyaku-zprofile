@@ -88,7 +88,7 @@ function docker-get-credhelper {
 # Sets environment for Docker
 function docker-set-env {
 	if ! command-has systemctl-service-path; then
-		zsource system.zsh
+		zsource -L
 	fi
 
 	### If rootless binaries exist, prefer those over rootful
@@ -332,7 +332,7 @@ function docker-upgrade {
 	done
 }
 
-### Docker socket creation
+# Docker socket creation
 function docker-socket-tls {
 	local PATH_pass=/tmp/ca_passphrase
 	local pass
@@ -447,11 +447,6 @@ function docker-socket-ssh {
 	docker context use rootless-ssh
 }
 
-
-#######################################
-### Container-specific commands
-#######################################
-
 # Function which defines container aliases
 function docker-alias {
 	local -r usage=(
@@ -500,6 +495,19 @@ function docker-alias {
 	# Define alias
 	alias $container_alias="docker exec ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
 }
+
+
+# ============================================================================
+# Plugin setup
+# ============================================================================
+
+# Set important environment variables for the proper functioning of docker
+docker-set-env
+
+
+# ============================================================================
+# Container-specific commands
+# ============================================================================
 
 # Defining simple container aliases
 DOCKER_CONTAINERS_CMD=(

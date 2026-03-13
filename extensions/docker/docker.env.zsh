@@ -34,7 +34,7 @@ typeset -A DOCKER_USER_VARS=(
 ### Non-root operations
 if (( 1000 <= $UID )); then
 	### Current non-root docker user
-	export DOCKER_USER="$(id -u):$(id -g)"
+	export DOCKER_USER="${UID}:${GID}"
 fi
 
 # Set config directory, regardless of context

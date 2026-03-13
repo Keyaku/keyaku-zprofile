@@ -4,11 +4,6 @@
 # TODO: Create a way to override this file (for user-specific configuration)
 ##############################################################################
 
-### Docker configuration
-if (( ${+commands[docker]} )) && (( ! ${+commands[podman]} )); then
-	docker-set-env
-fi
-
 ### Homebrew
 if (( ${+commands[brew]} )); then
 	export HOMEBREW_NO_ANALYTICS=1
