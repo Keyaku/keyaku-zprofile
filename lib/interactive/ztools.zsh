@@ -320,7 +320,7 @@ function zupdate {
 		local f
 		for f in "${ZDOTDIR}"/lib/**/*.zsh(on); do
 			if [[ ! -f "${f}.zwc" || "$f" -nt "${f}.zwc" ]]; then
-				zcompile "$f" &>/dev/null &
+				zcompile "$f" &!
 			fi
 		done
 		wait

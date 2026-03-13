@@ -1,7 +1,7 @@
 ##############################################################################
 # User login configuration
 #
-# TODO: Move this these configurations to a more suitable place.
+# TODO: Create a way to override this file (for user-specific configuration)
 ##############################################################################
 
 ### Docker configuration
@@ -17,7 +17,7 @@ fi
 
 ### Python
 if [[ -f "$XDG_DATA_HOME"/pyvenv/pyvenv.cfg ]]; then
-	vrun "$XDG_DATA_HOME"/pyvenv &>/dev/null
+	vrun "$XDG_DATA_HOME"/pyvenv >/dev/null
 fi
 
 ### Steam
