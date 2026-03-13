@@ -3,8 +3,10 @@
 
 ### Print fetch
 local fetch="fastfetch"
+local fetch_warned="$ZSH_CACHE_HOME/.fetch_warned"
 if (( ${+commands[$fetch]} )); then
-	$fetch
-else
-	print -u2 "Info: '$fetch' is not installed."
+    $fetch
+elif [[ ! -f "$fetch_warned" ]]; then
+    print -u2 -f '%s\n' "Info: '$fetch' is not installed." "This message will only show once."
+    touch "$fetch_warned"
 fi
