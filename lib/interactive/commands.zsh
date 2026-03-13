@@ -16,7 +16,7 @@ function command-has {
 	## Setup func opts
 	## FIXME: add flag for ignoring if command is alias
 	local f_help f_verbosity f_exit
-	local logical=or # default
+	local -a logical=(-o) # default
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		v+=f_verbosity q+=f_verbosity \
@@ -31,7 +31,7 @@ function command-has {
 	fi
 
 	## Arg parsing
-	if [[ "${logical[(I)-o]}" && "${logical[(I)-a]}" ]]; then
+	if (( ${logical[(I)-o]} && ${logical[(I)-a]} )); then
 		print_fn -e "Flags -o and -a are mutually exclusive"
 		return 1
 	fi
