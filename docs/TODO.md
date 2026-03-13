@@ -4,10 +4,6 @@ This tasklist contains all ideas or improvements for this environment setup.
 
 # TODO
 
-## Repo restructuring
-
-See [STRUCTURE_GOALS](./STRUCTURE_GOALS.md).
-
 ## `.zsh` code tasks
 
 ### User configuration
