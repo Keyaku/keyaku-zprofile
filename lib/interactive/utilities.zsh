@@ -18,7 +18,7 @@ fi
 alias get-requested-cpu-clock='cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq'
 
 function gpu-list {
-	typeset -Al all_cmds=(
+	local -A all_cmds=(
 		[lshw]="-C display"
 		[lspci]="-kd ::03xx"
 	)
@@ -48,7 +48,7 @@ function gpu-list {
 	## Help/usage message
 	if { (( ! $# )) && [[ -z "${f_tool}" ]] } || [[ "$f_help" ]]; then
 		>&2 print -l $usage
-		printf "Avaliable tools are:\n\t%s\n" "${(*k)all_cmds}"
+		printf "Available tools are:\n\t%s\n" "${(*k)all_cmds}"
 		[[ "$f_help" ]]; return $?
 	fi
 
@@ -92,6 +92,20 @@ function du_hast {
 	du -hs $@ | sort -rh
 }
 
+function sysbinpath {
+	local arg found
+	for arg; do
+		# Search only system paths, ignoring user paths
+		found=$(whence -pa "$arg" 2>/dev/null | grep -m1 '^/usr/')
+		if [[ -n "$found" ]]; then
+			echo "$found"
+		else
+			print_fn -e "No system binary found for '$arg'"
+			return 1
+		fi
+	done
+}
+
 # ============================================================================
 # Memory tools
 # ============================================================================
@@ -104,7 +118,7 @@ function meminfo {
 	)
 
 	## Setup func opts
-	local f_all f_free f_total
+	local f_help f_all f_free f_total
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{a,-all}=f_all \
@@ -127,20 +141,22 @@ function meminfo {
 		f_total=1
 	}
 
+	local -A meminfo
+	while IFS=: read -r key val; do
+		meminfo[${key// /}]=${val// /}
+	done < /proc/meminfo
+
 	local memUsable memTotal
 	local memory
 
 	if [[ "$f_free" ]]; then
 		# Search for MemAvailable. If non-existant, search for MemFree
-		memUsable="$(grep MemAvailable /proc/meminfo | awk {'print $2'})"
-		[[ -z "$memUsable" ]] && memUsable="$(grep MemFree /proc/meminfo | awk {'print $2'})"
-
-		memUsable="$(( $memUsable / 1000 ))"
+		memUsable=$(( ${${meminfo[MemAvailable]:-${meminfo[MemFree]}}%kB} / 1000 ))
 		memUsable="$(echo $memUsable | sed ':a;s/\B[0-9]\{3\}\>/ &/;ta') MB"
 	fi
 
 	if [[ "$f_total" ]]; then
-		memTotal="$(( $(grep MemTotal /proc/meminfo | awk {'print $2'}) / 1000 ))"
+		memTotal=$(( ${meminfo[MemTotal]%kB} / 1000 ))
 		memTotal="$(echo $memTotal | sed ':a;s/\B[0-9]\{3\}\>/ &/;ta') MB"
 	fi
 
@@ -196,45 +212,24 @@ function disk_speedtest {
 
 # Package Managers
 typeset -Ag PKGMGR_OS=(
+	[apt]=debian_version
+	[apt-get]=debian_version
+	[dnf]=fedora-release
 	[yum]=redhat-release
 	[pacman]=arch-release
 	[emerge]=gentoo-release
-	[zypp]=SuSE-release
-	[apt-get]=debian_version
+	[zypper]=SuSE-release
 	[apk]=alpine-release
-)
-
-# Package Manager list commands
-typeset -Ag PKGMGR_LIST=(
-	[pacman]="Ql"
 )
 
 # Obtains the package manager depending on the release file
 function pkgmgr-get {
 	local pkgmgr release_file
 	for pkgmgr release_file in ${(@kv)PKGMGR_OS}; do
-		if [[ -f "/etc/$release_file" ]] && command -v "$pkgmgr" &>/dev/null; then
-			echo "${pkgmgr}"
+		if [[ -f "/etc/$release_file" ]] && (( ${+commands[$pkgmgr]} )); then
+			echo "$pkgmgr"
 			return 0
 		fi
 	done
 	return 1
-}
-
-function pkgmgr-binpath {
-	local retval=0
-	local pkgmgr="$(pkgmgr-get)"
-
-	if ! array_keys_has PKGMGR_LIST "$pkgmgr"; then
-		print_fn -e "Case for '$pkgmgr' not implemented yet"
-		return 1
-	fi
-
-	local arg
-	for arg; do
-		$pkgmgr -${PKGMGR_LIST[$pkgmgr]} "$arg" | \grep -Eo -m1 '/usr(/.+)?/bin/[^/]+'
-		(( $? && ! $retval )) && retval=1
-	done
-
-	return $retval
 }

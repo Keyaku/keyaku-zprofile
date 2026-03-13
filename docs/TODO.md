@@ -18,7 +18,8 @@ As such, the `first_init.zsh` script should be ammended to prompt the user for t
 Essentially:
 * [ ] Add prompts for each `setup_*` function in `first_init.zsh`.
 * [ ] Avoid quiet operations in `extensions`.
-* [ ] Potentially have a global array akin to `plugins` to load selected extensions to load. This might not be necessary since the extensions _usually_ have a first line that checks for context clues (e.g. availability of one or more commands), which bars them to load if not necessary, improving performance. However, some people might not even want their `extensions/` to load for any reason whatsoever, and this must be respected.
+* [ ] Potentially have a global array akin to `plugins` to load selected extensions. This might not be necessary since the extensions _usually_ have a first line that checks for context clues (e.g. availability of one or more commands), which bars them to load if not necessary, improving performance. However, some people might not even want their `extensions/` to load for any reason whatsoever, and this must be respected.
+* [ ] Alternative to `_omz_source` without the huge overhead.
 * [ ] Make any submodule optional. This requires a bit of work:
 	* [ ] Add zsh-style configuration that controls which submodules are enabled or not via `zstyle ':zprofile:submodules:flatpak' enabled no`.
 	* [ ] If a submodule is disabled, ensure there is no attempt to load it, whether that is the sourcing of `ohmyzsh` or the selection of `powerlevel10k`.

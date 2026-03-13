@@ -112,7 +112,7 @@ function docker-set-env {
 	### Otherwise, assume default system-wide installation
 	else
 		### Set important environment variables
-		DOCKER_BIN="$(pkgmgr-binpath docker 2>/dev/null)"
+		DOCKER_BIN="$(sysbinpath docker 2>/dev/null)"
 		DOCKER_HOME="/usr/local/docker"
 	fi
 }
