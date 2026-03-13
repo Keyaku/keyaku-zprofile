@@ -318,7 +318,7 @@ function zupdate {
 	# Clean up .zwc files
 	if (( ${f_steps[(I)(-C|--clean)]} )); then
 		(( $verbosity )) && print "Cleaning up *.zwc files in lib/..."
-		rm -f ${ZDOTDIR}/lib/**/*.zwc(.N)}
+		rm -f ${ZDOTDIR}/lib/**/*.zwc(.N)
 	fi
 
 	# (Re)compile lib/ files
