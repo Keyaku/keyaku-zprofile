@@ -209,6 +209,10 @@ function zupdate {
 		"Usage: ${funcstack[1]} [OPTION...]"
 		"\t[-h|--help] : Print this help message"
 		"\t[-v] / [-q] : Increase / Decrease verbosity"
+		"\t[-a|--all]  : Update all steps. Overrides options -r, -s, -c"
+		"\t[-r|--repo] : Update repo"
+		"\t[-s|--submodules] : Update submodules"
+		"\t[-c|--compile] : Compile .zsh in lib/"
 	)
 
 	## Setup parseopts
@@ -220,6 +224,7 @@ function zupdate {
 		{a,-all}=f_steps \
 		{r,-repo}=f_steps \
 		{s,-submodules}=f_steps \
+		{c,-compile}=f_steps \
 		|| return 1
 
 	## Help/usage message
@@ -235,10 +240,8 @@ function zupdate {
 	(( verbosity += (${#f_verbosity//q} - ${#${f_verbosity//v}}) ))
 
 	# Steps
-	if (( ${#f_steps[(I)(-a|--all)]} == 1 && ${#f_steps[(I)((-r|--repo)|(-s|--submodules))]} == 0 )) \
-		|| [[ -z "${f_steps}" ]]
-	then
-		f_steps+=(-r -s)
+	if [[ -z "$f_steps" ]] || (( ${f_steps[(I)(-a|--all)]} ));	then
+		f_steps=(-r -s -c)
 	fi
 
 	### Getting repo info
@@ -268,12 +271,6 @@ function zupdate {
 		elif [[ $LOCAL == $BASE ]]; then
 			(( $verbosity )) && print_fn -ni "Updating..."
 			git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}} || return 1
-			# Recompile lib/ files
-			print "Recompiling lib/core/ files..."
-			for f in "${ZDOTDIR}"/lib/core/*.zsh(on); do
-				zcompile "$f" & &>/dev/null
-			done
-			wait
 		elif [[ $REMOTE == $BASE ]]; then
 			(( $verbosity )) && print_fn -ne "There are unpushed changes"
 			return 2
@@ -281,6 +278,18 @@ function zupdate {
 			(( $verbosity )) && print_fn -ne "Current branch has diverged from remote"
 			return 3
 		fi
+	fi
+
+	# (Re)compile lib/ files
+	if (( ${f_steps[(I)(-c|--compile)]} )); then
+		(( $verbosity )) && print "Recompiling lib/ files..."
+		local f
+		for f in "${ZDOTDIR}"/lib/**/*.zsh(on); do
+			if [[ ! -f "${f}.zwc" || "$f" -nt "${f}.zwc" ]]; then
+				zcompile "$f" &>/dev/null &
+			fi
+		done
+		wait
 	fi
 
 	# Update submodules
