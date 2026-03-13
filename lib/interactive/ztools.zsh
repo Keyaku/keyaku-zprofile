@@ -259,6 +259,7 @@ function zupdate {
 		{r,-repo}=f_steps \
 		{s,-submodules}=f_steps \
 		{c,-compile}=f_steps \
+		{C,-clean}=f_steps \
 		|| return 1
 
 	## Help/usage message
@@ -312,6 +313,12 @@ function zupdate {
 			(( $verbosity )) && print_fn -ne "Current branch has diverged from remote"
 			return 3
 		fi
+	fi
+
+	# Clean up .zwc files
+	if (( ${f_steps[(I)(-C|--clean)]} )); then
+		(( $verbosity )) && print "Cleaning up *.zwc files in lib/..."
+		rm -f ${ZDOTDIR}/lib/**/*.zwc(.N)}
 	fi
 
 	# (Re)compile lib/ files
