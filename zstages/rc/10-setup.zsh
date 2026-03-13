@@ -19,7 +19,7 @@ _zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh'
 # ============================================================================
 
 # Check for p10k; if non-existent, use robbyrussel
-if [[ -L "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
+if [[ -e "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
 	ZSH_THEME="powerlevel10k"
 
 	# Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
