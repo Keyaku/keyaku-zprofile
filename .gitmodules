@@ -1,16 +1,19 @@
 [submodule "ohmyzsh"]
-	path = ohmyzsh
+	path = vendor/ohmyzsh
 	url = https://github.com/ohmyzsh/ohmyzsh
 	shallow = true
 	ignore = all
 	branch = master
-[submodule "custom/themes/powerlevel10k"]
-	path = custom/themes/powerlevel10k
+[submodule "themes/powerlevel10k"]
+	path = vendor/themes/powerlevel10k
 	url = https://github.com/romkatv/powerlevel10k.git
 	shallow = true
 	ignore = all
-[submodule "custom/plugins/zsh-syntax-highlighting"]
-	path = extensions/zsh-syntax-highlighting
+[submodule "plugins/zsh-syntax-highlighting"]
+	path = vendor/plugins/zsh-syntax-highlighting
 	url = https://github.com/zsh-users/zsh-syntax-highlighting.git
 	shallow = true
 	ignore = all
+[submodule "plugins/flatpak"]
+	path = vendor/plugins/flatpak
+	url = https://github.com/bilelmoussaoui/flatpak-zsh-completion

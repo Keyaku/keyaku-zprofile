@@ -1,4 +1,4 @@
-#####################################################################
+##############################################################################
 #                            .zlogin
 #
 # File loaded 4th && if [[ -o login ]]
@@ -9,41 +9,35 @@
 # Should not be used to autostart graphical sessions,
 # as at this point the session might contain configuration
 # meant only for an interactive shell.
-#####################################################################
+##############################################################################
 
-### Docker configuration
-if (( ${+commands[docker]} )) && (( ! ${+commands[podman]} )); then
-	docker-set-env
+# ============================================================================
+# Benchmark Setup
+# ============================================================================
+# Track loading time if ZSH_PROFILE_BENCHMARK is set
+if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
+	zmodload zsh/datetime
+	local t_zsh_start=$EPOCHREALTIME
 fi
 
-### Homebrew
-if (( ${+commands[brew]} )); then
-	export HOMEBREW_NO_ANALYTICS=1
-	export HOMEBREW_NO_ENV_HINTS=1
+# ============================================================================
+# Stage 1: Load zlogin stage files
+# ============================================================================
+
+_zsh_source_dir "${ZDOTDIR}/zstages/login" "login"
+
+# ============================================================================
+# Benchmark Output
+# ============================================================================
+# Benchmark output for this stage
+if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
+	local t_end=$EPOCHREALTIME
+	local t_total=$(( t_end - t_zsh_start ))
+	print -u2 "========================================="
+	print -u2 "[TOTAL] $(is_sourced_by) stage took ${t_total}s"
+	print -u2 "========================================="
+	print -u2 ""
+	unset t_start t_end t_total
 fi
 
-### Python
-if [[ -f "$XDG_DATA_HOME"/pyvenv/pyvenv.cfg ]]; then
-	vrun "$XDG_DATA_HOME"/pyvenv &>/dev/null
-fi
-
-### Steam
-if (( ${+commands[steam]} )); then
-	# Default Steam paths
-	steam-set-paths
-
-	# WeMod launcher
-	WEMOD_HOME="${GIT_HOME:-$HOME/.local/git}/_games/wemod-launcher"
-	[[ -d "$WEMOD_HOME" ]] && export WEMOD_HOME || unset WEMOD_HOME
-fi
-
-
-### Last execution to run if in an interactive shell
-if [[ -o interactive ]]; then
-	if ! whatami Android; then
-		### Session type (X11, Wayland) configuration
-		if [[ -z "${XDG_SESSION_TYPE}" ]] && command-has loginctl; then
-			export XDG_SESSION_TYPE="$(loginctl show-session $(awk '/tty/ {print $1}' <(loginctl)) -p Type | awk -F= '{print $2}')"
-		fi
-	fi
-fi
+# vim: ft=zsh ts=4 sw=4 et

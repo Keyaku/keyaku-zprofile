@@ -1,4 +1,4 @@
-#####################################################################
+##############################################################################
 #                            .zshenv
 #
 # File loaded 1st.
@@ -6,147 +6,83 @@
 # Used for setting user's environment variables;
 # it should not contain commands that produce output
 # or assume the shell is attached to a TTY.
-# When this file exists it will _always_ be read.
-#####################################################################
-
-#######################################
-### XDG variables
-#######################################
-
-### User Directories
-export XDG_CACHE_HOME=$HOME/.local/cache
-export XDG_CONFIG_HOME=$HOME/.local/config
-export XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
-export XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
-# Set XDG_RUNTIME_DIR for Termux
-if (( ${+TERMUX_VERSION} )); then
-	export XDG_RUNTIME_DIR="${${:-$HOME/../usr/var/run/$UID}:P}"
-fi
-
-### System directories
-# FIXME: Set these appropriately with addvar and if Flatpak is available
-# typeset -a xdg_data_dirs=("${XDG_DATA_HOME}"/flatpak/exports/share "/var/lib/flatpak/exports/share" "${XDG_DATA_HOME}")
-# for data_dir in ${xdg_data_dirs}; do
-# 	if [[ -d "$data_dir" ]] && ! [[ "$XDG_DATA_DIRS" =~ (^|:)"$data_dir"/?(:|$) ]]; then
-# 		XDG_DATA_DIRS="$data_dir":"$XDG_DATA_DIRS"
-# 	fi
-# done
-# unset data_dir xdg_data_dirs
-# typeset -a xdg_config_dirs=("${XDG_CONFIG_HOME}")
-# for config_dir in ${xdg_data_dirs}; do
-# 	if [[ -d "$config_dir" ]] && ! [[ "$XDG_CONFIG_DIRS" =~ (^|:)"$config_dir"/?(:|$) ]]; then
-# 		XDG_CONFIG_DIRS="$config_dir":"$XDG_CONFIG_DIRS"
-# 	fi
-# done
-# unset config_dir xdg_config_dirs
-
-#######################################
-# Environment control
-#######################################
-
-### ZSH profile
-export SHORT_HOST=${SHORT_HOST:-${(%):-%m}}
-export ZSH_CACHE_HOME="${XDG_CACHE_HOME}/zsh"
-[[ -d "$ZSH_CACHE_HOME" ]] || mkdir -p "$ZSH_CACHE_HOME"
-export ZSH_CACHE_DIR="$ZSH_CACHE_HOME" # compatibility variable
-export ZSH_COMPDUMP="$ZSH_CACHE_HOME/zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
-export HISTFILE="$ZSH_CACHE_HOME/zsh_history"
-export HISTCONTROL=ignoredups:erasedups
-
-
-##############################################################################
-### Custom packages locations
-###
-### Any variable here should be set once at boot.
-### If a new one is added, a reboot is in order.
-###
-### Variables that point to config files should be set here.
+# When this file exists, it will _always_ be read.
 ##############################################################################
 
-### AM/AppMan
-if (( ${+commands[appman]} )); then
-	export SANDBOXDIR=$HOME/.local/app/appman/sandboxes
+# Uncomment the following lines to enable the benchmark or debug flags
+# ZSH_PROFILE_BENCHMARK=1
+# ZSH_PROFILE_DEBUG=1
+
+# Enable debug mode if ZSH_PROFILE_DEBUG is set
+[[ -n "${ZSH_PROFILE_DEBUG}" ]] && setopt XTRACE
+
+# ============================================================================
+# Benchmark Setup
+# ============================================================================
+# Track loading time if ZSH_PROFILE_BENCHMARK is set
+if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
+	zmodload zsh/datetime
+	local t_zsh_start=$EPOCHREALTIME
 fi
 
-### Bundle (Ruby gems)
-if (( ${+commands[bundle]} )); then
-	export BUNDLE_USER_CACHE="${XDG_CACHE_HOME}"/bundle
-	export BUNDLE_USER_CONFIG="${XDG_CONFIG_HOME}"/bundle
-	export BUNDLE_USER_PLUGIN="${XDG_DATA_HOME}"/bundle
+# ============================================================================
+# Helper functions
+# ============================================================================
+
+# Helper function for safe sourcing with error handling
+_zsh_source_file() {
+	local zsh_file=$1
+	local stage=${2:-${1:t}}
+
+	[[ -f "$zsh_file" ]] || { print -u2 "Warning: File not found: $zsh_file"; return 1; }
+	[[ -r "$zsh_file" ]] || { print -u2 "Warning: File not readable: $zsh_file"; return 1; }
+
+	local t_start
+	[[ -n "$ZSH_PROFILE_BENCHMARK" ]] && t_start=$EPOCHREALTIME
+	source "$zsh_file"
+	[[ -n "$ZSH_PROFILE_BENCHMARK" ]] && print -u2 "[$stage] ${zsh_file:t} took $(( EPOCHREALTIME - t_start ))s"
+}
+
+# Helper function for sourcing directories
+_zsh_source_dir() {
+	local target_dir=$1
+	local stage=${2:-unknown}
+	local pattern=${3:-"*.zsh"}
+
+	[[ -d "$target_dir" ]] || return 1
+
+	# Use glob qualifiers: N (null_glob), . (regular LIST_files), o (order by name)
+	local zsh_file
+	for zsh_file in "${target_dir}"/${~pattern}(N.on); do
+		_zsh_source_file "$zsh_file" "$stage"
+	done
+}
+
+# ============================================================================
+# Stage 1: Load core library functions
+# ============================================================================
+# These are fundamental utilities needed everywhere.
+
+_zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
+
+# ============================================================================
+# Stage 2: Load zshenv stage files
+# ============================================================================
+
+_zsh_source_dir "${ZDOTDIR}/zstages/env" "env"
+
+# ============================================================================
+# Benchmark Output
+# ============================================================================
+# Benchmark output for this stage
+if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
+	local t_end=$EPOCHREALTIME
+	local t_total=$(( t_end - t_zsh_start ))
+	print -u2 "========================================="
+	print -u2 "[TOTAL] $(is_sourced_by) stage took ${t_total}s"
+	print -u2 "========================================="
+	print -u2 ""
+	unset t_start t_end t_total
 fi
 
-### Cargo
-if (( ${+commands[cargo]} )); then
-	export CARGO_HOME="$XDG_DATA_HOME"/cargo
-fi
-
-### Less (is more)
-if (( ${+commands[less]} )); then
-	export LESSHISTFILE="${XDG_CACHE_HOME}/less/history"
-	export LESS=' -R '
-fi
-
-### Golang
-if (( ${+commands[go]} )); then
-	export GOPATH="${XDG_DATA_HOME}/go"
-fi
-
-### GNUPG & security tools
-export PASSWORD_STORE_DIR="${XDG_DATA_HOME}/password-store"
-
-### GTK
-export GTK2_RC_FILES="${XDG_CONFIG_HOME}/gtkrc-2.0"
-export GTK_USE_PORTAL=1
-
-### Mesa
-export MESA_SHADER_CACHE_DIR="${XDG_CACHE_HOME}/mesa_shader_cache"
-
-### Perl
-if (( ${+commands[perl]} )); then
-	export PERL_LOCAL_LIB_ROOT="${XDG_DATA_HOME}/perl"
-	export PERL_CPANM_HOME="${PERL_LOCAL_LIB_ROOT}/cpan"
-
-	export PERL5LIB="${PERL_CPANM_HOME}:${PERL_LOCAL_LIB_ROOT}/lib/perl5"
-
-	export PERL_MB_OPT="--install_base '${PERL_LOCAL_LIB_ROOT}'"
-	export PERL_MM_OPT="  INSTALL_BASE='${PERL_LOCAL_LIB_ROOT}'"
-fi
-
-if (( ${+commands[cpan]} )); then
-	alias cpan='cpan -j ${PERL_CPANM_HOME}/CPAN/MyConfig.pm'
-fi
-
-
-### SSH
-if (( ${+commands[ssh]} )); then
-	export SSH_HOME=${XDG_CONFIG_HOME}/ssh
-fi
-
-
-### SSL
-# Avoid setting root-based paths in Termux
-if (( ! ${+TERMUX_VERSION} )); then
-	export SSL_DIR="/etc/ssl"
-	export SSL_CERT_DIR="$SSL_DIR/certs"
-fi
-
-
-### Tk/Tcl, tkinter
-if [[ -d /usr/lib/tcl8.6 && -d /usr/lib/tk8.6 ]]; then
-	export TCL_LIBRARY=/usr/lib/tcl8.6
-	export TK_LIBRARY=/usr/lib/tk8.6
-fi
-
-
-### wget/curl
-if (( ${+commands[wget]} )); then
-	export WGETRC="${XDG_CONFIG_HOME}/wgetrc"
-	[[ ! -d "${XDG_DATA_HOME}"/wget ]] && mkdir -p "${XDG_DATA_HOME}"/wget
-	if [[ ! -f $XDG_CONFIG_HOME/wgetrc ]] || ! \grep -Eqw "hsts-file=${XDG_DATA_HOME}/wget/hsts" $XDG_CONFIG_HOME/wgetrc; then
-		echo "hsts-file=${XDG_DATA_HOME}/wget/hsts" >> $XDG_CONFIG_HOME/wgetrc
-	fi
-fi
-
-### X11
-# export XAUTHORITY="${XDG_CACHE_HOME}/X11/Xauthority"
-export XINITRC="${XDG_CONFIG_HOME}/X11/xinitrc"
+# vim: ft=zsh ts=4 sw=4 et

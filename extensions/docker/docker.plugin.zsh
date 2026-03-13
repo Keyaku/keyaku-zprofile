@@ -23,42 +23,6 @@ fi
 	fi
 } &|
 
-# Officially supported Docker environment variables
-typeset -A DOCKER_ENV_VARS=(
-	[DOCKER_API_VERSION]="Override the negotiated API version to use for debugging (e.g. 1.19)"
-	[DOCKER_CERT_PATH]="Location of your authentication keys. This variable is used both by the docker CLI and the dockerd daemon"
-	[DOCKER_CONFIG]="The location of your client configuration files."
-	[DOCKER_CONTENT_TRUST_SERVER]="The URL of the Notary server to use. Defaults to the same URL as the registry."
-	[DOCKER_CONTENT_TRUST]="When set Docker uses notary to sign and verify images. Equates to --disable-content-trust=false for build, create, pull, push, run."
-	[DOCKER_CONTEXT]="Name of the docker context to use (overrides DOCKER_HOST env var and default context set with docker context use)"
-	[DOCKER_CUSTOM_HEADERS]="(Experimental) Configure custom HTTP headers to be sent by the client. Headers must be provided as a comma-separated list of name=value pairs. This is the equivalent to the HttpHeaders field in the configuration file."
-	[DOCKER_DEFAULT_PLATFORM]="Default platform for commands that take the --platform flag."
-	[DOCKER_HIDE_LEGACY_COMMANDS]="When set, Docker hides "legacy" top-level commands (such as docker rm, and docker pull) in docker help output, and only Management commands per object-type (e.g., docker container) are printed. This may become the default in a future release."
-	[DOCKER_HOST]="	Daemon socket to connect to."
-	[DOCKER_TLS]="Enable TLS for connections made by the docker CLI (equivalent of the --tls command-line option). Set to a non-empty value to enable TLS. Note that TLS is enabled automatically if any of the other TLS options are set."
-	[DOCKER_TLS_VERIFY]="When set Docker uses TLS and verifies the remote. This variable is used both by the docker CLI and the dockerd daemon"
-	[BUILDKIT_PROGRESS]="Set type of progress output (auto, plain, tty, rawjson) when building with BuildKit backend. Use plain to show container output (default auto)."
-)
-
-# Custom Docker environment variables
-typeset -A DOCKER_USER_VARS=(
-	[DOCKER_ENV_VARS]="Dictionary with all officially supported Docker environment variables."
-	[DOCKER_USER_VARS]="Dictionary with all user-defined Docker environment variables."
-	[DOCKER_BIN]="Path to Docker binaries. Defaults to system installation"
-	[DOCKER_HOME]="Path to general non-configuration Docker files. Defaults to /usr/local/docker for root, and \$HOME/.local/docker for non-root."
-	[DOCKER_USER]="Current non-root user for Docker. Useful for containers where root is not necessary."
-)
-
-### Non-root operations
-if (( 1000 <= $UID )); then
-	### Current non-root docker user
-	export DOCKER_USER="$(id -u):$(id -g)"
-fi
-
-# Set config directory, regardless of context
-[[ -d "${XDG_CONFIG_HOME}/docker" ]] || mkdir -p "${XDG_CONFIG_HOME}/docker"
-export DOCKER_CONFIG="${XDG_CONFIG_HOME}/docker"
-
 # Checks current credention helper, fetching one if necessary
 function docker-get-credhelper {
 	local -r credhelper_repo="docker/docker-credential-helpers"
@@ -124,20 +88,20 @@ function docker-get-credhelper {
 # Sets environment for Docker
 function docker-set-env {
 	if ! command-has systemctl-service-path; then
-		zsource system.zsh
+		zsource -L
 	fi
 
 	### If rootless binaries exist, prefer those over rootful
 	if [[ -f "$(systemctl-service-path --user docker)" ]]; then
 		### Set important environment variables
 		export DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
-		DOCKER_HOME="$HOME/.local/docker"
+		DOCKER_HOME="${DOCKER_CONFIG:-$XDG_CONFIG_HOME/docker}"
 
 		# Prepend binary directory to PATH
-		addpath -p "$DOCKER_BIN"
+		addpath 1 "$DOCKER_BIN"
 
 		### Check if systemd service is running but is not in rootless context
-		if systemctl --user is-active -q docker && [[ "$(docker context show)" != "rootless" ]]; then
+		if systemctl --user is-enabled -q docker && [[ "$(docker context show)" != "rootless" ]]; then
 			unset DOCKER_HOST DOCKER_CONTEXT # Can only set rootless context with such variable(s) as unset
 			docker context use rootless >/dev/null || {
 				# In case of failure, set DOCKER_HOST
@@ -148,7 +112,7 @@ function docker-set-env {
 	### Otherwise, assume default system-wide installation
 	else
 		### Set important environment variables
-		DOCKER_BIN="$(pkgmgr-binpath docker 2>/dev/null)"
+		DOCKER_BIN="$(sysbinpath docker 2>/dev/null)"
 		DOCKER_HOME="/usr/local/docker"
 	fi
 }
@@ -214,7 +178,7 @@ function docker-rootless-install {
 		mkdir -p "$DOCKER_BIN"
 	fi
 	echo "Fetching and executing Docker rootless install script..."
-	curl -fsSL https://get.docker.com/rootless | DOCKER_BIN="${DOCKER_BIN}" sh || return $?
+	curl -fsSL https://get.docker.com/rootless | DOCKER_BIN="${DOCKER_BIN}" sh $@ || return $?
 	docker-set-env
 
 	echo "Exposing privileged ports..."
@@ -271,9 +235,13 @@ function docker-rootless-uninstall {
 		return 1
 	fi
 
-	if systemctl --user is-active -q docker; then
+	# Change context before disabling
+	docker context use default
+	docker context rm rootless >/dev/null
+
+	if systemctl --user is-enabled -q docker; then
 		echo "Stopping docker service..."
-		systemctl --user stop docker
+		systemctl --user disable --now docker
 	fi
 	if [[ "$f_daemon" && -f "${DOCKER_BIN}"/dockerd ]]; then
 		echo "Deleting docker daemon..."
@@ -283,6 +251,10 @@ function docker-rootless-uninstall {
 		rmpath "${DOCKER_BIN}"
 		[[ "$f_full" ]] && rm -rf "${DOCKER_BIN}"
 	fi
+
+	docker-set-env
+
+	ask --yn -k "Disable login linger for $USER?" && sudo loginctl disable-linger $USER
 }
 
 # Check if docker is running and if the given container exists
@@ -360,7 +332,7 @@ function docker-upgrade {
 	done
 }
 
-### Docker socket creation
+# Docker socket creation
 function docker-socket-tls {
 	local PATH_pass=/tmp/ca_passphrase
 	local pass
@@ -475,11 +447,6 @@ function docker-socket-ssh {
 	docker context use rootless-ssh
 }
 
-
-#######################################
-### Container-specific commands
-#######################################
-
 # Function which defines container aliases
 function docker-alias {
 	local -r usage=(
@@ -528,6 +495,19 @@ function docker-alias {
 	# Define alias
 	alias $container_alias="docker exec ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
 }
+
+
+# ============================================================================
+# Plugin setup
+# ============================================================================
+
+# Set important environment variables for the proper functioning of docker
+docker-set-env
+
+
+# ============================================================================
+# Container-specific commands
+# ============================================================================
 
 # Defining simple container aliases
 DOCKER_CONTAINERS_CMD=(

@@ -1,14 +1,7 @@
 (( ${+commands[git]} )) || return
 
-# Set and create GIT_HOME directory
-export GIT_HOME=$HOME/.local/git
-[[ -d "$GIT_HOME" ]] || mkdir -p "$GIT_HOME"
-
-# Check if sshCommand is in gitconfig
-GIT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/git/config"
-[[ ! -f "$GIT_CONFIG" ]] && {
-	mkdir -p "${GIT_CONFIG:h}"
-	touch "$GIT_CONFIG"
-}
-
-unset GIT_CONFIG
+# Set sshCommand if not set in gitconfig
+local sshCommand=$(git config --global --get core.sshCommand)
+if [[ ${sshCommand:0:3} != 'ssh' ]]; then
+	git config --global core.sshCommand "ssh -F ${SSH_HOME:-$HOME/.ssh}/config"
+fi

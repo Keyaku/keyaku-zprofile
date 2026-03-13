@@ -1,0 +1,223 @@
+
+# ============================================================================
+# Terminal prompts
+# ============================================================================
+
+# Prompt via read. Incorporates question and looping until non-empty REPLY
+function ask {
+	local -r usage=(
+		"Usage: $(get_funcname) [OPTION...] [(-p|--prompt) message] [-- \`read\` opts]"
+		"\t[-h|--help]"
+		"\t[-B|--yn|--yesno] : Prompt for a binary yes/no answer. This overrides -o|--opts with '-o y -o n'"
+		"\t[-k|--non-empty] : Prohibit empty answers"
+		"\t[-p|--prompt] : Defines question for the prompt"
+		"\t[-o|--opts] : Add possible answer(s)"
+		"\t[-d|--default] : Make argument the default answer if empty"
+	)
+
+	local -a valid_y=(yes ye y)
+	local -a valid_n=(no n)
+	local -a valid_yn=(${valid_y[@]} ${valid_n[@]})
+	local -a valid_yn_short=(y n)
+
+	## Setup parseopts
+	local f_help f_yesno f_nonEmpty f_prompt f_options f_default
+	zparseopts -D -E -K -- \
+		{h,-help}=f_help \
+		{B,-yn,-yesno}=f_yesno \
+		{k,-non-empty}=f_nonEmpty \
+		{p,-prompt}:=f_prompt \
+		{o,-opts}+:=f_options \
+		{d,-default}:=f_default
+
+	## Help/usage message
+	if (( ${#f_help} )); then
+		>&2 print -l $usage
+		return ${#f_help}
+	fi
+
+	## Parse arguments
+	local v_prompt v_default v_options=()
+	(( ${#f_prompt} )) && v_prompt="${f_prompt[-1]}"
+	# If yesno was requested, override options and enable strict
+	(( ${#f_yesno} )) && {
+		f_options=(-o${^valid_yn})
+	}
+
+	[[ "${f_options}" ]] && {
+		local i
+		for (( i=2; i<=${#f_options}; i+=2 )); do
+			v_options+=("${f_options[$i]}")
+		done
+	}
+	local -a printed_opts=(${v_options})
+
+	[[ "${f_default}" ]] && {
+		# If default was defined but nonEmpty is set to true, throw error
+		if [[ "$f_nonEmpty" ]]; then
+			print_fn -e "'-k' and '-d' are mutually exclusive"
+			return 1
+		fi
+		v_default="${f_default[-1]:l}"
+		# If going for yes/no, make sure the default is valid
+		if (( ${#f_yesno} )) && ! array_has valid_yn "$v_default"; then
+			print_fn -e "Invalid default value: '$v_default'"
+			return 1
+		fi
+
+		## Uppercase default option
+		if array_has printed_opts "${v_default:l}"; then
+			local idx=${printed_opts[(i)${v_default:l}]}
+			printed_opts[$idx]=("${v_default:u}")
+		else
+			printed_opts=("${v_default:u}" ${printed_opts})
+		fi
+	}
+
+	## Read extra arguments
+	local -a extra_args=()
+	while (( $# )); do
+		case $1 in
+		-- )
+			shift
+			extra_args=($@)
+		;;
+		-* ) print_fn -w "Invalid argument: '$1'"
+		;;
+		* )
+			# if a number, consider it a time amount
+			if [[ -z "$v_prompt" ]]; then
+				v_prompt="${1}"
+			else
+				print_fn -w "Discarded argument: '%s'\n\t%s\n" "$1" "Prompt message already defined"
+			fi
+		;;
+		esac
+		shift
+	done
+
+	## Prepare prompt message
+	(( ${#f_yesno} )) && printed_opts=(${printed_opts//(yes|ye|no)/})
+
+	v_prompt="${v_prompt:+$v_prompt }${printed_opts:+[${(j:/:)printed_opts}]}"
+	[[ "${v_prompt}" ]] && v_prompt="${v_prompt}\n"
+
+	## Begin prompting
+	local -i retval=0
+	local v_answer
+	REPLY=""
+	while [[ -z "${v_answer}" ]]; do
+		printf '%s> ' "${v_prompt}"
+		read -r ${extra_args} || return 1
+
+		if [[ -z "${REPLY}" ]]; then
+			if [[ "$f_nonEmpty" ]]; then
+				echo "Answer cannot be empty."
+			elif [[ "${v_default}" ]]; then
+				v_answer="${v_default}"
+			fi
+		elif (( 0 < ${#v_options} )) && ! array_has v_options "${REPLY:l}"; then
+			printf "Invalid answer: '%s'\n" "${REPLY}"
+		else
+			v_answer="$REPLY"
+		fi
+	done
+	REPLY="$v_answer"
+
+	if (( ${#f_yesno} )); then
+		REPLY="${REPLY:l}"
+		array_has valid_y "$REPLY"
+		retval=$?
+	fi
+
+	return $retval
+}
+
+
+# ============================================================================
+# Dialog prompts
+# ============================================================================
+
+# Get the first installed dialog prompt from list
+function get-prompt {
+	local PROMPT_TYPES=(kdialog dialog zenity)
+	local ptype
+
+	for ptype in ${PROMPT_TYPES[@]}; do
+		(( ${+commands[$ptype]} )) && {
+			echo "$ptype"
+			return 0
+		}
+	done
+
+	return 1
+}
+
+function prompt-user {
+	check_argc $# 1 1
+	local message="$1"
+
+	case $(get-prompt) in
+	kdialog ) kdialog --msgbox "$message" &>/dev/null
+	;;
+	dialog ) dialog --msgbox "$message" 10 60
+	;;
+	zenity ) zenity --info --text="$message" &>/dev/null
+	;;
+	esac
+}
+
+function prompt-radio {
+	check_argc $# 1
+	local title="$1"
+	shift
+	local arglist_off=() arglist=()
+
+	local idx=1 opt
+	for opt in $@; do
+		arglist+=($idx "$opt")
+		((idx++))
+	done
+
+	case $(get-prompt) in
+	kdialog ) kdialog --radiolist "$title" $(printf '%d %s off ' ${arglist[@]})
+	;;
+	dialog ) dialog --radiolist "$title" 0 0 0 $(printf '%d %s off ' ${arglist[@]})
+	;;
+	zenity )
+		zenity --title="title" --list --radiolist --column="" --column="Option" \
+			${arglist[@]}
+	;;
+	esac
+}
+
+function prompt-yesno {
+	check_argc $# 1 1
+	local message="$1"
+
+	case $(get-prompt) in
+	kdialog ) kdialog --yesno "$message" &>/dev/null
+	;;
+	dialog ) dialog --yesno "$message" 10 60
+	;;
+	zenity ) zenity --question --text="$message" &>/dev/null
+	;;
+	esac
+}
+
+function prompt-dir {
+	check_argc $# 1 2
+	local title="$1"
+	local startdir="${2:-$HOME}"
+
+	case $(get-prompt) in
+	kdialog ) (cd "${startdir}"
+			kdialog --getexistingdirectory
+		)
+	;;
+	dialog ) echo $(dialog --dselect "${startdir}" 10 60 --stdout)
+	;;
+	zenity ) echo $(zenity --file-selection --directory)
+	;;
+	esac
+}

@@ -1,4 +1,4 @@
-(( ${(v)#commands[(I)mkvtoolinx-gui|org.bunkus.mkvtoolnix-gui]} )) || return
+(( ${+commands[mkvtoolinx-gui]} || ${+commands[org.bunkus.mkvtoolnix-gui]} )) || return
 
 # Flatpak version
 if (( ${+commands[org.bunkus.mkvtoolnix-gui]} )); then

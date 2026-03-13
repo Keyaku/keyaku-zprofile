@@ -1,8 +1,6 @@
-(( ${(v)#commands[(I)gpg|gpgconf]} )) || return
+(( ${+commands[gpg]} || ${+commands[gpgconf]} )) || return
 
-[[ -z "$GNUPGHOME" ]] && export GNUPGHOME="${$XDG_DATA_HOME:-$HOME/.local/share}"/gnupg
-[[ -d "$GNUPGHOME" ]] || mkdir -p "$GNUPGHOME"
-
+# Fix permissions of gpg homedir
 function gpg-fix-perms {
 	local homedir=${1:-$GNUPGHOME}
 	if [[ ! -d "$homedir" ]]; then

@@ -1,18 +1,14 @@
 (( ${+commands[gpg-agent]} )) || return
 
-[[ -z "$GNUPGHOME" ]] && export GNUPGHOME="${$XDG_DATA_HOME:-$HOME/.local/share}"/gnupg
-[[ -d "$GNUPGHOME" ]] || mkdir -p "$GNUPGHOME"
-
-if [[ ! -f "$GNUPGHOME/gpg-agent.conf" ]] || ! \grep -q 'pinentry-program' "$GNUPGHOME/gpg-agent.conf"; then
+# Set pinentry if not set in gpg-agent.conf
+if ! \grep -qF 'pinentry-program /usr/bin/pinentry' "$GNUPGHOME/gpg-agent.conf"; then
 	echo "pinentry-program /usr/bin/pinentry" >> "$GNUPGHOME/gpg-agent.conf"
 fi
 
 # Start gpg-agent with systemd
-# FIXME: This is currently not enough to work with Flatpak VSCode. Launching Kleopatra seems to address it, but I need to resolve this here.
-if has_systemd && ! systemctl --user -q status gpg-agent &>/dev/null; then
-	systemctl --user -q enable --now gpg-agent
+if has_systemd && ! systemctl --user -q is-active gpg-agent.socket; then
+	systemctl --user -q start gpg-agent.socket
 fi
 
 # Load available plugin from ohmyzsh
-# FIXME: add gpg-agent to `plugins` array rather than sourcing it directly
-[[ -f "$ZSH/plugins/${0:h:t}/${0:t}" ]] && source "$ZSH/plugins/${0:h:t}/${0:t}"
+[[ -f "$ZSH/plugins/${0:h:t}/${0:t}" ]] && plugins+=(gpg-agent)

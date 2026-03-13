@@ -1,42 +1,5 @@
 (( $UID >= 1000 )) || return
-(( ${(v)#commands[(I)steam|com.valvesoftware.Steam]} )) || return
-
-### Setting main variables for Steam paths
-function steam-set-paths {
-	# Default Steam paths
-	typeset -Al steam_paths=(
-		[STEAM_HOME]=".steam"
-		[STEAM_LIBRARY]=".local/share/Steam"
-	)
-
-	### Set paths from array
-	local env_var env_path
-	for env_var env_path in ${(kv)steam_paths}; do
-		if [[ -z "${(P)env_var}" || ! -d "${(P)env_var}" ]]; then
-			: ${(P)env_var::="$HOME/$env_path"}
-
-			# Check if flatpak (only if default is not available)
-			if [[ ! -d "${(P)env_var}" ]]; then
-				(( ${+commands[com.valvesoftware.Steam]} )) && : ${(P)env_var::="$HOME/.var/app/com.valvesoftware.Steam/$env_path"}
-			fi
-
-			# Force search Steam home in case it was not found (for custom setups)
-			if [[ "$env_var" == "STEAM_HOME" && ! -d "${(P)env_var}" ]]; then
-				STEAM_HOME="$(find "$HOME" -maxdepth 6 -type d -name ".steam" -not -regex '.*\.?cache.*' -print -quit)"
-			fi
-
-			# Export variable or unset it depending on its validity
-			[[ -d "${(P)env_var}" ]] && export "${env_var}" || unset "${env_var}"
-		fi
-	done
-
-	### Check which variables were not set
-	for env_var env_path in ${(kv)steam_paths}; do
-		if (( ${+commands[steam]} )) && ! env | \grep -qw "$env_var" && [[ -z "${(P)env_var}" || ! -d "${(P)env_var}" ]]; then
-			print_fn -e "Could not set '$env_var' environment variable"
-		fi
-	done
-}
+(( ${+commands[steam]} || ${+commands[com.valvesoftware.Steam]} )) || return
 
 # Locate app_id from name
 function steam-app-id {
@@ -177,6 +140,6 @@ function steam-app-proton {
 }
 
 ### Flatpak version
-if (( ${+commands[com.valvesoftware.Steam]} )) && (( ! ${(v)#commands[(I)steam|steam-native]})); then
-	alias steam='flatpak run com.valvesoftware.Steam'
+if (( ${+commands[com.valvesoftware.Steam]} )) && ! (( ${commands[steam]} || ${commands[steam-native]} )); then
+	alias steam='com.valvesoftware.Steam'
 fi
