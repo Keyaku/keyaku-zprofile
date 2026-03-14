@@ -15,7 +15,7 @@
 # Benchmark Setup
 # ============================================================================
 # Track loading time if ZSH_PROFILE_BENCHMARK is set
-if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
+if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	zmodload zsh/datetime
 	local t_zsh_start=$EPOCHREALTIME
 fi
@@ -30,7 +30,7 @@ _zsh_source_dir "${ZDOTDIR}/zstages/login" "login"
 # Benchmark Output
 # ============================================================================
 # Benchmark output for this stage
-if [[ -n "${ZSH_PROFILE_BENCHMARK}" ]]; then
+if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	local t_end=$EPOCHREALTIME
 	local t_total=$(( t_end - t_zsh_start ))
 	print -u2 "========================================="
