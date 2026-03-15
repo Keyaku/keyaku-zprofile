@@ -41,12 +41,21 @@ HIST_STAMPS="dd/mm/yyyy"
 # bloat the login times.
 
 (( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
-
-(( ${+commands[git]} )) && plugins+=(git)
-(( ${+commands[python]} || ${+commands[pip]} )) && plugins+=(pip)
 (( ${+commands[ufw]} )) && plugins+=(ufw)
-(( ${+commands[flatpak]} )) && plugins+=(flatpak)
 
+# Load plugins without aliases
+local -aU _no_aliases=()
+(( ${+commands[dotnet]} ))  && _no_aliases+=(dotnet)
+(( ${+commands[flatpak]} )) && _no_aliases+=(flatpak)
+(( ${+commands[git]} ))     && _no_aliases+=(git)
+(( ${+commands[python]} || ${+commands[pip]} )) && _no_aliases+=(pip)
+
+local f_plugin
+for f_plugin in ${_no_aliases}; do
+	zstyle ":omz:plugins:$f_plugin" aliases 0
+done
+
+plugins+=($_no_aliases)
 
 # ============================================================================
 # OMZ themes
