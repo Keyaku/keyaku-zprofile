@@ -9,4 +9,5 @@
 export ZSH="$ZDOTDIR/vendor/ohmyzsh"
 
 # Prepare ohmyzsh specifically for this configuration
+zstyle ':zprofile:submodules:ohmyzsh' loaded true
 zstyle ':omz:update' mode disabled  # disable automatic updates
