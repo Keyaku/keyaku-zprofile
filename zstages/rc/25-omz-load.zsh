@@ -66,6 +66,8 @@ if (( ! ${USE_OMZ_PLUGIN} )); then
 	fi
 
 	plugins=($_plugins)
+
+	local -A aliases_pre galiases_pre
 	local plugin_file plugin_dir disable_aliases
 	for plugin plugin_dir in ${(kv)plugin_map}; do
 		plugin_file="${plugin_dir}/$plugin.plugin.zsh"
@@ -74,9 +76,13 @@ if (( ! ${USE_OMZ_PLUGIN} )); then
 		zstyle -T ":omz:plugins:$plugin" aliases || disable_aliases=1
 
 		if (( disable_aliases )); then
-			local -A aliases_pre=("${(@kv)aliases}")
+			aliases_pre=("${(@kv)aliases}")
+			galiases_pre=("${(@kv)galiases}")
+
 			source "$plugin_file"
+
 			aliases=("${(@kv)aliases_pre}")
+			galiases=("${(@kv)galiases_pre}")
 		else
 			source "$plugin_file"
 		fi
