@@ -41,13 +41,11 @@ HIST_STAMPS="dd/mm/yyyy"
 # bloat the login times.
 
 # Select plugins to load
-(( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
 (( ${+commands[ufw]} )) && plugins+=(ufw)
 
 # Select plugins without aliases
 local -a plugins_no_aliases=()
 
-(( ${+commands[dotnet]} )) && plugins_no_aliases+=(dotnet)
 (( ${+commands[flatpak]} )) && plugins_no_aliases+=(flatpak)
 (( ${+commands[python]} || ${+commands[pip]} )) && plugins_no_aliases+=(pip)
 
