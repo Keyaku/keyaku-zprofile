@@ -49,7 +49,6 @@ local -a plugins_no_aliases=()
 
 (( ${+commands[dotnet]} )) && plugins_no_aliases+=(dotnet)
 (( ${+commands[flatpak]} )) && plugins_no_aliases+=(flatpak)
-(( ${+commands[git]} )) && plugins_no_aliases+=(git)
 (( ${+commands[python]} || ${+commands[pip]} )) && plugins_no_aliases+=(pip)
 
 local plugin

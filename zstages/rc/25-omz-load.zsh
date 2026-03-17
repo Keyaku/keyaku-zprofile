@@ -79,12 +79,12 @@ if (( ! ${USE_OMZ_PLUGIN} )); then
 			aliases_pre=("${(@kv)aliases}")
 			galiases_pre=("${(@kv)galiases}")
 
-			source "$plugin_file"
+			_zsh_source_file "$plugin_file"
 
 			aliases=("${(@kv)aliases_pre}")
 			galiases=("${(@kv)galiases_pre}")
 		else
-			source "$plugin_file"
+			_zsh_source_file "$plugin_file"
 		fi
 	done
 
