@@ -40,13 +40,24 @@ HIST_STAMPS="dd/mm/yyyy"
 # Because of this, plugins to load should be carefully considered so as to not
 # bloat the login times.
 
+# Select plugins to load
 (( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
-
-(( ${+commands[git]} )) && plugins+=(git)
-(( ${+commands[python]} || ${+commands[pip]} )) && plugins+=(pip)
 (( ${+commands[ufw]} )) && plugins+=(ufw)
-(( ${+commands[flatpak]} )) && plugins+=(flatpak)
 
+# Select plugins without aliases
+local -a plugins_no_aliases=()
+
+(( ${+commands[dotnet]} )) && plugins_no_aliases+=(dotnet)
+(( ${+commands[flatpak]} )) && plugins_no_aliases+=(flatpak)
+(( ${+commands[git]} )) && plugins_no_aliases+=(git)
+(( ${+commands[python]} || ${+commands[pip]} )) && plugins_no_aliases+=(pip)
+
+local plugin
+for plugin in ${plugins_no_aliases[@]}; do
+	zstyle ":omz:plugins:$plugin" aliases 0
+done
+plugins+=($plugins_no_aliases)
+unset plugin plugins_no_aliases
 
 # ============================================================================
 # OMZ themes
