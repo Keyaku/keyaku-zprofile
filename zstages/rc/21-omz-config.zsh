@@ -53,11 +53,10 @@ local -a plugins_no_aliases=()
 (( ${+commands[python]} || ${+commands[pip]} )) && plugins_no_aliases+=(pip)
 
 local plugin
-for plugin in ${plugins_no_aliases[@]}; do
+for plugin in ${plugins_no_aliases}; do
 	zstyle ":omz:plugins:$plugin" aliases 0
 done
 plugins+=($plugins_no_aliases)
-unset plugin plugins_no_aliases
 
 # ============================================================================
 # OMZ themes
