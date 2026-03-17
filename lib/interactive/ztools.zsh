@@ -347,9 +347,10 @@ function zupdate {
 			(( ${#p_results} )) && _zcompile_file "${p_results[1]}" &!
 		done
 
-		for f in $ZDOTDIR/extensions/*/*.plugin.zsh(on); do
-			_zcompile_file "$f" &!
-		done
+		# XXX: Performance gain is none. How?
+		# for f in $ZDOTDIR/extensions/*/*.plugin.zsh(on); do
+		# 	_zcompile_file "$f" &!
+		# done
 
 		# Wait for all background jobs to finish
 		wait
