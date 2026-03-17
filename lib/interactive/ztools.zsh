@@ -230,6 +230,16 @@ function zsource {
 	return 0
 }
 
+# zcompile helper
+function _zcompile_file {
+	local f="$1"
+	(( $verbosity > 2 )) && print_fn -nd "Checking ${f:t}..."
+	if [[ ! -f "${f}.zwc" || "$f" -nt "${f}.zwc" ]]; then
+		(( $verbosity > 1 )) && print_fn -ni "Compiling ${f:t}..."
+		zcompile "$f"
+	fi
+}
+
 # Check for zprofile git repo changes
 function zupdate {
 	if [[ -d "${ZDOTDIR}/.git" ]]; then
@@ -317,19 +327,31 @@ function zupdate {
 
 	# Clean up .zwc files
 	if (( ${f_steps[(I)(-C|--clean)]} )); then
-		(( $verbosity )) && print "Cleaning up *.zwc files in lib/..."
-		rm -f ${ZDOTDIR}/lib/**/*.zwc(.N)
+		(( $verbosity )) && print "Cleaning up *.zwc files in lib/ and plugins..."
+		rm -f "${ZDOTDIR}"/{extensions,lib}/**/*.zwc(.N) {"$ZSH_CUSTOM","${ZSH:-$ZDOTDIR}"}/plugins/*/*.zwc(.N)
 	fi
 
-	# (Re)compile lib/ files
+	# (Re)compile libraries and plugins
 	if (( ${f_steps[(I)(-c|--compile)]} )); then
-		(( $verbosity )) && print "Recompiling lib/ files..."
+		(( $verbosity )) && print "Recompiling libraries and plugins..."
 		local f
 		for f in "${ZDOTDIR}"/lib/**/*.zsh(on); do
-			if [[ ! -f "${f}.zwc" || "$f" -nt "${f}.zwc" ]]; then
-				zcompile "$f" &!
-			fi
+			_zcompile_file "$f" &!
 		done
+
+		# Compile plugins
+		local -a p_results=()
+		for f in ${plugins}; do
+			p_results=({"$ZSH_CUSTOM","${ZSH:-$ZDOTDIR}"}/plugins/$f/$f.plugin.zsh(.N))
+			# If results were found, pick the first one
+			(( ${#p_results} )) && _zcompile_file "${p_results[1]}" &!
+		done
+
+		for f in $ZDOTDIR/extensions/*/*.plugin.zsh(on); do
+			_zcompile_file "$f" &!
+		done
+
+		# Wait for all background jobs to finish
 		wait
 	fi
 
