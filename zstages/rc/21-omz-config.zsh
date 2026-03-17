@@ -42,6 +42,7 @@ HIST_STAMPS="dd/mm/yyyy"
 
 # Select plugins to load
 (( ${+commands[ufw]} )) && plugins+=(ufw)
+[[ -e "$ZSH_CUSTOM"/plugins/zsh-syntax-highlighting ]] && plugins+=(zsh-syntax-highlighting)
 
 # Select plugins without aliases
 local -a plugins_no_aliases=()
