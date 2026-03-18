@@ -97,7 +97,7 @@ function check_envvars {
 	done
 
 	if (( ${#missing_vars} )); then
-		print_fn -e "Environment variable(s) not set:" "${(j:, :)@}"
+		print_fn -ne "Environment variable(s) not set:" "${(j:, :)@}"
 		return 1
 	fi
 }
@@ -110,7 +110,7 @@ function check_envvars {
 
 # Checks if argument exists in $path
 function haspath {
-	(( 0 < ${path[(I)(${(j:|:)@})]} ))
+	(( 0 < ${#${@%/}:*path} ))
 }
 
 # Adds argument(s) to $path if not set and if they're existing directories. Returns false if no path was set
@@ -118,24 +118,17 @@ function addpath {
 	local -i mode=0  # 0: append; 1: prepend
 	[[ "$1" == (0|1) ]] && { mode=$1; shift; }
 
-	local -a added_paths=()
-	local arg
+	local -a added_paths=(${@:|path}(N/))
 
-	# Parse arguments
-	for arg; do
-		# Check if path exists and is not already in $path
-		if [[ -d "$arg" ]] && ! haspath "$arg"; then
-			added_paths+=("$arg")
-		fi
-	done
-
-	# Add new paths
+	# Add new paths using ZSH expansion trickery
 	(( ${#added_paths} )) && {
+		local -i numpaths=${#path}
 		if (( $mode )); then
 			path=(${added_paths} ${path})
 		else
 			path+=(${added_paths})
 		fi
+		(( ${#path} != $numpaths ))
 	}
 }
 
