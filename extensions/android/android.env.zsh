@@ -7,15 +7,6 @@ if ! whatami Android; then
 		[[ -d "$ANDROID_ROOT" ]] || mkdir -p "$ANDROID_ROOT"
 		export ANDROID_USER_HOME="${ANDROID_ROOT}/.android"
 
-		if (( ${+commands[adb]} )); then
-			# Start Shizuku on connected device (non-root)
-			alias shizuku-start='adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh'
-
-			# Prevent adb from using user's home directory
-			alias adb="HOME=$ANDROID_ROOT ${commands[adb]}"
-			alias fastboot="HOME=$ANDROID_ROOT ${commands[fastboot]}"
-		fi
-
 		# Android development. Prefer sdk/ over ndk/
 		if [[ -d "${ANDROID_ROOT}"/sdk ]]; then
 			# Contrary to search results, do NOT set this path as ANDROID_SDK_ROOT. Set it as ANDROID_HOME:
@@ -32,6 +23,15 @@ if ! whatami Android; then
 
 			# Prepend platform tools to override system installation
 			addpath 1 "${ANDROID_ROOT}/sdk/platform-tools"
+		fi
+
+		if (( ${+commands[adb]} )); then
+			# Prevent adb from using user's home directory
+			alias adb="HOME=$ANDROID_ROOT ${commands[adb]}"
+			alias fastboot="HOME=$ANDROID_ROOT ${commands[fastboot]}"
+
+			# Start Shizuku on connected device (non-root)
+			alias shizuku-start='adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh'
 		fi
 	fi
 # if actually on Android (Termux)
