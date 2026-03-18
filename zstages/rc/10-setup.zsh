@@ -18,6 +18,16 @@ _zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh'
 # Themes
 # ============================================================================
 
+### Print fetch
+local fetch="fastfetch"
+local fetch_warned="$ZSH_CACHE_HOME/.fetch_warned"
+if (( ${+commands[$fetch]} )); then
+	$fetch
+elif [[ ! -f "$fetch_warned" ]]; then
+	print -u2 -f '%s\n' "Info: '$fetch' is not installed." "This message will only show once."
+	touch "$fetch_warned"
+fi
+
 # Check for p10k; if non-existent, use robbyrussel
 if [[ -e "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
 	ZSH_THEME="powerlevel10k"
@@ -25,7 +35,7 @@ if [[ -e "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
 	# Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
 	# Initialization code that may require console input (password prompts, [y/n]
 	# confirmations, etc.) must go above this block; everything else may go below.
-	if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-		_zsh_source_file "${ZSH_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
+	if [[ "$POWERLEVEL9K_INSTANT_PROMPT" != "off" && -r "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+		_zsh_source_file "${XDG_CACHE_HOME}/p10k-instant-prompt-${(%):-%n}.zsh"
 	fi
 fi
