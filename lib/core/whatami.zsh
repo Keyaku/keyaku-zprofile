@@ -5,12 +5,14 @@ typeset -agxU WHATAMI_LIST=()
 WHATAMI_CACHE_FILE="${ZSH_CACHE_HOME:-${XDG_CACHE_HOME:-$HOME/.local/cache}/zsh}/whatami_cache"
 
 function whatami {
-	local -ra usage=("Usage: ${funcstack[1]} [DISTRO...]")
-
-	if (( ${@[(I)-*|--*]} )); then
+	if (( ${@[(I)-*]} )); then
+		local -ra usage=("Usage: ${funcstack[1]} [DISTRO...]")
 		if (( ${@[(I)-h|--help]} )); then
 			>&2 print -l $usage
 			return 0
+		elif (( ${@[(I)-f|--force]} )); then
+			rm "$WHATAMI_CACHE_FILE"
+			WHATAMI_LIST=()
 		else
 			print -u2 "Error: Unknown option: ${@[(r)-*|--*]}"
 			return 1
@@ -41,14 +43,15 @@ function whatami {
 		fi
 
 		# Distribution detection - only if Linux
-		if (( ${+WHATAMI_LIST[(r)Linux]} )); then
+		if (( ${WHATAMI_LIST[(I)Linux]} )); then
 			if [[ -f /etc/os-release ]]; then
 				# Faster than lsb_release
 				local distro
 				local line
 				while IFS='=' read -r key val; do
-					[[ "$key" == "ID" ]] && { distro="${val//\"/}"; break; }
+					[[ "$key" == "ID" ]] && { distro="${(C)val//\"/}"; break; }
 				done < /etc/os-release
+				[[ "$distro" ]] && WHATAMI_LIST+=(${distro})
 			elif (( ${+commands[lsb_release]} )); then
 				# Fallback to lsb_release
 				WHATAMI_LIST+=("$(lsb_release -si)")
@@ -63,7 +66,7 @@ function whatami {
 		# Save to cache file
 		if (( ${#WHATAMI_LIST} )); then
 			[[ -d "${WHATAMI_CACHE_FILE:h}" ]] || mkdir -p "${WHATAMI_CACHE_FILE:h}"
-			print -l "${WHATAMI_LIST}" > "$WHATAMI_CACHE_FILE"
+			print "${WHATAMI_LIST}" > "$WHATAMI_CACHE_FILE"
 		fi
 	fi
 
@@ -77,5 +80,5 @@ function whatami {
 
 # Load if cache file exists
 if [[ -f "$WHATAMI_CACHE_FILE" ]]; then
-	WHATAMI_LIST=("${(f)$(<$WHATAMI_CACHE_FILE)}")
+	WHATAMI_LIST=(${(w)$(<$WHATAMI_CACHE_FILE)})
 fi
