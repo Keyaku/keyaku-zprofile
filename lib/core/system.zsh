@@ -90,10 +90,9 @@ function kill_zombies {
 
 ### Systemd
 function has_systemd {
-	local -a sessions=( /run/systemd/sessions/<->##(N-.) )
 	[[ -d /run/systemd/system ]] \
 		&& [[ "$(</proc/1/comm)" == "systemd" ]] \
-		&& (( ${#sessions} ))
+		&& (( ${#:-/run/systemd/sessions/<->##(N-.)} ))
 }
 
 if has_systemd; then
