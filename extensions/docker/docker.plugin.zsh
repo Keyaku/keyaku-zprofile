@@ -40,8 +40,7 @@ function docker-get-credhelper {
 
 	# 2. If credstore is `pass`, check if it's installed
 	if [[ "$credstore" == "pass" ]] && (( ! ${+commands[pass]} )); then
-		local pkgmgr="$(pkgmgr-get)"
-		print_fn -e "pass not installed.${pkgmgr:+ Install it via $pkgmgr.}"
+		print_fn -e "pass not installed."
 		return 1
 	fi
 
