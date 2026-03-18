@@ -205,31 +205,3 @@ function disk_speedtest {
 
 	rm -f /tmp/test*.img
 }
-
-# ============================================================================
-# Package manager tools
-# ============================================================================
-
-# Package Managers
-typeset -Ag PKGMGR_OS=(
-	[apt]=debian_version
-	[apt-get]=debian_version
-	[dnf]=fedora-release
-	[yum]=redhat-release
-	[pacman]=arch-release
-	[emerge]=gentoo-release
-	[zypper]=SuSE-release
-	[apk]=alpine-release
-)
-
-# Obtains the package manager depending on the release file
-function pkgmgr-get {
-	local pkgmgr release_file
-	for pkgmgr release_file in ${(@kv)PKGMGR_OS}; do
-		if [[ -f "/etc/$release_file" ]] && (( ${+commands[$pkgmgr]} )); then
-			echo "$pkgmgr"
-			return 0
-		fi
-	done
-	return 1
-}
