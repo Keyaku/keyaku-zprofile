@@ -233,6 +233,7 @@ function zsource {
 # zcompile helper
 function _zcompile_file {
 	local f="$1"
+	local -i verbosity="${2:-0}"
 	(( $verbosity > 2 )) && print_fn -nd "Checking ${f:t}..."
 	if [[ ! -f "${f}.zwc" || "$f" -nt "${f}.zwc" ]]; then
 		(( $verbosity > 1 )) && print_fn -ni "Compiling ${f:t}..."
@@ -256,7 +257,8 @@ function zupdate {
 		"\t[-a|--all]  : Update all steps. Overrides options -r, -s, -c"
 		"\t[-r|--repo] : Update repo"
 		"\t[-s|--submodules] : Update submodules"
-		"\t[-c|--compile] : Compile .zsh in lib/"
+		"\t[-c|--compile] : Compile .zsh in lib/ and plugins/"
+		"\t[-C|--clean] : Clean .zwc files from lib/ and plugins/"
 	)
 
 	## Setup parseopts
@@ -289,7 +291,7 @@ function zupdate {
 		f_steps=(-r -s -c)
 	fi
 
-	### Getting repo info
+	# Getting repo info
 	local repo_name
 	while IFS=$'=\t ' read -r key val; do
 		if [[ "$key" == "url" ]]; then
@@ -325,10 +327,14 @@ function zupdate {
 		fi
 	fi
 
+	# Get directories with plugins/
+	local -a plugin_dirs=("$ZSH_CUSTOM")
+	[[ -n "$ZSH" ]] && plugin_dirs+=("$ZSH")
+
 	# Clean up .zwc files
 	if (( ${f_steps[(I)(-C|--clean)]} )); then
 		(( $verbosity )) && print "Cleaning up *.zwc files in lib/ and plugins..."
-		rm -f "${ZDOTDIR}"/{extensions,lib}/**/*.zwc(.N) {"$ZSH_CUSTOM","${ZSH:-$ZDOTDIR}"}/plugins/*/*.zwc(.N)
+		rm -f "${ZDOTDIR}"/{extensions,lib}/**/*.zwc(.N) ${^plugin_dirs}/plugins/*/*.zwc(.N)
 	fi
 
 	# (Re)compile libraries and plugins
@@ -336,18 +342,18 @@ function zupdate {
 		(( $verbosity )) && print "Recompiling libraries and plugins..."
 		local f
 		for f in "${ZDOTDIR}"/lib/**/*.zsh(on); do
-			_zcompile_file "$f" &!
+			_zcompile_file "$f" $verbosity &!
 		done
 
 		# Compile plugins
 		local -a p_results=()
 		for f in ${plugins}; do
-			p_results=({"$ZSH_CUSTOM","${ZSH:-$ZDOTDIR}"}/plugins/$f/$f.plugin.zsh(.N))
+			p_results=(${^plugin_dirs}/plugins/$f/$f.plugin.zsh(.N))
 			# If results were found, pick the first one
 			(( ${#p_results} )) && _zcompile_file "${p_results[1]}" &!
 		done
 
-		# XXX: Performance gain is none. How?
+		# XXX: No performance gain. How?
 		# for f in $ZDOTDIR/extensions/*/*.plugin.zsh(on); do
 		# 	_zcompile_file "$f" &!
 		# done
