@@ -11,20 +11,20 @@
 local -A plugin_map=()
 
 local -a plugin_dirs=("$ZSH_CUSTOM" "$ZSH")
-local -a found_files
-local plugin found
+local -a plugin_results
+local plugin plugin_found
 
 for plugin ($plugins); do
-	found_files=(${^plugin_dirs}/plugins/$plugin/{$plugin.plugin.zsh,_$plugin}(.N))
-	if (( ! ${#found_files} )); then
+	plugin_results=(${^plugin_dirs}/plugins/$plugin/{_*,$plugin.plugin.zsh}(.N))
+	if (( ! ${#plugin_results} )); then
 		print_fn -w "plugin '$plugin' not found"
 		continue
 	fi
-	for found ($found_files); do
-		if [[ "${found:e}" == "zsh" ]]; then
-			plugin_map[$plugin]="${found:h}"
-		elif [[ "${found:t}" == "_$plugin" ]]; then
-			fpath=("${found:h}" $fpath)
+	for plugin_found ($plugin_results); do
+		if [[ "${plugin_found:e}" == "zsh" ]]; then
+			plugin_map[$plugin]="${plugin_found:h}"
+		elif [[ "${plugin_found:t}" == "_$plugin" ]]; then
+			fpath=("${plugin_found:h}" $fpath)
 		fi
 	done
 done
@@ -64,5 +64,5 @@ for plugin plugin_dir in ${(kv)plugin_map}; do
 	fi
 done
 
-# Clean up fpath duplicates introduced by omz
-fpath=(${(u)fpath})
+# Clear fpath duplicates added by omz. Stays commented just in case.
+# fpath=(${(u)fpath})
