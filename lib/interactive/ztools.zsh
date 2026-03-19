@@ -234,9 +234,14 @@ function zsource {
 function _zcompile_file {
 	local f="$1"
 	local -i verbosity="${2:-0}"
-	(( $verbosity > 2 )) && print_fn -nd "Checking ${f:t}..."
+	local filepath="${${f:h}//$ZDOTDIR\/**\/plugins\/}"
+
+	# If checking for test files, leave early
+	[[ "$filepath" == */test* ]] && return
+
+	(( $verbosity > 2 )) && print_fn -nd "Checking $filepath/${f:t}..."
 	if [[ ! -f "${f}.zwc" || "$f" -nt "${f}.zwc" ]]; then
-		(( $verbosity > 1 )) && print_fn -ni "Compiling ${f:t}..."
+		(( $verbosity > 1 )) && print_fn -ni "Compiling $filepath/${f:t}..."
 		zcompile "$f"
 	fi
 }
@@ -334,7 +339,7 @@ function zupdate {
 	# Clean up .zwc files
 	if (( ${f_steps[(I)(-C|--clean)]} )); then
 		(( $verbosity )) && print "Cleaning up *.zwc files in lib/ and plugins..."
-		rm -f "${ZDOTDIR}"/{extensions,lib}/**/*.zwc(.N) ${^plugin_dirs}/plugins/*/*.zwc(.N)
+		rm -f "${ZDOTDIR}"/{extensions,lib}/**/*.zwc(.N) ${^plugin_dirs}/plugins/*/**/*.zwc(.N)
 	fi
 
 	# (Re)compile libraries and plugins
@@ -348,9 +353,14 @@ function zupdate {
 		# Compile plugins
 		local -a p_results=()
 		for f in ${plugins}; do
-			p_results=(${^plugin_dirs}/plugins/$f/$f.plugin.zsh(.N))
+			p_results=(${^plugin_dirs}/plugins/$f(N))
 			# If results were found, pick the first one
-			(( ${#p_results} )) && _zcompile_file "${p_results[1]}" &!
+			if (( ${#p_results} )); then
+				local plugin_root="${p_results[1]}"
+				for zwc_f in "$plugin_root"/**/*.zsh(.N); do
+					_zcompile_file "$zwc_f" $verbosity &!
+				done
+			fi
 		done
 
 		# XXX: No performance gain. How?
