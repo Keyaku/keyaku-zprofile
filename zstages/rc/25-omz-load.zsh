@@ -9,18 +9,30 @@
 # Prepare fpath for plugins before omz loads
 # ============================================================================
 local -a plugins_rootpaths=("$ZSH_CUSTOM" "$ZSH")
-local -a plugins_results
+typeset -ga plugins_found fpaths_found
+
+local plugin
+for plugin ($plugins); do
+	local -a fpath_results=(${^plugins_rootpaths}/plugins/$plugin/_*(.N:h))
+	fpaths_found+=(${fpath_results[1]})
+	local -a plugin_results=(${^fpath_results[1]:-${^plugins_rootpaths}/plugins/$plugin}/$plugin.plugin.zsh(.N))
+	plugins_found+=(${plugin_results[1]})
+done
+
+# Update fpath
+fpath=(${fpaths_found} $fpath)
 
 # FIXME: these are not correct solutions. Right now, if a plugin exists in both
 # custom/ and ohmyzsh/, both paths will be added to fpath, and both will be
 # sourced by the plugin loader.
 # The logic is supposed to pick the first of plugins_rootpaths found.
 
-# Gather all directories with a .plugin.zsh
-plugins_results=(${^plugins_rootpaths}/plugins/${^plugins}/*.plugin.zsh(.N))
+# # Update fpath with directories containing a completion (_*) file
+# fpath_results=(${^plugins_rootpaths}/plugins/${^plugins}/_*(.N:h))
+# fpath=(${fpath_results} $fpath)
 
-# Update fpath with directories containing a completion (_*) file
-fpath=(${^plugins_rootpaths}/plugins/${^plugins}/_*(.N:h) $fpath)
+# # Gather all directories with a .plugin.zsh
+# plugins_found=(${^fpaths_found:-${^plugins_rootpaths}/plugins}/${fpaths_found:t}.plugin.zsh(.N))
 
 # ============================================================================
 # Load ohmyzsh
@@ -36,10 +48,10 @@ _zsh_source_file "$ZSH"/oh-my-zsh.sh
 # ============================================================================
 plugins=($_plugins)
 
-local -A aliases_pre galiases_pre
-local plugin plugin_file disable_aliases
+local -A aliases_pre
+local plugin_file disable_aliases
 
-for plugin_file in ${plugins_results}; do
+for plugin_file in ${plugins_found}; do
 	plugin="${plugin_file:h:t}"
 
 	disable_aliases=0
