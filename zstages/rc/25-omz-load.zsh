@@ -13,9 +13,12 @@ typeset -ga plugins_found fpaths_found
 
 local plugin
 for plugin ($plugins); do
-	local -a fpath_results=(${^plugins_rootpaths}/plugins/$plugin/_*(.N:h))
-	fpaths_found+=(${fpath_results[1]})
-	local -a plugin_results=(${^fpath_results[1]:-${^plugins_rootpaths}/plugins/$plugin}/$plugin.plugin.zsh(.N))
+	# Find directory with either file first, then pick the first result.
+	local -a fpath_results=(${^plugins_rootpaths}/plugins/$plugin/{_*,$plugin.plugin.zsh}(.N:h))
+	fpaths_found+=(${fpath_results[1]}/_*(.N:h))
+	# Use path for previously found completion files; if non-existent,
+	# redo search from all plugins_rootpaths, and pick first result.
+	local -a plugin_results=(${^fpath_results[1]}/$plugin.plugin.zsh(.N))
 	plugins_found+=(${plugin_results[1]})
 done
 
