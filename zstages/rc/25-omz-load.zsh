@@ -9,24 +9,24 @@
 # Prepare fpath for plugins before omz loads
 # ============================================================================
 local -a plugins_rootpaths=("$ZSH_CUSTOM" "$ZSH")
-typeset -ga fpaths_found plugins_found
 
-local plugin
-local -a fpaths_results plugins_results plugins_dirs
+local plugin plugin_path
+local -a fpaths_results plugins_results
+local -a fpaths_found plugins_found
 
 # Collect plugins and fpaths to use
 for plugin ($plugins); do
 	# Find directory with either file first, then pick the first result.
-	fpaths_results=(${^plugins_rootpaths}/plugins/$plugin/{_*,$plugin.plugin.zsh}(.N:h))
-	plugins_dirs+=(${fpaths_results[1]})
+	fpaths_results=(${^plugins_rootpaths}/plugins/$plugin/{_$plugin,$plugin.plugin.zsh}(.N:h))
+	plugin_path="${fpaths_results[1]}"
+	fpaths_found+=("$plugin_path"/_$plugin(.N:h))
 	# Use path for previously found completion files; if non-existent,
 	# redo search from all plugins_rootpaths, and pick first result.
-	plugins_results=(${fpaths_results[1]}/$plugin.plugin.zsh(.N))
+	plugins_results=("$plugin_path"/$plugin.plugin.zsh(.N))
 	plugins_found+=(${plugins_results[1]})
 done
 
 # Update fpath
-fpaths_found=(${^plugins_dirs}/_*(.N:h))
 fpath=(${fpaths_found} $fpath)
 
 
