@@ -11,19 +11,20 @@
 local -a plugins_rootpaths=("$ZSH_CUSTOM" "$ZSH")
 
 local plugin plugin_path
-local -a fpaths_results plugins_results
-local -a fpaths_found plugins_found
+local -a plugin_dirs fpaths_found plugins_found
 
 # Collect plugins and fpaths to use
 for plugin ($plugins); do
 	# Find directory with either file first, then pick the first result.
-	fpaths_results=(${^plugins_rootpaths}/plugins/$plugin/{_$plugin,$plugin.plugin.zsh}(.N:h))
-	plugin_path="${fpaths_results[1]}"
-	fpaths_found+=("$plugin_path"/_$plugin(.N:h))
-	# Use path for previously found completion files; if non-existent,
-	# redo search from all plugins_rootpaths, and pick first result.
-	plugins_results=("$plugin_path"/$plugin.plugin.zsh(.N))
-	plugins_found+=(${plugins_results[1]})
+	plugin_dirs=(${^plugins_rootpaths}/plugins/$plugin/{_$plugin,$plugin.plugin.zsh}(.N:h))
+	plugin_path="${plugin_dirs[1]}"
+	if [[ -n "$plugin_path" ]]; then
+		# Use path for previously found completion files
+		fpaths_found+=("$plugin_path"/_$plugin(.N:h))
+		plugins_found+=("$plugin_path"/$plugin.plugin.zsh(.N))
+	else
+		print_fn -e "plugin $plugin not found"
+	fi
 done
 
 # Update fpath
