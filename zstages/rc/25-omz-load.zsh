@@ -4,6 +4,7 @@
 
 # Check for Oh-My-ZSH; stop processing if not found
 [[ -n "$ZSH" && -f "${ZSH}/oh-my-zsh.sh" ]] || return
+zmodload zsh/stat
 
 if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	zmodload zsh/datetime
@@ -38,8 +39,8 @@ fpath=(${fpaths_found} $fpath)
 
 if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	print "fpath prep: $(( (EPOCHREALTIME-_tfpath0) ))s"
-	# printf '>>> %s: %s\n' "fpaths_found" "${fpaths_found}" plugins_found "${plugins_found}"
 fi
+[[ -n "${ZSH_PROFILE_DEBUG}" ]] && printf '>>> %s: %s\n' "fpaths_found" "${fpaths_found}" plugins_found "${plugins_found}"
 
 # ============================================================================
 # Load ohmyzsh
