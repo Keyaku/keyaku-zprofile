@@ -10,14 +10,22 @@ fi
 # Initialize submodules if ohmyzsh is not present or empty
 # ============================================================================
 
-[[ "${ZPROFILE_MODULES}" ]] || {
-	while IFS=$'=\t ' read -r key val; do
-		if [[ "$key" == "path" ]]; then
-			ZPROFILE_MODULES+=("${val}")
-		fi
-	done < "$ZDOTDIR/.gitmodules"
-}
-local -a empty_modules=("$ZDOTDIR"/$^ZPROFILE_MODULES/(N^F))
+if [[ -z "${ZPROFILE_MODULES}" ]]; then
+	if [[ ! -s "$ZSH_CACHE_HOME/zprofile_modules" ]]; then
+		# Fetch info from .gitmodules
+		while IFS=$'=\t ' read -r key val; do
+			if [[ "$key" == "path" ]]; then
+				ZPROFILE_MODULES+=("${val}")
+			fi
+		done < "$ZDOTDIR/.gitmodules"
+
+		# Cache info for following sessions
+		print "${ZPROFILE_MODULES}" > "$ZSH_CACHE_HOME/zprofile_modules"
+	else
+		ZPROFILE_MODULES=($(<"$ZSH_CACHE_HOME/zprofile_modules"))
+	fi
+fi
+local -a empty_modules=("$ZDOTDIR"/${^ZPROFILE_MODULES}(N^F))
 if (( ${#empty_modules} )); then
 	# Initialize submodules
 	zupdate --submodules
