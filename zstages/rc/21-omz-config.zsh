@@ -40,13 +40,21 @@ HIST_STAMPS="dd/mm/yyyy"
 # Because of this, plugins to load should be carefully considered so as to not
 # bloat the login times.
 
-(( ${+functions[command_not_found_handler]} )) || plugins+=(command-not-found)
-
-(( ${+commands[git]} )) && plugins+=(git)
-(( ${+commands[python]} || ${+commands[pip]} )) && plugins+=(pip)
+# Select plugins to load
 (( ${+commands[ufw]} )) && plugins+=(ufw)
-(( ${+commands[flatpak]} )) && plugins+=(flatpak)
+[[ -e "$ZSH_CUSTOM"/plugins/zsh-syntax-highlighting ]] && plugins+=(zsh-syntax-highlighting)
 
+# Select plugins without aliases
+local -a plugins_no_aliases=()
+
+(( ${+commands[flatpak]} )) && plugins_no_aliases+=(flatpak)
+(( ${+commands[python]} || ${+commands[pip]} )) && plugins_no_aliases+=(pip)
+
+local plugin
+for plugin in ${plugins_no_aliases}; do
+	zstyle ":omz:plugins:$plugin" aliases 0
+done
+plugins+=($plugins_no_aliases)
 
 # ============================================================================
 # OMZ themes

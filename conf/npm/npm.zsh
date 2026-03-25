@@ -19,19 +19,3 @@ local _npm_pfx="$(npm config get prefix)"
 if [[ -v MANPATH && ! "${MANPATH//:/ }" =~ " $_npm_pfx/share" ]]; then
 	MANPATH+=":$_npm_pfx/share"
 fi
-
-# Add npm completion
-if (( ${+functions[compdef]} )); then
-	command rm -f "$ZSH_CACHE_DIR/npm_completion"
-
-	_npm_completion() {
-		local si=$IFS
-		compadd -- $(COMP_CWORD=$((CURRENT-1)) \
-			COMP_LINE=$BUFFER \
-			COMP_POINT=0 \
-			npm completion -- "${words[@]}" \
-			2>/dev/null)
-		IFS=$si
-	}
-	compdef _npm_completion npm
-fi
