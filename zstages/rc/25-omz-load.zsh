@@ -94,5 +94,6 @@ if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	# print "plugin total: $((_tploader1-_tploader0))s"
 fi
 
-# Clear fpath duplicates added by omz. Comment this line in case fpath is bloated
-fpath=(${(u)fpath})
+# Remove fpath duplicates and empty directories added by omz.
+# Comment this line in case fpath is bloated.
+fpath=(${(u)^fpath}(FN))
