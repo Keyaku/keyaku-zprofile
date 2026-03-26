@@ -1,11 +1,8 @@
 (( ${+commands[svn]} )) || return
 
-# Load available plugin from ohmyzsh
-[[ -f "$ZSH/plugins/${0:h:t}/${0:t}" ]] && source "$ZSH/plugins/${0:h:t}/${0:t}"
-
 ### Personal configuration
 
-alias svn='svn --config-dir ${XDG_CONFIG_HOME}/subversion'
+alias svn="svn --config-dir ${XDG_CONFIG_HOME}/subversion"
 export SVN_STASH="$XDG_CONFIG_HOME/subversion/stash"
 [[ -d "$SVN_STASH" ]] || mkdir -p "$SVN_STASH"
 

@@ -7,8 +7,5 @@ fi
 
 # Start gpg-agent with systemd
 if has_systemd && ! systemctl --user -q is-active gpg-agent.socket; then
-	systemctl --user -q start gpg-agent.socket
+	systemctl --user -q start gpg-agent
 fi
-
-# Load available plugin from ohmyzsh
-[[ -f "$ZSH/plugins/${0:h:t}/${0:t}" ]] && plugins+=(gpg-agent)
