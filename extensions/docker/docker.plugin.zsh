@@ -512,10 +512,16 @@ docker-set-env
 DOCKER_CONTAINERS_CMD=(
 	caddy cloudflared mollysocket ntfy ollama
 )
+local -a _available_extensions=()
 for container_name in ${DOCKER_CONTAINERS_CMD}; do
 	docker-has "$container_name" &&	docker-alias "$container_name"
+	_available_extensions+=($ZDOTDIR/extensions/$container_name(NF[1]))
 done
 unset DOCKER_CONTAINERS_CMD container_name
+
+# Reload extension based on container_name
+(( 0 < ${#_available_extensions} )) && zsource -e ${_available_extensions:t}
+unset _available_extensions
 
 # Defining more complex aliases
 docker-alias -a occ -n nextcloud -u www-data "php occ"
