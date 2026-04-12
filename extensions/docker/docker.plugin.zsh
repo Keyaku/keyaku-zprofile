@@ -530,4 +530,5 @@ if docker-has fail2ban; then
 	for subcmd (client python regex server); do
 		docker-alias -a fail2ban-$subcmd -n fail2ban fail2ban-$subcmd
 	done
+	unset subcmd
 fi
