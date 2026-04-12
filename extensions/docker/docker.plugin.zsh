@@ -510,7 +510,7 @@ docker-set-env
 
 # Defining simple container aliases
 DOCKER_CONTAINERS_CMD=(
-	caddy cloudflared mollysocket ntfy ollama
+	caddy cloudflared fail2ban mollysocket ntfy ollama
 )
 local -a _available_extensions=()
 for container_name in ${DOCKER_CONTAINERS_CMD}; do
