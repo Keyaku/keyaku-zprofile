@@ -86,6 +86,7 @@ for plugin_file in ${plugins_found}; do
 	fi
 	(( ${ZSH_PROFILE_BENCHMARK} )) && _tsources=$((_tsources + (_t3-_t2)))
 done
+unset plugin
 
 if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	_tploader1=$EPOCHREALTIME

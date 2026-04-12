@@ -55,6 +55,7 @@ local plugin
 for plugin in ${plugins_no_aliases}; do
 	zstyle ":omz:plugins:$plugin" aliases 0
 done
+unset plugin
 plugins+=($plugins_no_aliases)
 
 # ============================================================================
