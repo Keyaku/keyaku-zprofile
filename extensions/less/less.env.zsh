@@ -2,4 +2,4 @@
 (( ${+commands[less]} )) || return
 
 export LESSHISTFILE="${XDG_CACHE_HOME}/less/history"
-export LESS=' -R '
+export LESS='-x4 -R'
