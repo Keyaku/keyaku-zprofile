@@ -510,7 +510,7 @@ docker-set-env
 
 # Defining simple container aliases
 DOCKER_CONTAINERS_CMD=(
-	caddy cloudflared fail2ban mollysocket ntfy ollama
+	caddy cloudflared mollysocket ntfy ollama
 )
 local -a _available_extensions=()
 for container_name in ${DOCKER_CONTAINERS_CMD}; do
@@ -524,4 +524,10 @@ unset DOCKER_CONTAINERS_CMD container_name
 unset _available_extensions
 
 # Defining more complex aliases
-docker-alias -a occ -n nextcloud -u www-data "php occ"
+docker-has nextcloud && docker-alias -a occ -n nextcloud -u www-data "php occ"
+if docker-has fail2ban; then
+	local subcmd
+	for subcmd (client python regex server); do
+		docker-alias -a fail2ban-$subcmd -n fail2ban fail2ban-$subcmd
+	done
+fi
