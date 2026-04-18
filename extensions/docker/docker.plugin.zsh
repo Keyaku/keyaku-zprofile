@@ -91,7 +91,7 @@ function docker-set-env {
 	fi
 
 	### If rootless binaries exist, prefer those over rootful
-	if [[ -f "$(systemctl-service-path --user docker)" ]]; then
+	if systemctl-service-path --user docker &>/dev/null; then
 		### Set important environment variables
 		export DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
 		DOCKER_HOME="${DOCKER_CONFIG:-$XDG_CONFIG_HOME/docker}"
