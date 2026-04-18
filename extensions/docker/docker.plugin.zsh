@@ -257,46 +257,49 @@ function docker-rootless-uninstall {
 	ask --yn -k "Disable login linger for $USER?" && sudo loginctl disable-linger $USER
 }
 
-# Check if docker is running and if the given container exists
+# Check if the given Docker projects exist
 function docker-has {
-	docker info > /dev/null 2>&1 || return $?
+	local -r usage=(
+		"Usage: $(get_funcname) [OPTION...] CONTAINER..."
+		"\t[-h|--help]"
+		"\t[-a|--any] : Return true if any container exists (default)"
+		"\t[-A|--all] : Return true only if all containers exist"
+	)
 
-	while (( $# )); do
-		docker ps -a --format '{{.Names}}' | \grep -qw "$1" || return $?
-		shift
-	done
-}
+	local f_help f_any f_all
+	zparseopts -D -F -K -- \
+		{h,-help}=f_help \
+		{a,-any}=f_any \
+		{A,-all}=f_all \
+		|| return 1
 
-function docker-getpath {
-	while (( $# )); do
-		find "$DOCKER_HOME/stacks" -not -empty -type d -name "$1" | \grep . || return $?
-		shift
-	done
-}
-
-# Check if there's a docker container environment under DOCKER_HOME for the given argument
-function docker-ls {
-	local args=() cmd_args=()
-
-	### Parse args
-	while (( $# )); do
-		case $1 in
-		-* )
-			cmd_args+=($1)
-		;;
-		* ) args+=($1)
-		;;
-		esac
-		shift
-	done
-	set -- ${args[@]}
-
-	if (( ! $# )); then
-		ls ${cmd_args[@]} "$DOCKER_HOME/stacks"
-	else
-		### Check if under DOCKER_HOME
-		docker-getpath $@ | tee >(xargs ls ${cmd_args[@]})
+	if [[ "$f_help" ]]; then
+		>&2 print -l $usage
+		return 0
 	fi
+
+	docker info &>/dev/null || return $?
+
+	(( $# )) || return 0
+
+	local -a names
+	names=(${(f)"$(docker ps -a --format '{{.Names}}')"})
+
+	local container
+	for container in "$@"; do
+		if (( ${names[(Ie)$container]} )); then
+			[[ -z "$f_all" ]] && return 0
+		else
+			[[ -n "$f_all" ]] && return 1
+		fi
+	done
+
+	[[ -n "$f_all" ]] && return 0
+	return 1
+}
+
+function docker-get-compose {
+	docker inspect "$@" --format '{{index .Config.Labels "com.docker.compose.project"}}: {{index .Config.Labels "com.docker.compose.project.config_files"}}' 2>/dev/null
 }
 
 # Updates Docker binaries. Only works for rootless; for system-wise, best to use package managers
@@ -311,24 +314,56 @@ function docker-update {
 }
 
 function docker-upgrade {
+	local -r usage=(
+		"Usage: $(get_funcname) [OPTION...] CONTAINER..."
+		"\t[-h|--help]"
+		"\t[-d|--dry-run] : Print commands without executing"
+	)
+
+	local f_help f_dryrun
+	zparseopts -D -F -K -- \
+		{h,-help}=f_help \
+		{d,-dry-run}=f_dryrun \
+		|| return 1
+
+	if [[ "$f_help" ]]; then
+		>&2 print -l $usage
+		return 0
+	fi
+
 	if (( ! $# )); then
-		print_fn -e "Docker stack name(s) required as argument(s)"
+		print_fn -e "Container name(s) required as argument(s)"
 		return 1
 	fi
 
-	while (( $# )); do
-		local stack="$(docker-getpath "$1")"
-		## If stack directory was found
-		if [[ -d "$stack" ]]; then
-			(cd "$stack"
-				docker compose down
-				docker compose pull
-				docker compose up -d
-			)
-		else
-			print_fn -e "Stack not found under $DOCKER_HOME/stacks: '$1'"
+	if [[ "$f_dryrun" ]]; then
+		f_dryrun="echo"
+		echo "Dry-run mode enabled"
+	fi
+
+	local container compose_file running
+	for container in "$@"; do
+		{ read -r running; read -r compose_file; } < <(docker inspect "$container" \
+			--format $'{{.State.Running}}\n{{index .Config.Labels "com.docker.compose.project.config_files"}}' 2>/dev/null)
+
+		if [[ -z "$compose_file" ]]; then
+			print_fn -e "'$container': not found or not part of a compose stack"
+			continue
 		fi
-		shift
+
+		if [[ "$running" != "true" ]]; then
+			print_fn -w "'$container': not running, skipping"
+			continue
+		fi
+
+		if [[ "$compose_file" == /data/compose/* ]]; then
+			print_fn -w "'$container': managed by Portainer, skipping"
+			continue
+		fi
+
+		$f_dryrun docker compose -f "$compose_file" down &&\
+			$f_dryrun docker compose -f "$compose_file" pull &&\
+			$f_dryrun docker compose -f "$compose_file" up -d
 	done
 }
 
@@ -450,7 +485,7 @@ function docker-socket-ssh {
 # Function which defines container aliases
 function docker-alias {
 	local -r usage=(
-		"Usage: ${funcstack[1]} [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
+		"Usage: $(get_funcname) [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
 		"\t[-h|--help]"
 	)
 
@@ -548,6 +583,6 @@ function portainer-up {
 		print_fn -e "portainer-restrict.sh: executable required but not found"
 		return 1
 	fi
-	docker compose -f $(docker-getpath portainer)/(docker-|)compose.y(a|)ml(.N[1]) up -d "$@" &&\
+	docker compose -f $(docker-get-compose portainer) up -d "$@" &&\
 		sudo portainer-restrict.sh
 }
