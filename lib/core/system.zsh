@@ -98,7 +98,8 @@ function has_systemd {
 if has_systemd; then
 	### Systemd specific
 	function systemctl-service-path {
-		systemctl cat "$@" 2>/dev/null | sed -En 's~# (.+?\.service)~\1~p'
+		local out=$(systemctl cat "$@" 2>/dev/null | awk '/^# /{sub(/^# /, ""); print; exit}')
+		[[ -n "$out" ]] && echo "$out"
 	}
 
 	alias systemctl-show-unitpath='systemctl show -p UnitPath --value'
