@@ -538,3 +538,15 @@ fi
 # Reload extension based on container_name
 (( 0 < ${#_available_extensions} )) && zsource -e ${_available_extensions:t}
 unset _available_extensions
+
+### Portainer helpers
+
+# Launch Portainer while restricting its open port
+function portainer-up {
+	if (( ! ${+commands[portainer-restrict.sh]} )); then
+		print_fn -e "portainer-restrict.sh: executable required but not found"
+		return 1
+	fi
+	docker compose -f $(docker-getpath portainer)/(docker-|)compose.y(a|)ml(.N[1]) up -d "$@" &&\
+		sudo portainer-restrict.sh
+}
