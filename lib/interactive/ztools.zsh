@@ -140,9 +140,9 @@ function zsource {
 	if (( f_ext )); then
 		local -a ext_names=(${(z)flag_names[e]})
 		if (( ${#ext_names} )); then
-			_extensions=("$ZDOTDIR"/extensions/(${(j:|:)ext_names})/*.(plugin|ext).zsh(-.N))
+			_extensions=("$ZDOTDIR"/extensions/(${(j:|:)ext_names})/*.(env|plugin).zsh(-.N))
 		else
-			_extensions=("$ZDOTDIR"/extensions/(*~example)/*.(plugin|ext).zsh(-.N))
+			_extensions=("$ZDOTDIR"/extensions/(*~example)/*.(env|plugin).zsh(-.N))
 		fi
 	fi
 
