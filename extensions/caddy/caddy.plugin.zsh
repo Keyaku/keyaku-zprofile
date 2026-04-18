@@ -1,6 +1,11 @@
 (( ${+commands[caddy]} || ${+aliases[caddy]} )) || return
 
-# FIXME: This works better with the default caddy config (which also works with docker)
-# but not with a user-defined path.
-alias caddy-reload="caddy reload --config /etc/caddy/Caddyfile"
-alias caddy-fmt="caddy fmt --overwrite /etc/caddy/Caddyfile"
+local _caddyfile
+if [[ "${aliases[caddy]}" == *docker* || "${aliases[caddy]}" == *podman* ]]; then
+	_caddyfile="/etc/caddy/Caddyfile"
+else
+	_caddyfile="${CADDYFILE:-/etc/caddy/Caddyfile}"
+fi
+
+alias caddy-reload="caddy reload --config ${_caddyfile}"
+alias caddy-fmt="caddy fmt --overwrite ${_caddyfile}"
