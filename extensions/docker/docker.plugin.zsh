@@ -113,6 +113,7 @@ function docker-set-env {
 		### Set important environment variables
 		DOCKER_BIN="$(sysbinpath docker 2>/dev/null)"
 		DOCKER_HOME="/usr/local/docker"
+		docker-set-host -q
 	fi
 }
 
