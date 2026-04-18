@@ -370,6 +370,9 @@ function zupdate {
 
 		# Wait for all background jobs to finish
 		wait
+
+		(( $verbosity )) && print "Reloading freshly recompiled libraries..."
+		zsource -L
 	fi
 
 	# Update submodules
