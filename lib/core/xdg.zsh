@@ -8,7 +8,7 @@ function xdg-migrate {
 		"Usage: ${funcstack[1]} [OPTION...] SRC_PATH DST_PATH"
 		"\t-h, --help : Displays this message"
 		"\t-d, --dry-run : Do not execute anything; just print"
-		"\t-s, --symbolic : Create a symbolic link instead of migrating"
+		"\t-s, --symlink : Also create a symbolic link from SRC_PATH to DST_PATH after migrating"
 		# "\t-e, --env ENV_VAR : Pick environment variable. May help finding respective directories"
 	)
 
@@ -17,7 +17,7 @@ function xdg-migrate {
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{d,-dry-run}=f_dryrun \
-		{s,-symbolic}=f_sym \
+		{s,-symlink}=f_sym \
 		|| return 1
 
 
@@ -40,21 +40,8 @@ function xdg-migrate {
 	# TODO: check envvar against XDG table
 
 	local -i retval=0
-	## If symlink was requested
-	if [[ "${f_sym}" ]]; then
-		echo "Creating symbolic link from $src to $dst..."
-		if [[ -L "$src" ]]; then
-			print_fn -e "Path '$src' exists and already is a symbolic link"
-			retval=1
-		elif [[ -e "$dst" ]]; then
-			print_fn -e "Path '$dst' exists. Aborting"
-			retval=1
-		else
-			$f_dryrun ln -s "$src" "$dst"
-			retval=$?
-		fi
 	## If src is a directory
-	elif [[ -d "$src" ]]; then
+	if [[ -d "$src" ]]; then
 		echo "Migrating $src to $dst..."
 		if [[ -d "$dst" ]]; then
 			$f_dryrun rsync -Prazq "$src"/ "$dst" && $f_dryrun rm -r "$src"
@@ -65,12 +52,18 @@ function xdg-migrate {
 	## If src is a file
 	elif [[ -f "$src" ]]; then
 		echo "Moving $src to $dst..."
-		[[ -d "$dst" ]] || mkdir -p "$dst"
+		[[ -d "$dst" ]] || $f_dryrun mkdir -p "$dst"
 		$f_dryrun mv "$src" "$dst"
 		retval=$?
 	else
 		print_fn -e "Something went wrong; '$src' not a valid file or directory"
 		retval=128
+	fi
+
+	## If requested, create a symlink from the original path to the migrated destination
+	if (( retval == 0 )) && [[ -n "$f_sym" ]]; then
+		$f_dryrun ln -s "$dst" "$src"
+		retval=$?
 	fi
 
 	return $retval
