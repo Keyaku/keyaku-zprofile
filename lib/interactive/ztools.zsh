@@ -130,7 +130,7 @@ function zsource {
 		if (( ${#func_names} )); then
 			# Filter out any names starting with '.'
 			func_names=(${func_names:#.*})
-			(( ${#func_names} )) && _functions=("$ZSH_CUSTOM"/functions/**/(${(j:|:)func_names})(-.DN:t))
+			(( ${#func_names} )) && _functions=("$ZSH_CUSTOM"/functions/**/(${(j:|:)~func_names})(-.DN:t))
 		else
 			_functions=(${^func_dirs}/[^.]*(-.DN:t))
 		fi
@@ -140,7 +140,7 @@ function zsource {
 	if (( f_ext )); then
 		local -a ext_names=(${(z)flag_names[e]})
 		if (( ${#ext_names} )); then
-			_extensions=("$ZDOTDIR"/extensions/(${(j:|:)ext_names})/*.(env|plugin).zsh(-.N))
+			_extensions=("$ZDOTDIR"/extensions/(${(j:|:)~ext_names})/*.(env|plugin).zsh(-.N))
 		else
 			_extensions=("$ZDOTDIR"/extensions/(*~example)/*.(env|plugin).zsh(-.N))
 		fi

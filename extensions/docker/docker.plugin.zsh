@@ -514,21 +514,27 @@ DOCKER_CONTAINERS_CMD=(
 )
 local -a _available_extensions=()
 for container_name in ${DOCKER_CONTAINERS_CMD}; do
-	docker-has "$container_name" &&	docker-alias "$container_name"
-	_available_extensions+=($ZDOTDIR/extensions/$container_name(NF[1]))
+	if docker-has "$container_name"; then
+		docker-alias "$container_name"
+		_available_extensions+=($ZDOTDIR/extensions/$container_name(NF[1]))
+	fi
 done
 unset DOCKER_CONTAINERS_CMD container_name
 
-# Reload extension based on container_name
-(( 0 < ${#_available_extensions} )) && zsource -e ${_available_extensions:t}
-unset _available_extensions
-
 # Defining more complex aliases
-docker-has nextcloud && docker-alias -a occ -n nextcloud -u www-data "php occ"
+if docker-has nextcloud; then
+	docker-alias -a occ -n nextcloud -u www-data "php occ"
+	_available_extensions+=($ZDOTDIR/extensions/nextcloud(NF[1]))
+fi
 if docker-has fail2ban; then
 	local subcmd
 	for subcmd (client python regex server); do
 		docker-alias -a fail2ban-$subcmd -n fail2ban fail2ban-$subcmd
 	done
 	unset subcmd
+	_available_extensions+=($ZDOTDIR/extensions/fail2ban(NF[1]))
 fi
+
+# Reload extension based on container_name
+(( 0 < ${#_available_extensions} )) && zsource -e ${_available_extensions:t}
+unset _available_extensions
