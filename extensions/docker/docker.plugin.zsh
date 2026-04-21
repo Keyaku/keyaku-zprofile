@@ -399,6 +399,12 @@ else
 	}
 fi
 
+# List all existing Docker items following a given format. Uses format '.Names' if no argument given.
+function docker-list {
+	local fmt="${@:-.Names}"
+	docker ps -a --format "{{$fmt}}"
+}
+
 # Check if the given Docker projects exist
 function docker-has {
 	# Exit on error, e.g. Docker is not running or returns nothing
@@ -426,7 +432,7 @@ function docker-has {
 	(( $# )) || return 1
 
 	local -a names
-	names=(${(f)"$(docker ps -a --format '{{.Names}}')"})
+	names=(${(f)"$(docker-list)"})
 
 	local container
 	for container in "$@"; do
@@ -562,24 +568,26 @@ docker-set-env
 # ============================================================================
 
 # Defining simple container aliases
-DOCKER_CONTAINERS_CMD=(
+local -a CURRENT_CONTAINERS=(${(f)"$(docker-list)"})
+local -a ALIASING_CONTAINERS=(
 	caddy cloudflared mollysocket ntfy ollama
 )
+
 local -a _available_extensions=()
-for container_name in ${DOCKER_CONTAINERS_CMD}; do
-	if docker-has "$container_name"; then
+for container_name in ${ALIASING_CONTAINERS}; do
+	if (( ${CURRENT_CONTAINERS[(Ie)$container_name]} )); then
 		docker-alias "$container_name"
 		_available_extensions+=($ZDOTDIR/extensions/$container_name(NF[1]))
 	fi
 done
-unset DOCKER_CONTAINERS_CMD container_name
+unset ALIASING_CONTAINERS container_name
 
 # Defining more complex aliases
-if docker-has nextcloud; then
+if (( ${CURRENT_CONTAINERS[(Ie)nextcloud]} )); then
 	docker-alias -a occ -n nextcloud -u www-data "php occ"
 	_available_extensions+=($ZDOTDIR/extensions/nextcloud(NF[1]))
 fi
-if docker-has fail2ban; then
+if (( ${CURRENT_CONTAINERS[(Ie)fail2ban]} )); then
 	local subcmd
 	for subcmd (client python regex server); do
 		docker-alias -a fail2ban-$subcmd -n fail2ban fail2ban-$subcmd
@@ -593,7 +601,7 @@ fi
 unset _available_extensions
 
 ### Portainer helpers
-if docker-has portainer; then
+if (( ${CURRENT_CONTAINERS[(Ie)portainer]} )); then
 	# Launch Portainer while restricting its open port
 	function portainer-up {
 		if (( ! ${+commands[portainer-restrict.sh]} )); then
@@ -604,3 +612,5 @@ if docker-has portainer; then
 			sudo portainer-restrict.sh
 	}
 fi
+
+unset CURRENT_CONTAINERS
