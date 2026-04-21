@@ -390,6 +390,12 @@ else
 	# Don't set anything. Podman isn't picky.
 	function docker-set-env {
 		unset DOCKER_HOST # Safety unset
+
+		# Warn user about being in docker group despite using Podman
+		if id -nG "$USER" | grep -qw "docker"; then
+			print -u2 "$(get_funcname): User $USER is currently in group 'docker' despite using Podman."
+			print -u2 "Detach from it using:\n> sudo gpasswd -d \"$USER\" \"docker\""
+		fi
 	}
 fi
 
