@@ -1,5 +1,10 @@
 (( $+commands[docker] )) || return
 
+zmodload zsh/datetime
+local t_step_start t_step_end
+local t_zsh_start=$EPOCHREALTIME
+t_step_start=$t_zsh_start
+
 # Standardized $0 handling
 # https://zdharma-continuum.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html#zero-handling
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
@@ -393,8 +398,15 @@ else
 	}
 fi
 
+t_step_end=$EPOCHREALTIME
+print -u2 "exclusive functions step took $((t_step_end - t_step_start))s"
+t_step_start=$EPOCHREALTIME
+
 # Check if the given Docker projects exist
 function docker-has {
+	# Exit on error, e.g. Docker is not running or returns nothing
+	setopt local_options err_return
+
 	local -r usage=(
 		"Usage: $(get_funcname) [OPTION...] CONTAINER..."
 		"\t[-h|--help]"
@@ -414,9 +426,7 @@ function docker-has {
 		return 0
 	fi
 
-	docker info &>/dev/null || return $?
-
-	(( $# )) || return 0
+	(( $# )) || return 1
 
 	local -a names
 	names=(${(f)"$(docker ps -a --format '{{.Names}}')"})
@@ -541,6 +551,9 @@ function docker-alias {
 	alias $container_alias="docker exec ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
 }
 
+t_step_end=$EPOCHREALTIME
+print -u2 "functions for all step took $((t_step_end - t_step_start))s"
+t_step_start=$EPOCHREALTIME
 
 # ============================================================================
 # Plugin setup
@@ -548,6 +561,10 @@ function docker-alias {
 
 # Set important environment variables for the proper functioning of docker
 docker-set-env
+
+t_step_end=$EPOCHREALTIME
+print -u2 "docker-set-env step took $((t_step_end - t_step_start))s"
+t_step_start=$EPOCHREALTIME
 
 
 # ============================================================================
@@ -581,6 +598,10 @@ if docker-has fail2ban; then
 	_available_extensions+=($ZDOTDIR/extensions/fail2ban(NF[1]))
 fi
 
+t_step_end=$EPOCHREALTIME
+print -u2 "docker alias setting step took $((t_step_end - t_step_start))s"
+t_step_start=$EPOCHREALTIME
+
 # Reload extension based on container_name
 (( 0 < ${#_available_extensions} )) && zsource -e ${_available_extensions:t}
 unset _available_extensions
@@ -597,3 +618,15 @@ if docker-has portainer; then
 			sudo portainer-restrict.sh
 	}
 fi
+
+t_step_end=$EPOCHREALTIME
+print -u2 "portainer helpers step took $((t_step_end - t_step_start))s"
+t_step_start=$EPOCHREALTIME
+
+local t_zsh_end=$EPOCHREALTIME
+local t_zsh_total=$(( t_zsh_end - t_zsh_start ))
+print -u2 "========================================="
+print -u2 "[TOTAL] $(is_sourced_by) stage took ${t_zsh_total}s"
+print -u2 "========================================="
+print -u2 ""
+unset t_zsh_start t_zsh_end t_zsh_total
