@@ -7,6 +7,6 @@ function gpg-fix-perms {
 		print_fn -e "Unable to fix permissions due to invalid path: '$homedir'"
 		return 1
 	fi
-	chmod 600 "$homedir"/{**,.*/**}/*(-.) # Set 600 for files
-	chmod 700 "$homedir"/{**,.*/**}/(-/)  # Set 700 for directories
+	chmod 600 "$homedir"/{**,.*/**}/*(-.N) # Set 600 for files
+	chmod 700 "$homedir"/{**,.*/**}/(-/N)  # Set 700 for directories
 }
