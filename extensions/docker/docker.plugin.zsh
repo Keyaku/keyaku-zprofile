@@ -551,7 +551,7 @@ function docker-alias {
 	[[ "${(t)container_cmd}" == *array* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
 
 	# Define alias
-	alias $container_alias="docker exec ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
+	alias $container_alias="docker exec -it ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
 }
 
 
