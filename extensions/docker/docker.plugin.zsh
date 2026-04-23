@@ -557,6 +557,158 @@ function docker-alias {
 	alias $container_alias="docker exec -it ${container_user:+--user ${container_user[-1]}} $container_name $container_cmd"
 }
 
+# Migrate data from a container's volume/bind mount to another volume or directory
+function docker-migrate-volume {
+	local -r usage=(
+		"Usage: $(get_funcname) [OPTION...] [<container>] [<src>] [<dst>]"
+		"\t[-h|--help]      : Prints this message"
+		"\t[-n|--dry-run]   : Print steps without executing"
+		"\t[-k|--keep]      : Keep source after migration (manual cleanup)"
+		"\t[--name <name>]  : Container name (non-positional)"
+		"\t[--src <path>]   : Source bind mount path or named volume"
+		"\t[--dst <path>]   : Destination bind mount path or named volume"
+	)
+
+	local f_help f_dryrun f_keep
+	local -a f_cname=() f_src=() f_dst=()
+	zparseopts -D -F -K -- \
+		{h,-help}=f_help \
+		{n,-dry-run}=f_dryrun \
+		{k,-keep}=f_keep \
+		-name:=f_cname \
+		-src:=f_src \
+		-dst:=f_dst \
+		|| return 1
+
+	if [[ "$f_help" ]]; then
+		>&2 print -l $usage
+		return 0
+	fi
+
+	local DRYRUN="${f_dryrun:+echo}"
+
+	# Named flags take priority over positional args
+	local container_name src dst
+	(( ${#f_cname} )) && container_name="${f_cname[-1]}"
+	(( ${#f_src}   )) && src="${f_src[-1]}"
+	(( ${#f_dst}   )) && dst="${f_dst[-1]}"
+
+	[[ -z "$container_name" && $# -ge 1 ]] && { container_name="$1"; shift; }
+	[[ -z "$src"            && $# -ge 1 ]] && { src="$1"; shift; }
+	[[ -z "$dst"            && $# -ge 1 ]] && { dst="$1"; shift; }
+
+	# Validate required arguments
+	[[ -z "$container_name" ]] && { print_fn -e "Container name required"; return 1; }
+	[[ -z "$src"            ]] && { print_fn -e "Source volume/path required"; return 1; }
+	[[ -z "$dst"            ]] && { print_fn -e "Destination volume/path required"; return 1; }
+
+	# Validate container exists
+	docker-has "$container_name" || { print_fn -e "Container '$container_name' not found"; return 1; }
+
+	# Warn if container is running — live data may be inconsistent
+	if [[ "$(docker inspect -f '{{.State.Running}}' "$container_name" 2>/dev/null)" == "true" ]]; then
+		print_fn -w "Container '$container_name' is running. Migrating live data may cause inconsistencies."
+	fi
+
+	# Classify type: anything with '/' is a bind mount path; otherwise a named volume
+	local src_type dst_type
+	if [[ "$src" == */* ]]; then
+		src="${src:A}"
+		src_type="bind"
+	else
+		src_type="volume"
+	fi
+
+	# Validate src is attached to the container
+	local mnt_type mnt_name mnt_source src_attached=0
+	while IFS='|' read -r mnt_type mnt_name mnt_source; do
+		[[ -z "$mnt_type" ]] && continue
+		if   [[ "$src_type" == "volume" && "$mnt_type" == "volume" && "$mnt_name"   == "$src" ]] \
+		  || [[ "$src_type" == "bind"   && "$mnt_type" == "bind"   && "$mnt_source" == "$src" ]]; then
+			src_attached=1; break
+		fi
+	done < <(docker inspect -f '{{range .Mounts}}{{.Type}}|{{.Name}}|{{.Source}}{{"\n"}}{{end}}' "$container_name" 2>/dev/null)
+
+	(( src_attached )) || { print_fn -e "'$src' is not attached to container '$container_name'"; return 1; }
+
+	if [[ "$src_type" == "bind" && ! -d "$src" ]]; then
+		print_fn -e "Source directory '$src' does not exist"
+		return 1
+	fi
+
+	if [[ "$dst" == */* ]]; then
+		dst="${dst:A}"
+		dst_type="bind"
+	else
+		dst_type="volume"
+	fi
+
+	[[ "$src" == "$dst" ]] && { print_fn -e "Source and destination cannot be the same"; return 1; }
+
+	# Prepare destination
+	if [[ "$dst_type" == "bind" && ! -d "$dst" ]]; then
+		print_fn "Creating destination directory '$dst'..."
+		$DRYRUN mkdir -p "$dst" || { print_fn -e "Failed to create '$dst'"; return 1; }
+	elif [[ "$dst_type" == "volume" ]]; then
+		print_fn "Creating destination volume '$dst'..."
+		$DRYRUN docker volume create "$dst" || { print_fn -e "Failed to create volume '$dst'"; return 1; }
+	fi
+
+	# Copy data
+	print_fn "Copying '$src' ($src_type) → '$dst' ($dst_type)..."
+	if [[ "$src_type" == "bind" && "$dst_type" == "bind" ]]; then
+		$DRYRUN rsync -aH "${src}/" "${dst}/" || { print_fn -e "rsync failed"; return 1; }
+	else
+		# docker run handles both named volumes and bind mounts uniformly via -v
+		$DRYRUN docker run --rm \
+			-v "${src}:/mnt/src:ro" \
+			-v "${dst}:/mnt/dst" \
+			busybox sh -c "cd /mnt/src && cp -a . /mnt/dst/" \
+			|| { print_fn -e "Copy failed"; return 1; }
+	fi
+
+	# Verify file layout (skipped in dry-run since nothing was actually copied)
+	if [[ -z "$DRYRUN" ]]; then
+		print_fn "Verifying file layout..."
+		local src_root dst_root src_files dst_files
+		if [[ "$src_type" == "bind" ]]; then
+			src_root="$src"
+		else
+			src_root="$(docker volume inspect "$src" -f '{{.Mountpoint}}')" \
+				|| { print_fn -e "Cannot inspect volume '$src'"; return 1; }
+		fi
+		if [[ "$dst_type" == "bind" ]]; then
+			dst_root="$dst"
+		else
+			dst_root="$(docker volume inspect "$dst" -f '{{.Mountpoint}}')" \
+				|| { print_fn -e "Cannot inspect volume '$dst'"; return 1; }
+		fi
+
+		src_files="$(find "$src_root" -type f | sed "s|^${src_root}/||" | sort)"
+		dst_files="$(find "$dst_root" -type f | sed "s|^${dst_root}/||" | sort)"
+
+		if [[ "$src_files" != "$dst_files" ]]; then
+			print_fn -e "Verification failed: file layout mismatch"
+			return 1
+		fi
+		print_fn -s "Verification passed"
+	fi
+
+	# Remove source or hand off for manual cleanup
+	if [[ "$f_keep" ]]; then
+		print_fn -w "Source kept. Verify the migration and remove '$src' manually."
+	else
+		print_fn "Removing source '$src'..."
+		if [[ "$src_type" == "bind" ]]; then
+			$DRYRUN rm -rf "$src" || { print_fn -e "Failed to remove '$src'"; return 1; }
+		else
+			$DRYRUN docker volume rm "$src" || { print_fn -e "Failed to remove volume '$src'"; return 1; }
+		fi
+	fi
+
+	[[ -z "$DRYRUN" ]] && print_fn -s "Migration complete"
+}
+
 
 # ============================================================================
 # Plugin setup
