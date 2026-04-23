@@ -6,13 +6,15 @@
 # Network tools
 # ============================================================================
 # Define listen_ports as one of these, in order of preference
-if (( ${+commands[netstat]} )); then
-	alias listen_ports="netstat -ltpn"
-elif (( ${+commands[lsof]} )); then
-	alias listen_ports="sudo lsof -P 2>/dev/null | sed '1p;/LISTEN/!d'"
-else
-	alias listen_ports="echo 'netstat or lsof required but not installed'"
-fi
+function listen_ports {
+	if (( ${+commands[netstat]} )); then
+		netstat -ltpn
+	elif (( ${+commands[lsof]} )); then
+		sudo lsof -P 2>/dev/null | sed '1p;/LISTEN/!d'
+	else
+		print_fn -e "netstat or lsof required but not installed"
+	fi
+}
 
 ### Hardware info
 alias get-requested-cpu-clock='cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq'

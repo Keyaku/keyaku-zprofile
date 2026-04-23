@@ -183,7 +183,7 @@ function zsource {
 	_source_guard() {
 		local f
 		for f; do
-			if [[ ! -r "$f" ]] || ! source "$f"; then
+			if [[ ! -r "$f" ]] && ! source "$f"; then
 				print_fn -e "error sourcing '${f//$ZDOTDIR/\$ZDOTDIR}'"
 				return 1
 			fi
