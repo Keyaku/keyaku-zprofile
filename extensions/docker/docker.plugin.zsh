@@ -509,7 +509,10 @@ function docker-upgrade {
 function docker-alias {
 	local -r usage=(
 		"Usage: $(get_funcname) [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
-		"\t[-h|--help]"
+		"\t[-h|--help] : Prints this message"
+		"\t[-n|--name] : Name of the target container"
+		"\t[-a|--alias] : Name of the resulting alias"
+		"\t[-c|--cmd] : Command to send to the container"
 	)
 
 	## Setup func opts
@@ -551,7 +554,7 @@ function docker-alias {
 	[[ "${(t)container_cmd}" == *array* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
 
 	# Define alias
-	alias $container_alias="docker exec -it ${container_user:+--user $container_user[-1]} $container_name $container_cmd"
+	alias $container_alias="docker exec -it ${container_user:+--user ${container_user[-1]}} $container_name $container_cmd"
 }
 
 
@@ -584,13 +587,13 @@ unset ALIASING_CONTAINERS container_name
 
 # Defining more complex aliases
 if (( ${CURRENT_CONTAINERS[(Ie)nextcloud]} )); then
-	docker-alias -a occ -n nextcloud -u www-data "php occ"
+	docker-alias -a occ --name nextcloud -u www-data "php occ"
 	_available_extensions+=($ZDOTDIR/extensions/nextcloud(NF[1]))
 fi
 if (( ${CURRENT_CONTAINERS[(Ie)fail2ban]} )); then
 	local subcmd
 	for subcmd (client python regex server); do
-		docker-alias -a fail2ban-$subcmd -n fail2ban fail2ban-$subcmd
+		docker-alias -a fail2ban-$subcmd --name fail2ban fail2ban-$subcmd
 	done
 	unset subcmd
 	_available_extensions+=($ZDOTDIR/extensions/fail2ban(NF[1]))
