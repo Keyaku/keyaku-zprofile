@@ -647,15 +647,15 @@ function docker-migrate-volume {
 
 	# Prepare destination
 	if [[ "$dst_type" == "bind" && ! -d "$dst" ]]; then
-		print_fn "Creating destination directory '$dst'..."
+		print_fn -ni "Creating destination directory '$dst'..."
 		$DRYRUN mkdir -p "$dst" || { print_fn -e "Failed to create '$dst'"; return 1; }
 	elif [[ "$dst_type" == "volume" ]]; then
-		print_fn "Creating destination volume '$dst'..."
+		print_fn -ni "Creating destination volume '$dst'..."
 		$DRYRUN docker volume create "$dst" || { print_fn -e "Failed to create volume '$dst'"; return 1; }
 	fi
 
 	# Copy data
-	print_fn "Copying '$src' ($src_type) → '$dst' ($dst_type)..."
+	print_fn -ni "Copying '$src' ($src_type) → '$dst' ($dst_type)..."
 	if [[ "$src_type" == "bind" && "$dst_type" == "bind" ]]; then
 		$DRYRUN rsync -aH "${src}/" "${dst}/" || { print_fn -e "rsync failed"; return 1; }
 	else
@@ -669,7 +669,7 @@ function docker-migrate-volume {
 
 	# Verify file layout (skipped in dry-run since nothing was actually copied)
 	if [[ -z "$DRYRUN" ]]; then
-		print_fn "Verifying file layout..."
+		print_fn -ni "Verifying file layout..."
 		local src_root dst_root src_files dst_files
 		if [[ "$src_type" == "bind" ]]; then
 			src_root="$src"
@@ -698,7 +698,7 @@ function docker-migrate-volume {
 	if [[ "$f_keep" ]]; then
 		print_fn -w "Source kept. Verify the migration and remove '$src' manually."
 	else
-		print_fn "Removing source '$src'..."
+		print_fn -ni "Removing source '$src'..."
 		if [[ "$src_type" == "bind" ]]; then
 			$DRYRUN rm -rf "$src" || { print_fn -e "Failed to remove '$src'"; return 1; }
 		else
