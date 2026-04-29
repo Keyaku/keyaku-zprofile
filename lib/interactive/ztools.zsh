@@ -231,7 +231,7 @@ function zsource {
 		fi
 	fi
 
-	unfunction _source_guard
+	(( ${+functions[_source_guard]} )) && unfunction _source_guard
 	return 0
 }
 

@@ -51,6 +51,7 @@ All cleaned up! But there'll be more to come.
 * [ ] Write function or code that receives an associative array for formatted "usage" printing, where keys = `shortopt|longopt`, and values = description of associated option.
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
 	* [ ] Potentially use [metapac](https://github.com/ripytide/metapac).
+* [ ] Check if `[[ -t 1 ]]` is applicable in this environment.
 
 
 ### `zstages/`
