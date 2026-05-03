@@ -108,7 +108,7 @@ function _print_callstack {
 	local -i is_printing=0
 	local -i count idx_stack idx_trace
 
-	local -r can_skip="^(print_\w+|check_argc)$"
+	local -r can_skip="^(print_[[:alnum:]_]+|check_argc)$"
 
 	for ((count=1, idx_stack=2, idx_trace=1; idx_stack <= ${#funcstack}; idx_stack++, idx_trace++)); do
 		local src=(${(s[:])funcfiletrace[$idx_trace]})
@@ -136,7 +136,7 @@ function print_fn {
 	(( ${+fg} )) || { autoload -Uz colors && colors; }
 
 	# If caller is one of the skippable functions, skip it
-	local -r can_skip="^(print_\w+|check_argc)$"
+	local -r can_skip="^(print_[[:alnum:]_]+|check_argc)$"
 
 	# Color names for use in fg_bold/fg_no_bold lookups
 	local -A lvl_color=(
