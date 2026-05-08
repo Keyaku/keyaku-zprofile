@@ -157,6 +157,43 @@ function setup_pacman {
 	fi
 }
 
+# Installs this ZSH environment for the root user (sparse ZDOTDIR: symlinked
+# code dirs, copied startup files, independent user-config space).
+function setup_root {
+	(( ${+commands[sudo]} )) || return 1
+
+	ask -Bd n -p "Would you like to install this ZSH environment for the root user?" || return 0
+
+	local root_home=$(getent passwd root | cut -d: -f6)
+	local root_zdotdir="${root_home}/.local/config/zsh"
+
+	if [[ -d "$root_zdotdir" && ! -L "$root_zdotdir" ]]; then
+		sudo mv "$root_zdotdir" "${root_zdotdir}.bak"
+		print_fn -i "Backed up $root_zdotdir to ${root_zdotdir}.bak"
+	fi
+
+	sudo mkdir -p "$root_zdotdir"
+
+	# Symlink shared code directories — always reflect the live repo state
+	local dir
+	for dir in lib extensions zstages vendor conf; do
+		[[ -e "$ZDOTDIR/$dir" ]] || continue
+		sudo ln -sfn "$ZDOTDIR/$dir" "$root_zdotdir/$dir"
+	done
+
+	# Independent: root has its own custom dir and no .p10k.zsh by default
+	sudo mkdir -p "$root_zdotdir/custom"
+
+	# Copy startup entry point files (stable boilerplate; sync manually if they change)
+	local f
+	for f in .zshenv .zprofile .zshrc .zlogin .zlogout; do
+		[[ -f "$ZDOTDIR/$f" ]] || continue
+		sudo cp "$ZDOTDIR/$f" "$root_zdotdir/$f"
+	done
+
+	print_fn -s "Root ZSH environment installed at $root_zdotdir."
+}
+
 # Sets up Flatpak user repo and base packages
 function setup_flatpak {
 	local fp_install=user
@@ -197,7 +234,7 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
-typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de)
+typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_root)
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 

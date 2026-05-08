@@ -19,13 +19,15 @@ _zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh'
 # ============================================================================
 
 ### Print fetch
-local fetch="fastfetch"
-local fetch_warned="$ZSH_CACHE_HOME/.fetch_warned"
-if (( ${+commands[$fetch]} )); then
-	$fetch
-elif [[ ! -f "$fetch_warned" ]]; then
-	print -u2 -f '%s\n' "Info: '$fetch' is not installed." "This message will only show once."
-	touch "$fetch_warned"
+if (( EUID != 0 )); then
+	local fetch="fastfetch"
+	local fetch_warned="$ZSH_CACHE_HOME/.fetch_warned"
+	if (( ${+commands[$fetch]} )); then
+		$fetch
+	elif [[ ! -f "$fetch_warned" ]]; then
+		print -u2 -f '%s\n' "Info: '$fetch' is not installed." "This message will only show once."
+		touch "$fetch_warned"
+	fi
 fi
 
 # Check for p10k; if non-existent, use robbyrussel

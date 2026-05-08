@@ -51,6 +51,34 @@ Use **POSIX ERE** patterns, not PCRE. Termux (Android) `zsh` builds without PCRE
 - No ANSI codes by hand; use `${fg_bold[color]}` / `${fg_no_bold[color]}` / `${reset_color}` from `colors`.
 - Compiled (`.zwc`) files are gitignored; run `zcompile` or `zupdate` to refresh them.
 
+## Root / Elevated-User Sharing
+
+Root gets a **sparse `ZDOTDIR`** at `${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh`. Code directories are symlinked to this repo (always live); startup entry points are copied (stable, rarely change). Run `setup_root` via `first_init.zsh` to bootstrap this:
+
+```
+${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh/
+  lib/        → symlink to $ZDOTDIR/lib        (live)
+  extensions/ → symlink to $ZDOTDIR/extensions  (live)
+  zstages/    → symlink to $ZDOTDIR/zstages     (live)
+  vendor/     → symlink to $ZDOTDIR/vendor      (live)
+  conf/       → symlink to $ZDOTDIR/conf        (live)
+  custom/                                        (own, empty)
+  .zshenv / .zprofile / .zshrc / .zlogin / .zlogout   (copied — sync if changed)
+```
+
+Because entry points and stage files use `$ZDOTDIR` at runtime (which expands to root's own dir), and `$HOME` for XDG paths, each user's cache, state, and user config (`.p10k.zsh`, etc.) stay fully independent.
+
+### Root hardening (EUID guards)
+
+- **`ZSH_DISABLE_COMPFIX=true`** is set in `20-omz-setup.zsh` when `EUID == 0`, suppressing OMZ's insecure-completion-directory warnings.
+- **fastfetch is skipped** (`10-setup.zsh`) — cosmetic, not needed for root.
+- Root has no `.p10k.zsh` by default → falls back to the theme set in `21-omz-config.zsh`.
+- Pattern for new EUID guards: `(( EUID != 0 ))` wrapping the body, or `(( EUID == 0 )) && return` at the top of something that should never run as root.
+
+### Security note
+
+Symlinked code dirs are owned by the repo user. If that user has sudo, the trust level is equivalent — a compromised account already has a path to root. Root's own startup files (`.zshenv` etc.) are root-owned.
+
 ## Known Cross-Platform Concern
 Code must work on both Arch Linux (primary) and **Termux (Android)**. Termux has a reduced/different zsh build:
 - No PCRE regex support → use POSIX ERE character classes only.
@@ -63,5 +91,6 @@ Set `ZSH_PROFILE_BENCHMARK=1` to time each sourced file. Set `ZSH_PROFILE_DEBUG=
 ## What NOT to do
 - Do not add commands that produce output to `.zshenv` (it's sourced even in non-interactive, non-TTY contexts).
 - Do not add personal/private config (API keys, host-specific vars) to tracked files — use `*.local.*` files (gitignored).
+- Do not hardcode local paths or usernames — use `$HOME`, `$USER`, `$ZDOTDIR`, `$XDG_CONFIG_HOME`, etc.
 - Do not use `echo` for user-facing messages; use `print_fn`.
 - Do not use PCRE regex tokens (`\d`, `\s`, `\w`, `\b`).
