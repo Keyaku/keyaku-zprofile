@@ -93,7 +93,7 @@ if (( ! $+commands[podman] )); then
 		fi
 
 		### If rootless binaries exist, prefer those over rootful
-		if systemctl-service-path --user docker &>/dev/null; then
+		if has_user_systemd && systemctl-service-path --user docker &>/dev/null; then
 			### Set important environment variables
 			export DOCKER_BIN="${XDG_DATA_HOME}/docker/bin"
 			DOCKER_HOME="${DOCKER_CONFIG:-$XDG_CONFIG_HOME/docker}"

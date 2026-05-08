@@ -95,6 +95,11 @@ function has_systemd {
 		&& (( ${#:-/run/systemd/sessions/<->##(N-.)} ))
 }
 
+# True only when the user's own session bus is reachable (i.e. safe to call `systemctl --user`)
+function has_user_systemd {
+	[[ -n "${XDG_RUNTIME_DIR}" ]] && has_systemd
+}
+
 if has_systemd; then
 	### Systemd specific
 	function systemctl-service-path {
