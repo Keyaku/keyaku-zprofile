@@ -14,6 +14,7 @@
 .vscode/
 .idea/
 *.log
+*.local.*
 
 # OS (Windows, macOS, Linux...) or DE (KDE, GNOME...) specific
 .DS_Store
