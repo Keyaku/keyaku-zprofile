@@ -1,0 +1,16 @@
+[Unit]
+Description=User maintenance (flatpak updates, etc.)
+# Run around sleep/wake transitions and at login. The script throttles itself,
+# so the double-fire (pre-sleep + post-resume) is harmless.
+After=network-online.target suspend.target sleep.target hibernate.target hybrid-sleep.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/maintenance.zsh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=default.target suspend.target sleep.target hibernate.target hybrid-sleep.target
