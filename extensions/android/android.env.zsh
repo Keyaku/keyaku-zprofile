@@ -37,4 +37,9 @@ if ! whatami Android; then
 # if actually on Android (Termux)
 elif [[ -v TERMUX_VERSION && "${TERMUX__PREFIX:P}" == "/data/data/com.termux/files/usr" ]]; then
 	export XDG_RUNTIME_DIR="${${:-$TERMUX__PREFIX/var/run/$UID}:P}"
+
+	# Commands dependent on glibc-runner
+	if (( ${+commands[rtk]} )); then
+		alias rtk="glibc-runner ${commands[rtk]}"
+	fi
 fi
