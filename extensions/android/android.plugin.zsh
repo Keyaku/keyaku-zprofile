@@ -21,4 +21,9 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 		fi
 		[[ "${RISH_APPLICATION_ID}" == "com.termux" ]] || export RISH_APPLICATION_ID="com.termux"
 	fi
+
+	# Commands dependent on glibc-runner
+	if (( ${+commands[rtk]} )); then
+		alias rtk="glibc-runner ${commands[rtk]}"
+	fi
 fi
