@@ -4,7 +4,8 @@
       "Bash(command -v git-filter-repo)",
       "Bash(python3 -m git_filter_repo --version)",
       "Bash(git filter-branch *)",
-      "Bash(git --version)"
+      "Bash(git --version)",
+      "Bash(git mv *)"
     ]
   }
 }

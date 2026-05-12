@@ -1,9 +1,9 @@
 (( ${+commands[vim]} )) || return
 
 # Copy the whole vimrc file. Any user plugin should be loaded in a 'plugins' file, or additional configuration in 'myvimrc'
-if [[ ! -f "$MYVIMRC" ]]; then
-	mv "$MYVIMRC"{,.old}
-	cp "$ZDOTDIR/conf/vim/vimrc" "$MYVIMRC"
+if [[ -n "$MYVIMRC" && ! -f "$MYVIMRC" ]]; then
+	[[ -d "${MYVIMRC:h}" ]] || mkdir -p "${MYVIMRC:h}"
+	cp "$ZDOTDIR/conf/home/vim/vimrc" "$MYVIMRC"
 fi
 
 # Alias to open vim with encoding information

@@ -338,7 +338,7 @@ if (( ! $+commands[podman] )); then
 		local PATH_svc="$(systemctl --user cat docker 2>/dev/null | head -n1 | awk '{print $NF}')"
 		if [[ ! -f "${PATH_svc}.d/override.conf" ]]; then
 			mkdir -p "${PATH_svc}.d"
-			cp "$ZDOTDIR/conf/docker/$(get_funcname).conf" ${PATH_svc}.d/override.conf
+			cp "$ZDOTDIR/conf/etc/docker/$(get_funcname).conf" ${PATH_svc}.d/override.conf
 		else
 			echo "'${PATH_svc}.d/override.conf' already exists. Skipping"
 		fi
@@ -373,7 +373,7 @@ if (( ! $+commands[podman] )); then
 			# Adding configuration
 			[[ -d "$SSH_HOME/config.d" ]] || mkdir -p "$SSH_HOME/config.d"
 
-			cp "$ZDOTDIR/conf/docker/$(get_funcname).conf" $SSH_HOME/config.d/docker.conf
+			cp "$ZDOTDIR/conf/home/docker/$(get_funcname).conf" $SSH_HOME/config.d/docker.conf
 
 			# Checking if config file exists and contains an Include directive
 			[[ ! -f "$SSH_HOME/config" ]] && touch "$SSH_HOME/config"

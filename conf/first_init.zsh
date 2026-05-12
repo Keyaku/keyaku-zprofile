@@ -79,11 +79,11 @@ function setup_zsh {
 	# Add missing variables to zshenv
 	if [[ ! -f "$zshenv" ]]; then
 		NEEDS_RESTART=1
-		$SUDO cp "$ZDOTDIR/conf/zsh/zshenv" "$zshenv"
-	elif ! file_contents_in "$ZDOTDIR/conf/zsh/zshenv" "$zshenv"; then
+		$SUDO cp "$ZDOTDIR/conf/etc/zsh/zshenv" "$zshenv"
+	elif ! file_contents_in "$ZDOTDIR/conf/etc/zsh/zshenv" "$zshenv"; then
 		NEEDS_RESTART=1
 		echo "Adding ZSH variables to system zshenv..."
-		diff -u "$zshenv" "$ZDOTDIR/conf/zsh/zshenv" > "$ZSH_CACHE_HOME"/zshenv.patch
+		diff -u "$zshenv" "$ZDOTDIR/conf/etc/zsh/zshenv" > "$ZSH_CACHE_HOME"/zshenv.patch
 		$SUDO patch -su -d/ -p0 -i "$ZSH_CACHE_HOME"/zshenv.patch
 	fi
 }
@@ -94,19 +94,19 @@ function setup_ssh {
 	local ssh_system="$ROOT"/etc/ssh
 
 	# Synchronize SSH configuration files
-	if ! file_contents_in "$ZDOTDIR/conf/ssh" "$ssh_system"; then
+	if ! file_contents_in "$ZDOTDIR/conf/etc/ssh" "$ssh_system"; then
 		echo "Synchronizing SSH conf..."
-		$SUDO rsync -Przcq --no-t "$ZDOTDIR/conf/ssh/" "$ssh_system"
+		$SUDO rsync -Przcq --no-t "$ZDOTDIR/conf/etc/ssh/" "$ssh_system"
 	fi
 }
 
 # Sets up systemd system-wide to follow XDG Base Directory Specification
 function setup_systemd {
 	# Synchronize systemd configuration files
-	if ! file_contents_in "$ZDOTDIR/conf/systemd" /etc/systemd; then
+	if ! file_contents_in "$ZDOTDIR/conf/etc/systemd" /etc/systemd; then
 		NEEDS_RESTART=1
 		echo "Synchronizing systemd conf..."
-		$SUDO rsync -Przcq --no-t "$ZDOTDIR/conf/systemd/" "/etc/systemd"
+		$SUDO rsync -Przcq --no-t "$ZDOTDIR/conf/etc/systemd/" "/etc/systemd"
 	fi
 }
 
@@ -122,7 +122,7 @@ function setup_termux {
 	[[ -d ~/storage ]] || termux-setup-storage
 
 	# Add .termux configuration and scripts
-	rsync -Przcq --no-t "$ZDOTDIR/conf/termux/" "$HOME/.termux"
+	rsync -Przcq --no-t "$ZDOTDIR/conf/home/termux/" "$HOME/.termux"
 	chmod ug+x "$HOME"/.termux/boot/**/*.sh(-.)
 
 	# TODO: Install rish and add it to path
@@ -153,7 +153,7 @@ function setup_pacman {
 	# Prepare rehash hook, to work with this repo's pacman plugin
 	if [[ ! -f /etc/pacman.d/hooks/zsh.hook ]]; then
 		[[ -d /etc/pacman.d/hooks ]] || $SUDO mkdir -p /etc/pacman.d/hooks
-		$SUDO cp "$SCRIPT_DIR"/hooks/zsh.hook /etc/pacman.d/hooks/.
+		$SUDO cp "$SCRIPT_DIR"/etc/pacman/hooks/zsh.hook /etc/pacman.d/hooks/.
 	fi
 }
 
