@@ -16,6 +16,7 @@ zstages/profile/  # Loaded by .zprofile
 zstages/rc/       # Loaded by .zshrc (OMZ loaded at 25-omz-load.zsh)
 zstages/login/    # Loaded by .zlogin
 extensions/       # Own plugins (unconditionally sourced but self-guard via command checks)
+completions/      # Zsh `_<funcname>` completions for lib/ functions (prepended to $fpath)
 custom/           # User plugins/themes/functions (tracked but empty by default)
 vendor/ohmyzsh/   # Git submodule
 conf/             # Setup scripts and config files
@@ -50,6 +51,12 @@ Use **POSIX ERE** patterns, not PCRE. Termux (Android) `zsh` builds without PCRE
 - `local -r`, `local -i`, `local -a`, etc. — use typed locals.
 - No ANSI codes by hand; use `${fg_bold[color]}` / `${fg_no_bold[color]}` / `${reset_color}` from `colors`.
 - Compiled (`.zwc`) files are gitignored; run `zcompile` or `zupdate` to refresh them.
+- Function definition forms carry meaning: `function NAME { … }` for top-level (public) functions, `name() { … }` for nested locals. The completions drift checker uses this distinction.
+
+### Completions (`completions/`)
+- One `_<funcname>` file per user-facing function in `lib/`. Files start with `#compdef NAME` and use `_arguments -s -S`. Style reference: [custom/plugins/owrt-config/_owrt-config](custom/plugins/owrt-config/_owrt-config).
+- `completions/.skip` lists `lib/` functions that intentionally have no completion (internal helpers, free-value checkers). Underscore-prefixed names are auto-skipped.
+- Drift between `lib/` and `completions/` is caught by [conf/check-completions.zsh](conf/check-completions.zsh) — invoked at the tail of `zupdate` (warn-only) and by the pre-commit hook at [conf/hooks/pre-commit](conf/hooks/pre-commit) (blocking; bypass with `--no-verify`). Hook is enabled by `setup_git_hooks` in `first_init.zsh` via `git config core.hooksPath conf/hooks`. The hook is POSIX sh and re-execs the checker through `flatpak-spawn --host` when `/.flatpak-info` is present, so it works from Flatpak-sandboxed git clients (e.g. VSCode-in-Flatpak).
 
 ## Root / Elevated-User Sharing
 
