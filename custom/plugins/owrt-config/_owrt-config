@@ -1,0 +1,190 @@
+#compdef owrt-config owrt-config.zsh
+
+# Zsh completion for owrt-config.zsh
+# Drop into $fpath (e.g. add 'owrt-config' to $plugins so this dir gets fpath'd).
+
+local curcontext="$curcontext" state state_descr line
+typeset -A opt_args
+
+_owrt-config_store_path() {
+	local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/owrt-config"
+	local config_file="$config_dir/config.json"
+	local default_store="${XDG_DATA_HOME:-$HOME/.local/share}/owrt-config/routers.json"
+
+	if [[ -n "$OWRT_CONFIG_STORE_PATH" ]]; then
+		print -r -- "$OWRT_CONFIG_STORE_PATH"
+		return
+	fi
+	if [[ -f "$config_file" ]] && (( $+commands[jq] )); then
+		local p; p="$(jq -r '.store_path // empty' "$config_file" 2>/dev/null)"
+		[[ -n "$p" ]] && { print -r -- "$p"; return }
+	fi
+	print -r -- "$default_store"
+}
+
+_owrt-config_router_ids() {
+	local store; store="$(_owrt-config_store_path)"
+	[[ -f "$store" ]] || return
+	(( $+commands[jq] )) || return
+
+	local -a ids descs
+	ids=("${(@f)$(jq -r '.routers[]?.id // empty' "$store" 2>/dev/null)}")
+	descs=("${(@f)$(jq -r '.routers[]? | "\(.id):\(.host) [\((.tags // []) | join(","))]"' "$store" 2>/dev/null)}")
+	(( ${#descs} )) && _describe -t routers 'router' descs || \
+		_describe -t routers 'router' ids
+}
+
+_owrt-config_tags() {
+	local store; store="$(_owrt-config_store_path)"
+	[[ -f "$store" ]] || return
+	(( $+commands[jq] )) || return
+
+	local -a tags
+	tags=("${(@f)$(jq -r '[.routers[]?.tags[]?] | unique | .[]' "$store" 2>/dev/null)}")
+	(( ${#tags} )) && _describe -t tags 'tag' tags
+}
+
+_owrt-config_tasks() {
+	local -a tasks
+	# Ask the script for the canonical list; fall back to a hardcoded set if
+	# the script isn't reachable (e.g. during initial setup).
+	if (( $+commands[owrt-config.zsh] )); then
+		tasks=("${(@f)$(owrt-config.zsh task list --names 2>/dev/null)}")
+	fi
+	(( ${#tasks} )) || tasks=(
+		'wifi-passwd:Prompt for new Wi-Fi password and apply to both radios'
+		'update-pkgs:Update package index and upgrade installed packages (apk)'
+		'sysupgrade:Run auc (attended sysupgrade)'
+	)
+	_describe -t tasks 'task' tasks
+}
+
+_owrt-config_commands() {
+	local -a cmds
+	cmds=(
+		'list:List registered routers'
+		'ls:List registered routers'
+		'add:Register a router'
+		'remove:Remove a router'
+		'rm:Remove a router'
+		'delete:Remove a router'
+		'edit:Edit a router (or open in $EDITOR)'
+		'ssh:Open SSH session, or run a one-shot command'
+		'run:Batch-run commands across routers'
+		'task:Manage / list named tasks'
+		'config:View / edit defaults'
+	)
+	_describe -t commands 'command' cmds
+}
+
+_owrt-config_cmd_list() {
+	_arguments -s -S \
+		'(-t --tag)'{-t,--tag}'[Filter by tag]:tag:_owrt-config_tags'
+}
+
+_owrt-config_cmd_add() {
+	_arguments -s -S \
+		'1:router id:' \
+		'--host[Hostname or IP]:host:_hosts' \
+		'--user[SSH user]:user:_users' \
+		'--port[SSH port]:port:' \
+		'*'{-t,--tag}'[Tag (repeatable)]:tag:_owrt-config_tags'
+}
+
+_owrt-config_cmd_remove() {
+	_arguments -s -S \
+		'1:router:_owrt-config_router_ids'
+}
+
+_owrt-config_cmd_edit() {
+	_arguments -s -S \
+		'1:router:_owrt-config_router_ids' \
+		'--host[Set hostname or IP]:host:_hosts' \
+		'--user[Set SSH user]:user:_users' \
+		'--port[Set SSH port]:port:' \
+		'--id[Rename router id]:new id:' \
+		'*'{-t,--tag}'[Add tag (repeatable)]:tag:_owrt-config_tags' \
+		'*--untag[Remove tag (repeatable)]:tag:_owrt-config_tags'
+}
+
+_owrt-config_cmd_ssh() {
+	_arguments -s -S \
+		'1:router:_owrt-config_router_ids' \
+		'*:remote command:_command_names -e'
+}
+
+_owrt-config_cmd_run() {
+	_arguments -s -S \
+		'*'{-r,--router}'[Include router]:router:_owrt-config_router_ids' \
+		'*'{-R,--exclude-router}'[Exclude router]:router:_owrt-config_router_ids' \
+		'*'{-t,--tag}'[Include routers with tag]:tag:_owrt-config_tags' \
+		'--all[All registered routers]' \
+		'*'{-c,--command}'[Raw command (repeatable, joined with &&)]:command:' \
+		'*--task[Named preset (repeatable)]:task:_owrt-config_tasks' \
+		'(-p --parallel)'{-p,--parallel}'[Run in parallel]' \
+		'(-i --interactive)'{-i,--interactive}'[Prompt before run / between routers]' \
+		'(-e --exit-on-error)'{-e,--exit-on-error}'[Stop on first failure]' \
+		'(-n --dry-run)'{-n,--dry-run}'[Print plan, do not connect]'
+}
+
+_owrt-config_cmd_task() {
+	local -a subs=('list:List available tasks')
+	_arguments -s -S '1:subcommand:->sub' && return
+	case $state in
+		sub) _describe -t task-subcommands 'task subcommand' subs ;;
+	esac
+}
+
+_owrt-config_cmd_config() {
+	local -a subs=(
+		'show:Print current config'
+		'path:Print path to config file'
+		'set:Set a config key'
+	)
+	local -a keys=(
+		'user:Default SSH user'
+		'port:Default SSH port'
+		'prefix:Hostname prefix used when auto-composing host'
+		'domain:Hostname domain suffix (e.g. .lan)'
+		'store_path:Path to the routers.json store'
+	)
+	_arguments -C \
+		'1:subcommand:->sub' \
+		'2:key:->key' \
+		'3:value:' \
+		&& return
+	case $state in
+		sub) _describe -t config-subcommands 'config subcommand' subs ;;
+		key)
+			[[ "${words[2]}" == "set" ]] && _describe -t config-keys 'key' keys
+		;;
+	esac
+}
+
+_owrt-config() {
+	_arguments -C \
+		'(-h --help)'{-h,--help}'[Print help]' \
+		'*-v[Increase verbosity]' \
+		'*-q[Decrease verbosity]' \
+		'1: :->cmd' \
+		'*:: :->args' \
+		&& return
+
+	case $state in
+		cmd) _owrt-config_commands ;;
+		args)
+			case ${words[1]} in
+				list|ls)            _owrt-config_cmd_list ;;
+				add)                _owrt-config_cmd_add ;;
+				remove|rm|delete)   _owrt-config_cmd_remove ;;
+				edit)               _owrt-config_cmd_edit ;;
+				ssh)                _owrt-config_cmd_ssh ;;
+				run)                _owrt-config_cmd_run ;;
+				task)               _owrt-config_cmd_task ;;
+				config)             _owrt-config_cmd_config ;;
+			esac
+		;;
+	esac
+}
+
+_owrt-config "$@"
