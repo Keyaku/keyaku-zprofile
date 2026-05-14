@@ -1,42 +1,105 @@
 #!/bin/sh
-# Pre-commit hook: verify completions/_<name> tracks lib/ functions when
-# either side is touched in the staged diff. Otherwise stays out of the way.
+# Pre-commit hook for keyaku-zprofile.
 #
-# POSIX sh so it runs even in environments without zsh (e.g. when VSCode's
-# git extension is itself sandboxed in Flatpak). The checker script is zsh,
-# so we re-exec it on the host via flatpak-spawn when inside a sandbox.
+# Runs (in order, failing fast):
+#   1. `zsh -n` syntax check on every staged zsh file / entry point.
+#   2. Startup smoke test: spawn `zsh -i -c exit` with ZDOTDIR pointing at
+#      the repo so the full startup chain (lib/core → zstages/env → … →
+#      zstages/rc) is exercised. Any nonzero exit fails the commit.
+#      Skip with PRE_COMMIT_NO_STARTUP=1.
+#   3. Completions drift check (only when lib/ or completions/ touched).
+#
+# POSIX sh so it runs even when the git client itself is in a Flatpak
+# sandbox (e.g. VSCode's git extension); anything needing zsh is re-exec'd
+# on the host via flatpak-spawn when /.flatpak-info is present.
 #
 # Install once with:
 #   git config core.hooksPath conf/hooks
+#
+# Bypass with: git commit --no-verify
 
 set -eu
 
 repo_root=$(git rev-parse --show-toplevel)
 checker="$repo_root/conf/check-completions.zsh"
 
-# Only run when the staged diff touches files we care about.
-if ! git diff --cached --name-only --diff-filter=ACMR | \
-		grep -qE '^(lib/.*\.zsh|completions/_.+|completions/\.skip)$'; then
-	exit 0
-fi
-
-# Run the zsh checker — directly on the host, or via flatpak-spawn from a
-# Flatpak sandbox (the presence of /.flatpak-info is the canonical signal).
+in_flatpak=0
 if [ -f /.flatpak-info ] && command -v flatpak-spawn >/dev/null 2>&1; then
-	flatpak-spawn --host "$checker" -q
-else
-	"$checker" -q
+	in_flatpak=1
 fi
 
-status=$?
-if [ "$status" -ne 0 ]; then
-	{
-		echo ""
-		echo "pre-commit: completions drift detected."
-		echo "Fix by adding a completion under completions/, or by listing the"
-		echo "function in completions/.skip if it intentionally has none."
-		echo "Bypass with: git commit --no-verify"
-	} >&2
-	exit 1
+run_host() {
+	if [ "$in_flatpak" -eq 1 ]; then
+		flatpak-spawn --host "$@"
+	else
+		"$@"
+	fi
+}
+
+# -----------------------------------------------------------------------
+# 1. Syntax check (zsh -n) on staged zsh files.
+# -----------------------------------------------------------------------
+staged_zsh=$(git diff --cached --name-only --diff-filter=ACMR | \
+	grep -E '(\.zsh$|^\.z(shenv|profile|shrc|login|logout)$|^lib/|^zstages/|^extensions/)' || true)
+
+if [ -n "$staged_zsh" ]; then
+	existing=""
+	for f in $staged_zsh; do
+		[ -f "$repo_root/$f" ] && existing="$existing $repo_root/$f"
+	done
+
+	if [ -n "$existing" ]; then
+		# shellcheck disable=SC2086
+		if ! run_host zsh -n $existing; then
+			{
+				echo ""
+				echo "pre-commit: zsh syntax errors in staged files (see above)."
+				echo "Bypass with: git commit --no-verify"
+			} >&2
+			exit 1
+		fi
+	fi
 fi
+
+# -----------------------------------------------------------------------
+# 2. Startup smoke test.
+# -----------------------------------------------------------------------
+if [ "${PRE_COMMIT_NO_STARTUP:-0}" != "1" ]; then
+	smoke_log=$(mktemp)
+	if run_host env ZDOTDIR="$repo_root" ZSH_PROFILE_BENCHMARK= ZSH_PROFILE_DEBUG= \
+			zsh -i -c 'exit 0' >"$smoke_log" 2>&1; then
+		rm -f "$smoke_log"
+	else
+		rc=$?
+		{
+			echo ""
+			echo "pre-commit: startup smoke test failed (exit $rc). Output:"
+			echo "---"
+			cat "$smoke_log"
+			echo "---"
+			echo "Bypass with: PRE_COMMIT_NO_STARTUP=1 git commit"
+			echo "         or: git commit --no-verify"
+		} >&2
+		rm -f "$smoke_log"
+		exit 1
+	fi
+fi
+
+# -----------------------------------------------------------------------
+# 3. Completions drift check.
+# -----------------------------------------------------------------------
+if git diff --cached --name-only --diff-filter=ACMR | \
+		grep -qE '^(lib/.*\.zsh|completions/_.+|completions/\.skip)$'; then
+	if ! run_host "$checker" -q; then
+		{
+			echo ""
+			echo "pre-commit: completions drift detected."
+			echo "Fix by adding a completion under completions/, or by listing the"
+			echo "function in completions/.skip if it intentionally has none."
+			echo "Bypass with: git commit --no-verify"
+		} >&2
+		exit 1
+	fi
+fi
+
 exit 0
