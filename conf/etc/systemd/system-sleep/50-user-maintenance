@@ -1,0 +1,20 @@
+#!/bin/sh
+# Trigger each logged-in user's maintenance.service after the system resumes
+# from suspend/hibernate. systemd-sleep(8) invokes this with $1 = pre|post
+# and $2 = mode (suspend|hibernate|hybrid-sleep|suspend-then-hibernate).
+#
+# The user unit's own throttle (~1h) keeps duplicate fires harmless.
+
+[ "$1" = post ] || exit 0
+
+# Iterate active sessions, dedup by UID, trigger the user unit on each.
+loginctl list-users --no-legend 2>/dev/null | awk '{print $1, $2}' | \
+while read -r uid user; do
+	[ -n "$uid" ] && [ "$uid" -ge 1000 ] 2>/dev/null || continue
+	# Skip users without a running systemd user manager.
+	[ -S "/run/user/$uid/systemd/private" ] || continue
+	systemctl --machine="$user@.host" --user start maintenance.service \
+		>/dev/null 2>&1 || true
+done
+
+exit 0

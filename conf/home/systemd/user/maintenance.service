@@ -1,9 +1,8 @@
 [Unit]
 Description=User maintenance (flatpak updates, etc.)
-# Run around sleep/wake transitions and at login. The script throttles itself,
-# so the double-fire (pre-sleep + post-resume) is harmless.
-After=network-online.target suspend.target sleep.target hibernate.target hybrid-sleep.target
-Wants=network-online.target
+# Fired at login via default.target, and on resume via the system-sleep hook
+# installed under /etc/systemd/system-sleep/. The script throttles itself,
+# so duplicate triggers are harmless.
 
 [Service]
 Type=oneshot
@@ -13,4 +12,4 @@ IOSchedulingClass=idle
 TimeoutStartSec=30min
 
 [Install]
-WantedBy=default.target suspend.target sleep.target hibernate.target hybrid-sleep.target
+WantedBy=default.target
