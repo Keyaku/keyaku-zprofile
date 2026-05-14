@@ -79,7 +79,8 @@ _owrt-config_commands() {
 
 _owrt-config_cmd_list() {
 	_arguments -s -S \
-		'(-t --tag)'{-t,--tag}'[Filter by tag]:tag:_owrt-config_tags'
+		'(-t --tag)'{-t,--tag}'[Filter by tag]:tag:_owrt-config_tags' \
+		'--columns[Pick columns (comma list; "help" lists names)]:columns:(id host user port tags created updated help)'
 }
 
 _owrt-config_cmd_add() {
@@ -127,11 +128,46 @@ _owrt-config_cmd_run() {
 		'(-n --dry-run)'{-n,--dry-run}'[Print plan, do not connect]'
 }
 
+_owrt-config_config_task_names() {
+	local store config_file="${XDG_CONFIG_HOME:-$HOME/.config}/owrt-config/config.json"
+	[[ -f "$config_file" ]] || return
+	(( $+commands[jq] )) || return
+	local -a names
+	names=("${(@f)$(jq -r '.tasks // {} | keys[]?' "$config_file" 2>/dev/null)}")
+	(( ${#names} )) && _describe -t config-tasks 'config task' names
+}
+
 _owrt-config_cmd_task() {
-	local -a subs=('list:List available tasks')
-	_arguments -s -S '1:subcommand:->sub' && return
+	local -a subs=(
+		'list:List available tasks'
+		'ls:List available tasks'
+		'add:Save a task to the config'
+		'rm:Remove a config-defined task'
+	)
+	_arguments -C \
+		'1:subcommand:->sub' \
+		'*:: :->args' \
+		&& return
 	case $state in
 		sub) _describe -t task-subcommands 'task subcommand' subs ;;
+		args)
+			case ${words[1]} in
+				list|ls)
+					_arguments -s -S \
+						'--columns[Pick columns (comma list; "help" lists names)]:columns:(name description source commands help)'
+				;;
+				add)
+					_arguments -s -S \
+						'1:task name:' \
+						'(-d --description)'{-d,--description}'[Task description]:description:' \
+						'*'{-c,--command}'[Command to run on the router (repeatable)]:command:'
+				;;
+				rm|remove|delete)
+					_arguments -s -S \
+						'1:task:_owrt-config_config_task_names'
+				;;
+			esac
+		;;
 	esac
 }
 

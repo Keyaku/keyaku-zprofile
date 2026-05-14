@@ -25,14 +25,16 @@ readonly -a usage=(
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	""
 	"COMMANDS"
-	"\tlist [--tag TAG]                List registered routers"
+	"\tlist [--tag TAG] [--columns COLS]  List registered routers"
 	"\tadd ID [--host H] [--user U] [--port N] [--tag T]...   Register a router"
 	"\tremove ID                       Remove a router"
 	"\tedit ID [--host H] [--user U] [--port N] [--id NEW]"
 	"\t        [--tag T]... [--untag T]...                    Edit a router (or open in \$EDITOR)"
 	"\tssh ID [CMD...]                 Open SSH session, or run a one-shot command"
 	"\trun [SELECTORS] [-c CMD]... [--task NAME]...           Batch-run commands across routers"
-	"\ttask list                       List available named tasks"
+	"\ttask list [--columns COLS]       List available named tasks"
+	"\ttask add NAME [-d DESC] -c CMD [-c CMD]...   Save a task to the config"
+	"\ttask rm NAME                    Remove a config-defined task"
 	"\tconfig [path|show|set KEY VAL]  View / edit defaults (prefix, domain, user, port)"
 	""
 	"RUN SELECTORS (default: all)"
@@ -65,6 +67,13 @@ typeset -gA TASK_DESCRIPTIONS=(
 	wifi-passwd "Prompt for new Wi-Fi password and apply to both radios"
 	update-pkgs "Update package index and upgrade installed packages (apk)"
 	sysupgrade  "Run owut (attended sysupgrade)"
+)
+
+# Human-readable command summary per built-in task (for `task list`).
+typeset -gA TASK_BUILTIN_COMMANDS=(
+	wifi-passwd "<prompts> && uci set wireless.default_radio{0,1}.key=... && uci commit wireless && wifi"
+	update-pkgs "apk update && apk upgrade"
+	sysupgrade  "owut upgrade"
 )
 
 function _task_cmds {
@@ -100,6 +109,15 @@ function _task_cmds {
 			print -- "owut upgrade"
 		;;
 		*)
+			# Fall back to a user-defined task in the config file.
+			local custom
+			custom="$(jq -r --arg name "$1" \
+				'(.tasks // {})[$name].commands // [] | if type == "array" then .[] else empty end' \
+				"$CONFIG_FILE_PATH" 2>/dev/null)"
+			if [[ -n "$custom" ]]; then
+				print -r -- "$custom"
+				return 0
+			fi
 			print_fn -e "Unknown task: %s" "$1"
 			return 1
 		;;
@@ -118,7 +136,8 @@ function _config_default_json {
 				port: 22,
 				prefix: "router",
 				domain: ".lan"
-			}
+			},
+			tasks: {}
 		}'
 }
 
@@ -145,7 +164,8 @@ function _config_ensure {
 				port:   (.defaults.port   // 22),
 				prefix: (.defaults.prefix // "router"),
 				domain: (.defaults.domain // ".lan")
-			}
+			},
+			tasks: (.tasks // {})
 		}' "$CONFIG_FILE_PATH" > "$tmp" \
 		&& mv "$tmp" "$CONFIG_FILE_PATH" \
 		|| { rm -f "$tmp"; return 1; }
@@ -216,6 +236,42 @@ function _default_host_for_id {
 	print -r -- "${prefix}${id}${domain}"
 }
 
+# Resolve --columns selection (Flatpak-style column picker).
+# Args:
+#   $1 — pipe-separated "name:description" pairs (available columns)
+#   $2 — user-supplied value (empty for default, "help" to list, or comma list)
+#   $3 — default comma list
+# Echoes the validated comma list, or prints help and returns 2.
+function _resolve_columns {
+	local available_str="$1" user="$2" default="$3"
+	local -a available=("${(@s:|:)available_str}")
+
+	if [[ "$user" == "help" || "$user" == "?" ]]; then
+		{
+			print "Available columns:"
+			local pair
+			for pair in "${available[@]}"; do
+				printf '\t%-14s %s\n' "${pair%%:*}" "${pair#*:}"
+			done
+			print -- "Default: ${default}"
+		} >&2
+		return 2
+	fi
+
+	local -A names=()
+	local pair
+	for pair in "${available[@]}"; do
+		names[${pair%%:*}]=1
+	done
+
+	local picked="${user:-$default}"
+	local col
+	for col in "${(@s:,:)picked}"; do
+		[[ -n "${names[$col]-}" ]] || { print_fn -e "Unknown column: %s (try --columns help)" "$col"; return 1; }
+	done
+	print -r -- "$picked"
+}
+
 function _print_tsv_table {
 	awk -F '\t' '
 	{
@@ -259,27 +315,50 @@ function _resolve_endpoint {
 # --- Commands: registry ---
 
 function owrt_list {
-	local f_tag
-	zparseopts -D -F -K -- {t,-tag}:=f_tag || return 1
-	local tag="${f_tag[-1]}"
+	local f_tag f_columns
+	zparseopts -D -F -K -- \
+		{t,-tag}:=f_tag \
+		-columns:=f_columns \
+		|| return 1
 
+	local available="id:Router id|host:SSH host|user:Effective SSH user|port:Effective SSH port|tags:Comma-joined tag list|created:Created timestamp|updated:Updated timestamp"
+	local cols rc
+	cols="$(_resolve_columns "$available" "${f_columns[-1]}" "id,host,user,port,tags")"
+	rc=$?
+	(( rc == 2 )) && return 0
+	(( rc == 0 )) || return $rc
+
+	local tag="${f_tag[-1]}"
 	local data; data="$(_json_read)" || return 1
 
 	{
-		print $'ID\tHOST\tUSER\tPORT\tTAGS'
+		# Header: uppercase column names
+		local -a header_cols=("${(@s:,:)cols:u}")
+		print -r -- "${(pj:\t:)header_cols}"
+
 		jq -r \
 			--arg tag "$tag" \
 			--arg default_user "$(_config_value '.defaults.user')" \
 			--arg default_port "$(_config_value '.defaults.port')" \
+			--arg cols "$cols" \
 			'.routers
 			| (if $tag != "" then map(select((.tags // []) | index($tag))) else . end)
-			| if length == 0 then empty else .[] | [
-				.id,
-				.host,
-				(.user // $default_user),
-				((.port // ($default_port | tonumber)) | tostring),
-				((.tags // []) | join(",") | if . == "" then "-" else . end)
-			] | @tsv end' <<< "$data"
+			| if length == 0 then empty
+			  else
+			    ($cols | split(",")) as $picked
+			    | .[]
+			    | . as $r
+			    | {
+			        id:      ($r.id // "-"),
+			        host:    ($r.host // "-"),
+			        user:    ($r.user // $default_user // "-"),
+			        port:    (($r.port // ($default_port | tonumber)) | tostring),
+			        tags:    (($r.tags // []) | join(",") | if . == "" then "-" else . end),
+			        created: ($r.created_at // "-"),
+			        updated: ($r.updated_at // "-")
+			      } as $row
+			    | [ $picked[] as $c | $row[$c] ] | @tsv
+			  end' <<< "$data"
 	} | _print_tsv_table
 }
 
@@ -484,24 +563,121 @@ function owrt_task {
 	local sub="${1:-list}"
 	shift 2>/dev/null
 	case "$sub" in
-		list)
-			local f_names
-			zparseopts -D -F -K -- -names=f_names || return 1
+		add)
+			local name="$1"; shift 2>/dev/null
+			[[ -n "$name" ]] || { print -u2 "Usage: $THIS task add NAME [--description DESC] -c CMD [-c CMD]..."; return 1; }
+
+			local f_desc
+			local -a f_cmds
+			zparseopts -D -F -K -- \
+				{d,-description}:=f_desc \
+				{c,-command}+:=f_cmds \
+				|| return 1
+
+			local -a cmds=("${(@)f_cmds:#(-c|--command)}")
+			(( ${#cmds} )) || { print_fn -e "At least one command (-c CMD) is required."; return 1; }
+
+			local desc="${f_desc[-1]}"
+
+			local tmp; tmp="$(mktemp)" || return 1
+			jq \
+				--arg name "$name" \
+				--arg desc "$desc" \
+				--argjson cmds "$(jq -n '$ARGS.positional' --args -- "${cmds[@]}")" \
+				'.tasks //= {}
+				 | .tasks[$name] = (
+				     {commands: $cmds}
+				     + (if $desc != "" then {description: $desc} else {} end)
+				 )' "$CONFIG_FILE_PATH" > "$tmp" \
+				&& mv "$tmp" "$CONFIG_FILE_PATH" \
+				|| { rm -f "$tmp"; return 1; }
+
+			print_fn -s "Added task: %s (%d command%s)" "$name" "${#cmds}" "$( (( ${#cmds} == 1 )) || print s )"
+		;;
+		list|ls)
+			local f_names f_columns
+			zparseopts -D -F -K -- -names=f_names -columns:=f_columns || return 1
+
+			local available="name:Task name|description:Task description|source:built-in or config|commands:Joined command list"
+			local cols rc
+			cols="$(_resolve_columns "$available" "${f_columns[-1]}" "name,description,source,commands")"
+			rc=$?
+			(( rc == 2 )) && return 0
+			(( rc == 0 )) || return $rc
+
+			# Merge built-in tasks with config-defined tasks; config overrides on name collision.
+			local -A all_desc all_cmds
+			local name
+			for name in "${(@k)TASK_DESCRIPTIONS}"; do
+				all_desc[$name]="${TASK_DESCRIPTIONS[$name]}"
+				all_cmds[$name]="${TASK_BUILTIN_COMMANDS[$name]-}"
+			done
+
+			local -a entries
+			entries=("${(@f)$(jq -r '.tasks // {} | to_entries[] | "\(.key)\t\(.value.description // "(no description)")\t\((.value.commands // []) | join(" && "))"' \
+				"$CONFIG_FILE_PATH" 2>/dev/null)}")
+			local entry desc cmds
+			for entry in "${entries[@]}"; do
+				[[ -n "$entry" ]] || continue
+				name="${entry%%$'\t'*}"
+				local rest="${entry#*$'\t'}"
+				desc="${rest%%$'\t'*}"
+				cmds="${rest#*$'\t'}"
+				all_desc[$name]="$desc"
+				all_cmds[$name]="$cmds"
+			done
+
 			if (( ${#f_names} )); then
 				# Machine-readable: name:description per line (for completion).
-				local name
-				for name in "${(@k)TASK_DESCRIPTIONS}"; do
-					printf '%s:%s\n' "$name" "${TASK_DESCRIPTIONS[$name]}"
+				for name in "${(@k)all_desc}"; do
+					printf '%s:%s\n' "$name" "${all_desc[$name]}"
 				done
 				return 0
 			fi
+
+			local -a chosen=("${(@s:,:)cols}")
+
 			{
-				print $'TASK\tDESCRIPTION'
-				local name
-				for name in "${(@k)TASK_DESCRIPTIONS}"; do
-					printf '%s\t%s\n' "$name" "${TASK_DESCRIPTIONS[$name]}"
+				local -a header_cols=("${(@)chosen:u}")
+				print -r -- "${(pj:\t:)header_cols}"
+
+				local col val source
+				for name in "${(@k)all_desc}"; do
+					if [[ -n "${TASK_DESCRIPTIONS[$name]-}" ]]; then
+						source="built-in"
+					else
+						source="config"
+					fi
+					local -a row=()
+					for col in "${chosen[@]}"; do
+						case "$col" in
+							name)        val="$name" ;;
+							description) val="${all_desc[$name]:--}" ;;
+							source)      val="$source" ;;
+							commands)    val="${all_cmds[$name]:--}" ;;
+						esac
+						row+=("$val")
+					done
+					print -r -- "${(pj:\t:)row}"
 				done
 			} | _print_tsv_table
+		;;
+		rm|remove|delete)
+			local name="$1"
+			[[ -n "$name" ]] || { print -u2 "Usage: $THIS task rm NAME"; return 1; }
+			if [[ -n "${TASK_DESCRIPTIONS[$name]-}" ]]; then
+				print_fn -e "Cannot remove built-in task: %s" "$name"
+				return 1
+			fi
+			if ! jq -e --arg name "$name" '(.tasks // {}) | has($name)' "$CONFIG_FILE_PATH" >/dev/null 2>&1; then
+				print_fn -e "Task not found in config: %s" "$name"
+				return 1
+			fi
+			local tmp; tmp="$(mktemp)" || return 1
+			jq --arg name "$name" 'del(.tasks[$name])' "$CONFIG_FILE_PATH" > "$tmp" \
+				&& mv "$tmp" "$CONFIG_FILE_PATH" \
+				|| { rm -f "$tmp"; return 1; }
+			print_fn -s "Removed task: %s" "$name"
 		;;
 		*) print_fn -e "Unknown task subcommand: %s" "$sub"; return 1 ;;
 	esac
