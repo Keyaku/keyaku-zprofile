@@ -35,7 +35,7 @@ Essentially:
 		* [x] Either move anything personal to external files, or add `.zlogin` to `.gitignore`. Preferably the former.
 * [x] `zupdate`: Improve performance when detecting changes from remote git repo.
 * [x] Create easy way to recompile `lib/core/` manually (which is recompiled on `zupdate` if there are remote changes), or detect that the compiled files are older than the `.zsh` files themselves.
-* [ ] Fix `.zshrc` recompiling `compdef` when `.zshrc` is read with `-li` or not. Will improve performance. The problem seems to lie in how `$fpath` is aggregated.
+* [x] Fix `.zshrc` recompiling `compdef` when `.zshrc` is read with `-li` or not. Will improve performance. The problem seems to lie in how `$fpath` is aggregated.
 * [ ] Move my own user-defined stuff (variables, aliases...) to an untracked directory, or to a separate branch that will be personal to me and won't affect the main branch.
 
 
@@ -46,9 +46,7 @@ All cleaned up! But there'll be more to come.
 
 ### `lib/`
 
-* [ ] Add arguments to `(add|rm|has)path` functions, particularly for verbosity and to return 0 even in case of non-added paths.
-* [ ] Create autocomplete for main functions.
-* [ ] Write function or code that receives an associative array for formatted "usage" printing, where keys = `shortopt|longopt`, and values = description of associated option.
+* [x] Create autocomplete for main functions.
 * [ ] Implement function that fetches system's package manager and installs packages accordingly.
 	* [ ] Potentially use [metapac](https://github.com/ripytide/metapac).
 * [ ] Check if `[[ -t 1 ]]` is applicable in this environment.

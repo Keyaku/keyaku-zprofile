@@ -1,0 +1,6 @@
+#compdef xdg-home-check
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-s --simple)'{-s,--simple}'[simple output]' \
+	'(-a --all)'{-a,--all}'[include all]'

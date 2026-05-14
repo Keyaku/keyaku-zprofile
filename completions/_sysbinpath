@@ -1,0 +1,4 @@
+#compdef sysbinpath
+
+_arguments -s -S \
+	'*:command:_command_names -e'

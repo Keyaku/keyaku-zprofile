@@ -1,0 +1,26 @@
+#compdef print_fn
+
+local -a levels=(
+	'-s[success color]'
+	'--success[success color]'
+	'-e[error color]'
+	'--error[error color]'
+	'-w[warning color]'
+	'--warn[warning color]'
+	'-i[info color]'
+	'--info[info color]'
+	'-d[debug color]'
+	'--debug[debug color]'
+)
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-c --callstack)'{-c,--callstack}'[print callstack]' \
+	'(-T --timestamp)'{-T,--timestamp}'[prepend timestamp]' \
+	'(-n --no-header)'{-n,--no-header}'[omit file:function:line header]' \
+	"(-s --success -e --error -w --warn -i --info -d --debug)"{-s,--success}'[success color]' \
+	"(-s --success -e --error -w --warn -i --info -d --debug)"{-e,--error}'[error color]' \
+	"(-s --success -e --error -w --warn -i --info -d --debug)"{-w,--warn}'[warning color]' \
+	"(-s --success -e --error -w --warn -i --info -d --debug)"{-i,--info}'[info color]' \
+	"(-s --success -e --error -w --warn -i --info -d --debug)"{-d,--debug}'[debug color]' \
+	'*::fmt and args:'

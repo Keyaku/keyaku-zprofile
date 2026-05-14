@@ -1,0 +1,20 @@
+# Functions in lib/ that intentionally have no completion file.
+# One name per line. Lines starting with `#` and blank lines are ignored.
+#
+# Internal helpers (called by other functions, not at the prompt):
+get_funcname
+is_sourced
+is_sourced_by
+assign
+hasvar
+get-prompt
+
+# Free-value checkers (any string is valid input — nothing useful to suggest):
+is_int
+is_num
+vercmp
+str_contains
+str_starts_with
+count_occurrences
+is_valid_date
+check_argc

@@ -1,0 +1,5 @@
+#compdef gpu-list
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	{-t,--tool}'[tool to use]:tool:(lshw lspci)'

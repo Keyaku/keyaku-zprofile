@@ -35,7 +35,7 @@ for plugin ($plugins); do
 done
 
 # Update fpath
-fpath=(${fpaths_found} $fpath)
+fpath=($ZDOTDIR/completions ${fpaths_found} $fpath)
 
 if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	print "fpath prep: $(( (EPOCHREALTIME-_tfpath0) ))s"

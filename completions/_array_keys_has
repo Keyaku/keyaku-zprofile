@@ -1,0 +1,19 @@
+#compdef array_keys_has
+
+_array_keys_has_names() {
+	local -a names
+	names=(${(k)parameters[(R)association*]})
+	_describe -t associations 'associative array' names
+}
+
+_array_keys_has_keys() {
+	local arrname="${words[2]}"
+	[[ -z "$arrname" ]] && return
+	local -a keys
+	keys=("${(@k)${(P)arrname}}")
+	(( ${#keys} )) && _describe -t keys 'key' keys
+}
+
+_arguments -s -S \
+	'1:associative array:_array_keys_has_names' \
+	'*:key:_array_keys_has_keys'

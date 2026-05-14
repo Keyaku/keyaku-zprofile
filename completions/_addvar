@@ -1,0 +1,11 @@
+#compdef addvar
+
+_addvar_envvars() {
+	local -a names
+	names=(${(k)parameters[(R)*export*]})
+	_describe -t envvars 'environment variable' names
+}
+
+_arguments -s -S \
+	'1:env var name:_addvar_envvars' \
+	'*:value:'

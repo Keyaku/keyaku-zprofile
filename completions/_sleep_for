@@ -1,0 +1,8 @@
+#compdef sleep_for
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	{-t,--time}'[time to sleep in seconds]:seconds' \
+	{-m,--msg,--message}'[message to display]:message' \
+	'(-c --clear)'{-c,--clear}'[clear countdown line on completion]' \
+	'*::time:'

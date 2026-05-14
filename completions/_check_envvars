@@ -1,0 +1,10 @@
+#compdef check_envvars
+
+_check_envvars_names() {
+	local -a names
+	names=(${(k)parameters[(R)*export*]})
+	_describe -t envvars 'environment variable' names
+}
+
+_arguments -s -S \
+	'*:env var name:_check_envvars_names'

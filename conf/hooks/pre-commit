@@ -1,0 +1,42 @@
+#!/bin/sh
+# Pre-commit hook: verify completions/_<name> tracks lib/ functions when
+# either side is touched in the staged diff. Otherwise stays out of the way.
+#
+# POSIX sh so it runs even in environments without zsh (e.g. when VSCode's
+# git extension is itself sandboxed in Flatpak). The checker script is zsh,
+# so we re-exec it on the host via flatpak-spawn when inside a sandbox.
+#
+# Install once with:
+#   git config core.hooksPath conf/hooks
+
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+checker="$repo_root/conf/check-completions.zsh"
+
+# Only run when the staged diff touches files we care about.
+if ! git diff --cached --name-only --diff-filter=ACMR | \
+		grep -qE '^(lib/.*\.zsh|completions/_.+|completions/\.skip)$'; then
+	exit 0
+fi
+
+# Run the zsh checker — directly on the host, or via flatpak-spawn from a
+# Flatpak sandbox (the presence of /.flatpak-info is the canonical signal).
+if [ -f /.flatpak-info ] && command -v flatpak-spawn >/dev/null 2>&1; then
+	flatpak-spawn --host "$checker" -q
+else
+	"$checker" -q
+fi
+
+status=$?
+if [ "$status" -ne 0 ]; then
+	{
+		echo ""
+		echo "pre-commit: completions drift detected."
+		echo "Fix by adding a completion under completions/, or by listing the"
+		echo "function in completions/.skip if it intentionally has none."
+		echo "Bypass with: git commit --no-verify"
+	} >&2
+	exit 1
+fi
+exit 0

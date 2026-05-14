@@ -1,0 +1,8 @@
+#compdef rmpath
+
+_rmpath_entries() {
+	(( ${#path} )) && _describe -t paths 'path entry' path
+}
+
+_arguments -s -S \
+	'*:path entry:_rmpath_entries'

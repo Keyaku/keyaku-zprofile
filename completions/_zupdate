@@ -1,0 +1,11 @@
+#compdef zupdate
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'*-v[increase verbosity]' \
+	'*-q[decrease verbosity]' \
+	'(-a --all)'{-a,--all}'[update all steps (overrides -r/-s/-c)]' \
+	'(-r --repo)'{-r,--repo}'[update repo]' \
+	'(-s --submodules)'{-s,--submodules}'[update submodules]' \
+	'(-c --compile -C --clean)'{-c,--compile}'[compile .zsh under lib/ and plugins/]' \
+	'(-c --compile -C --clean)'{-C,--clean}'[clean .zwc files]'

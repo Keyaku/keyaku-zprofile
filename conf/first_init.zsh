@@ -227,10 +227,33 @@ function setup_de {
 	return 0
 }
 
+### Repo-local setup
+
+# Points this repo's git hooksPath at conf/hooks so the pre-commit completion
+# drift check runs on commits that touch lib/ or completions/.
+function setup_git_hooks {
+	(( ${+commands[git]} )) || return 1
+	[[ -d "$ZDOTDIR/.git" ]] || return 0
+
+	local current
+	current=$(git -C "$ZDOTDIR" config --local --default '' core.hooksPath)
+	[[ "$current" == "conf/hooks" ]] && return 0
+
+	if [[ -n "$current" ]]; then
+		print_fn -w "core.hooksPath is already set to '$current' — leaving as-is"
+		return 0
+	fi
+
+	ask -Bd y -p "Enable repo pre-commit hook for completions drift check (sets core.hooksPath=conf/hooks)?" || return 0
+
+	git -C "$ZDOTDIR" config --local core.hooksPath conf/hooks
+	print_fn -s "Pre-commit hook enabled."
+}
+
 ### Function filters
 
 # Base functions for all platforms
-typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh)
+typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh setup_git_hooks)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions

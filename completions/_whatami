@@ -1,0 +1,18 @@
+#compdef whatami
+
+_whatami_tags() {
+	local -a tags=(
+		Linux macOS Android WSL BSD Windows Solaris
+		arch debian ubuntu fedora centos rhel opensuse alpine
+		raspbian termux pi
+	)
+	# Merge in anything already detected on this machine
+	(( ${#WHATAMI_LIST} )) && tags+=($WHATAMI_LIST)
+	tags=(${(u)tags})
+	_describe -t tags 'distro tag' tags
+}
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-f --force)'{-f,--force}'[invalidate cache and re-detect]' \
+	'*:distro tag:_whatami_tags'

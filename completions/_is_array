@@ -1,0 +1,10 @@
+#compdef is_array
+
+_is_array_names() {
+	local -a names
+	names=(${(k)parameters[(R)array*]})
+	_describe -t arrays 'array' names
+}
+
+_arguments -s -S \
+	'*:variable name:_is_array_names'

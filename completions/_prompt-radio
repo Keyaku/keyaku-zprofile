@@ -1,0 +1,5 @@
+#compdef prompt-radio
+
+_arguments -s -S \
+	'1:title:' \
+	'*:option:'

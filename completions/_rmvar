@@ -1,0 +1,19 @@
+#compdef rmvar
+
+_rmvar_envvars() {
+	local -a names
+	names=(${(k)parameters[(R)*export*]})
+	_describe -t envvars 'environment variable' names
+}
+
+_rmvar_values() {
+	local varname="${words[2]}"
+	[[ -z "$varname" ]] && return
+	local -a vals
+	vals=("${(@s.:.)${(P)varname}}")
+	(( ${#vals} )) && _describe -t values 'value' vals
+}
+
+_arguments -s -S \
+	'1:env var name:_rmvar_envvars' \
+	'*:value to remove:_rmvar_values'

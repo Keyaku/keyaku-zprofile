@@ -1,0 +1,12 @@
+#compdef str_join
+
+_str_join_arrays() {
+	local -a arrays
+	arrays=(${(k)parameters[(R)array*]})
+	_describe -t arrays 'array' arrays
+}
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	{-d,--delim,--delimiter}'[set delimiter (default: space)]:delimiter' \
+	'1:array name:_str_join_arrays'

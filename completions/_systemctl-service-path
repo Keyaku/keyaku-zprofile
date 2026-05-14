@@ -1,0 +1,12 @@
+#compdef systemctl-service-path
+
+_systemctl-service-path_units() {
+	local -a units
+	if (( $+commands[systemctl] )); then
+		units=("${(@f)$(systemctl list-unit-files --no-legend --no-pager 2>/dev/null | awk '{print $1}')}")
+		(( ${#units} )) && _describe -t units 'unit' units
+	fi
+}
+
+_arguments -s -S \
+	'*:systemd unit:_systemctl-service-path_units'

@@ -1,0 +1,3 @@
+#compdef has_user_systemd
+
+_message 'no arguments'

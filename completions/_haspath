@@ -1,0 +1,8 @@
+#compdef haspath
+
+_haspath_entries() {
+	(( ${#path} )) && _describe -t paths 'path entry' path
+}
+
+_arguments -s -S \
+	'*:path entry:_haspath_entries'

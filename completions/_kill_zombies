@@ -1,0 +1,3 @@
+#compdef kill_zombies
+
+_message 'no arguments'

@@ -1,0 +1,10 @@
+#compdef is_associative_array
+
+_is_associative_array_names() {
+	local -a names
+	names=(${(k)parameters[(R)association*]})
+	_describe -t associations 'associative array' names
+}
+
+_arguments -s -S \
+	'*:variable name:_is_associative_array_names'

@@ -1,0 +1,8 @@
+#compdef xdg-migrate
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-d --dry-run)'{-d,--dry-run}'[print without executing]' \
+	'(-s --symlink)'{-s,--symlink}'[symlink SRC to DST after migrating]' \
+	'1:source path:_files' \
+	'2:destination path:_files'

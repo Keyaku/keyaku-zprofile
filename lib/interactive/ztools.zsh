@@ -386,4 +386,11 @@ function zupdate {
 		git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
 		(( $verbosity )) && printf ' %s\n' "Done."
 	fi
+
+	# Warn on completion drift between lib/ functions and completions/_<name>.
+	# Silent on success; non-zero exit is informational, not fatal.
+	if [[ -x "${ZDOTDIR}/conf/check-completions.zsh" ]]; then
+		"${ZDOTDIR}/conf/check-completions.zsh" -q || \
+			print_fn -w "completion drift detected — see above; run conf/check-completions.zsh for details"
+	fi
 }

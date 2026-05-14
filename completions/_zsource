@@ -1,0 +1,34 @@
+#compdef zsource
+
+_zsource_functions() {
+	local dir="${ZSH_CUSTOM:-$ZDOTDIR/custom}/functions"
+	[[ -d "$dir" ]] || return
+	local -a names
+	names=("$dir"/*(N:t))
+	(( ${#names} )) && _describe -t functions 'function' names
+}
+
+_zsource_extensions() {
+	local dir="$ZDOTDIR/extensions"
+	[[ -d "$dir" ]] || return
+	local -a names
+	names=("$dir"/*(N/:t))
+	(( ${#names} )) && _describe -t extensions 'extension' names
+}
+
+_zsource_plugins() {
+	(( ${#plugins} )) && _describe -t plugins 'plugin' plugins
+}
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'*-v[increase verbosity]' \
+	'*-q[decrease verbosity]' \
+	'(-a --all)'{-a,--all}'[reload everything (except plugins)]' \
+	'(-L --libraries)'{-L,--libraries}'[reload all files under $ZDOTDIR/lib/]' \
+	'(-l --login)'{-l,--login}'[reload zstages/profile/ and zstages/login/]' \
+	'(-i --interactive)'{-i,--interactive}'[reload zstages/rc/]' \
+	'(-f --functions)'{-f,--functions}'[reload functions]:*:function:_zsource_functions' \
+	'(-e --extensions)'{-e,--extensions}'[reload extensions]:*:extension:_zsource_extensions' \
+	'(-p --plugin)'{-p,--plugin}'[reload plugin(s)]:*:plugin:_zsource_plugins' \
+	'*::names:'

@@ -1,0 +1,4 @@
+#compdef du_hast
+
+_arguments -s -S \
+	'*:directory:_directories'

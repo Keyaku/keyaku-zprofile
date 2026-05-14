@@ -1,0 +1,4 @@
+#compdef is_hostname
+
+_arguments -s -S \
+	'1:hostname:_hosts'

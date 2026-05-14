@@ -1,0 +1,9 @@
+#compdef command-has
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'*-v[increase verbosity]' \
+	'*-q[decrease verbosity]' \
+	'(-o --or -a --and)'{-o,--or}'[OR (default)]' \
+	'(-o --or -a --and)'{-a,--and}'[AND]' \
+	'*:command:_command_names -e'

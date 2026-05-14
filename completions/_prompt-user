@@ -1,0 +1,4 @@
+#compdef prompt-user
+
+_arguments -s -S \
+	'1:message:'

@@ -1,0 +1,7 @@
+#compdef is_ip_address
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-4 --ipv4 -6 --ipv6)'{-4,--ipv4}'[test as IPv4 (default)]' \
+	'(-4 --ipv4 -6 --ipv6)'{-6,--ipv6}'[test as IPv6]' \
+	'1:IP address:'

@@ -1,0 +1,7 @@
+#compdef meminfo
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-a --all -f --free -t --total)'{-a,--all}'[usable / total memory (default)]' \
+	'(-a --all -f --free -t --total)'{-f,--free}'[usable memory only]' \
+	'(-a --all -f --free -t --total)'{-t,--total}'[total memory only]'

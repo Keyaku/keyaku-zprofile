@@ -1,0 +1,3 @@
+#compdef disk_speedtest
+
+_message 'no arguments'

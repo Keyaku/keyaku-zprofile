@@ -1,0 +1,19 @@
+#compdef array_has
+
+_array_has_names() {
+	local -a names
+	names=(${(k)parameters[(R)array*]})
+	_describe -t arrays 'array' names
+}
+
+_array_has_values() {
+	local arrname="${words[2]}"
+	[[ -z "$arrname" ]] && return
+	local -a vals
+	vals=("${(@P)arrname}")
+	(( ${#vals} )) && _describe -t values 'value' vals
+}
+
+_arguments -s -S \
+	'1:array name:_array_has_names' \
+	'*:value:_array_has_values'

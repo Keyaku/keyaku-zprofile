@@ -1,0 +1,6 @@
+#compdef command-path
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-l --line)'{-l,--line}'[print results line by line]' \
+	'*:command:_command_names -e'

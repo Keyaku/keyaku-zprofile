@@ -1,0 +1,4 @@
+#compdef prompt-yesno
+
+_arguments -s -S \
+	'1:message:'

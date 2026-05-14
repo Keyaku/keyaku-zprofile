@@ -1,0 +1,9 @@
+#compdef ask
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-B --yn --yesno)'{-B,--yn,--yesno}'[binary yes/no prompt]' \
+	'(-k --non-empty)'{-k,--non-empty}'[prohibit empty answers]' \
+	{-p,--prompt}'[prompt message]:message' \
+	\*{-o,--opts}'[add possible answer]:option' \
+	{-d,--default}'[default answer if empty]:default'

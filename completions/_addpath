@@ -1,0 +1,4 @@
+#compdef addpath
+
+_arguments -s -S \
+	'*:directory:_directories'
