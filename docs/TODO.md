@@ -20,6 +20,7 @@ Essentially:
 	* [ ] Add zsh-style configuration that controls which submodules are enabled or not via `zstyle ':zprofile:submodules:flatpak' enabled no`.
 	* [ ] If a submodule is disabled, ensure there is no attempt to load it, whether that is the sourcing of `ohmyzsh` or the selection of `powerlevel10k`.
 	* [ ] In the case of `ohmyzsh` being disabled, ensure the environment works without it (by adding the necessary phases, e.g. `compdef` and plugin logic) and that no extension depends on it.
+* [ ] Make checks for git submodules on initialization, enabling them only if necessary (e.g. distro comes with zsh-syntax-highlighter installed => disable submodule).
 
 ### Main profiles (`.zshenv`, `.zprofile`, `.zshrc`, `.zlogin`)
 
