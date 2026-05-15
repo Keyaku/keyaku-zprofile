@@ -102,11 +102,12 @@ function setup_ssh {
 
 # Sets up systemd system-wide to follow XDG Base Directory Specification
 function setup_systemd {
-	# Synchronize systemd configuration files
+	# Synchronize /etc/systemd. -p preserves the source file modes so the
+	# system-sleep helper stays 0755 while drop-in .conf files stay 0644.
 	if ! file_contents_in "$ZDOTDIR/conf/etc/systemd" /etc/systemd; then
 		NEEDS_RESTART=1
 		echo "Synchronizing systemd conf..."
-		$SUDO rsync -Przcq --no-t "$ZDOTDIR/conf/etc/systemd/" "/etc/systemd"
+		$SUDO rsync -Przcpq --no-t "$ZDOTDIR/conf/etc/systemd/" "/etc/systemd"
 	fi
 }
 
