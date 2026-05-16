@@ -21,4 +21,9 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 		fi
 		[[ "${RISH_APPLICATION_ID}" == "com.termux" ]] || export RISH_APPLICATION_ID="com.termux"
 	fi
+	# Start sshd on first interactive shell (port 8022). Idempotent via pgrep.
+	if command-has sshd pgrep && ! pgrep -x sshd &>/dev/null; then
+		command-has termux-wake-lock && termux-wake-lock
+		sshd
+	fi
 fi
