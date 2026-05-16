@@ -239,9 +239,9 @@ function print_fn {
 	>&2 printf "${header:+%s }${fg_no_bold[$p_color]}%s${reset_color}" "$header" "$message"
 
 	if [[ "$f_callstack" ]]; then
-		[[ "$message" ]] && printf "\n"
+		[[ "$message" ]] && >&2 printf "\n"
 		_print_callstack $p_color
 	fi
-	printf "\n"
+	>&2 printf "\n"
 	(( $idx ))
 }
