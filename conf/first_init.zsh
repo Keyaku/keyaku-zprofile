@@ -80,7 +80,7 @@ function setup_zsh {
 	if [[ ! -f "$zshenv" ]]; then
 		NEEDS_RESTART=1
 		$SUDO cp "$ZDOTDIR/conf/etc/zsh/zshenv" "$zshenv"
-	elif ! file_contents_in "$ZDOTDIR/conf/etc/zsh/zshenv" "$zshenv"; then
+	elif ! file_contents_in -q "$ZDOTDIR/conf/etc/zsh/zshenv" "$zshenv"; then
 		NEEDS_RESTART=1
 		echo "Adding ZSH variables to system zshenv..."
 		diff -u "$zshenv" "$ZDOTDIR/conf/etc/zsh/zshenv" > "$ZSH_CACHE_HOME"/zshenv.patch
@@ -94,7 +94,7 @@ function setup_ssh {
 	local ssh_system="$ROOT"/etc/ssh
 
 	# Synchronize SSH configuration files
-	if ! file_contents_in "$ZDOTDIR/conf/etc/ssh" "$ssh_system"; then
+	if ! file_contents_in -q "$ZDOTDIR/conf/etc/ssh" "$ssh_system"; then
 		echo "Synchronizing SSH conf..."
 		$SUDO rsync -rzcq --no-t "$ZDOTDIR/conf/etc/ssh/" "$ssh_system"
 	fi
@@ -104,7 +104,7 @@ function setup_ssh {
 function setup_systemd {
 	# Synchronize /etc/systemd. -p preserves the source file modes so the
 	# system-sleep helper stays 0755 while drop-in .conf files stay 0644.
-	if ! file_contents_in "$ZDOTDIR/conf/etc/systemd" /etc/systemd; then
+	if ! file_contents_in -q "$ZDOTDIR/conf/etc/systemd" /etc/systemd; then
 		NEEDS_RESTART=1
 		echo "Synchronizing systemd conf..."
 		$SUDO rsync -rzcpq --no-t "$ZDOTDIR/conf/etc/systemd/" "/etc/systemd"
@@ -124,7 +124,8 @@ function setup_termux {
 
 	# Add .termux configuration and scripts
 	rsync -rzcq --no-t "$ZDOTDIR/conf/home/termux/" "$HOME/.termux"
-	chmod ug+x "$HOME"/.termux/boot/**/*.sh(-.N)
+	local -a boot_scripts=("$HOME"/.termux/boot/**/*.sh(-.N))
+	(( ${#boot_scripts} )) && chmod ug+x ${boot_scripts}
 
 	# TODO: Install rish and add it to path
 }
