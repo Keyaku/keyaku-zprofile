@@ -6,8 +6,9 @@ _zshcache_time="$(date +%s%N)"
 
 if (( ! ${+precmd_functions[_rehash_precmd]} )); then
 	_rehash_precmd() {
-		if [[ -a /var/cache/zsh/pacman ]]; then
-			local paccache_time="$(date -r /var/cache/zsh/pacman +%s%N)"
+		local cache_hook="${TERMUX__PREFIX:-}/var/cache/zsh/pacman"
+		if [[ -a "$cache_hook" ]]; then
+			local paccache_time="$(date -r "$cache_hook" +%s%N)"
 			if (( _zshcache_time < paccache_time )); then
 				rehash
 				_zshcache_time="$paccache_time"

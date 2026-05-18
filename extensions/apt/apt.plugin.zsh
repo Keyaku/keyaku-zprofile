@@ -1,7 +1,11 @@
-# Select exclusively Debian or Ubuntu
+# Select exclusively Debian or Ubuntu (or Termux)
 whatami Debian Ubuntu Android || return
 
 (( ${+commands[apt]} || ${+commands[apt-get]} )) || return
+
+# On Termux pacman builds, apt may linger but is not the active manager —
+# the pacman db directory is the authoritative signal.
+[[ -d "${TERMUX__PREFIX:-}/var/lib/pacman/local" ]] && return
 
 local SUDO=$(whatami Android || echo "sudo ")
 
