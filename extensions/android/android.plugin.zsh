@@ -52,10 +52,10 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			# Default path: validate that ~/storage/downloads is the
 			# symlink created by `termux-setup-storage`, not a stray dir.
 			if [[ ! -e "${HOME}/storage" ]]; then
-				print_fn -e "${HOME}/storage missing — run 'termux-setup-storage' first"
+				print_fn -e "${HOME}/storage missing. Run 'termux-setup-storage' first"
 				return 1
 			elif [[ ! -L "${HOME}/storage/downloads" ]]; then
-				print_fn -e "${HOME}/storage/downloads is not a symlink — storage permission likely not granted"
+				print_fn -e "${HOME}/storage/downloads is not a symlink. Storage permission likely not granted"
 				return 1
 			elif [[ ! -d "${HOME}/storage/downloads" ]]; then
 				print_fn -e "${HOME}/storage/downloads symlink target is unreachable"
@@ -83,7 +83,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 		print_fn -s "Backup written to ${output}"
 
 		# Write a standalone POSIX-sh restore script next to the tarball so
-		# the backup is self-contained — no dependency on this zsh setup.
+		# the backup is self-contained, no dependency on this zsh setup.
 		local -r script="${output%.tar.gz}-restore.sh"
 		local -r backup_basename="${output:t}"
 		if ! cat >"${script}" <<-EOF
@@ -123,7 +123,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			""
 			"Switching downloads the target bootstrap zip into ~/storage/downloads,"
 			"verifies it where possible, and prints manual extraction instructions."
-			"This function NEVER modifies \$PREFIX — replacing a live \$PREFIX from"
+			"This function NEVER modifies \$PREFIX. Replacing a live \$PREFIX from"
 			"within a shell that lives in it is unsafe."
 		)
 		local -a o_current o_list o_help
@@ -140,7 +140,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			[pacman]="termux-pacman/termux-packages"
 		)
 
-		# Detect what is actually installed (db presence beats binary presence —
+		# Detect what is actually installed (db presence beats binary presence;
 		# a stray pacman binary on an apt system shouldn't flip detection).
 		local current=""
 		if [[ -d "${PREFIX}/var/lib/pacman/local" ]]; then
@@ -166,7 +166,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			return 1
 		fi
 
-		# Pick target: arg, else interactive (plain select — no GUI on SSH).
+		# Pick target: arg, else interactive (plain select; no GUI on SSH).
 		local target="${1:-}"
 		if [[ -z "$target" ]]; then
 			print_fn -i "Current package manager: ${current:-unknown}"
@@ -191,7 +191,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 		fi
 
 		if [[ "$target" == "$current" ]]; then
-			print_fn -i "Already using $target — nothing to do."
+			print_fn -i "Already using $target. Nothing to do."
 			return 0
 		fi
 
@@ -268,12 +268,12 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 				return 1
 			fi
 		else
-			print_fn -w "No sha256 published alongside asset — integrity not verified"
+			print_fn -w "No sha256 published alongside asset; integrity not verified"
 			rm -f "$sha_file"
 		fi
 
 		# Export current package list to $HOME (which survives the bootstrap
-		# swap — $HOME is /data/data/com.termux/files/home, separate from usr/).
+		# swap. $HOME is /data/data/com.termux/files/home, separate from usr/).
 		local -r pkglist="${HOME}/termux-pkglist-${current:-unknown}-$(date +%Y%m%d-%H%M%S).txt"
 		if [[ -n "$current" ]]; then
 			print_fn -i "Exporting installed package list to ${pkglist}..."
@@ -322,7 +322,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			         pacman-key --init
 			         pacman-key --populate
 
-			  5. The fresh bootstrap ships only a minimal base — zsh and this
+			  5. The fresh bootstrap ships only a minimal base; zsh and this
 			     environment are gone (\$PREFIX/etc was wiped). From the default
 			     bash/sh, install zsh first, then re-bootstrap:
 			         # apt variant:    pkg install zsh
