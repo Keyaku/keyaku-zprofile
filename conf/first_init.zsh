@@ -128,6 +128,7 @@ function setup_termux {
 	(( ${#boot_scripts} )) && chmod ug+x ${boot_scripts}
 
 	# TODO: Install rish and add it to path
+	return 0
 }
 
 # Sets up XDG configuration and dotdirs locations
