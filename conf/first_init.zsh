@@ -74,7 +74,7 @@ function setup_zsh {
 	# Set zshenv file path
 	local zshenv=$(echo "$ROOT"/etc/**/zshenv(N.))
 	[[ -z "$zshenv" ]] && zshenv="$ROOT"/etc/zsh/zshenv
-	[[ ! -d "${zshenv:h}" ]] && shenv="$ROOT"/etc/zshenv
+	[[ ! -d "${zshenv:h}" ]] && zshenv="$ROOT"/etc/zshenv
 
 	# Add missing variables to zshenv
 	if [[ ! -f "$zshenv" ]]; then
@@ -96,7 +96,7 @@ function setup_ssh {
 	# Synchronize SSH configuration files
 	if ! file_contents_in "$ZDOTDIR/conf/etc/ssh" "$ssh_system"; then
 		echo "Synchronizing SSH conf..."
-		$SUDO rsync -Przcq --no-t "$ZDOTDIR/conf/etc/ssh/" "$ssh_system"
+		$SUDO rsync -rzcq --no-t "$ZDOTDIR/conf/etc/ssh/" "$ssh_system"
 	fi
 }
 
@@ -107,7 +107,7 @@ function setup_systemd {
 	if ! file_contents_in "$ZDOTDIR/conf/etc/systemd" /etc/systemd; then
 		NEEDS_RESTART=1
 		echo "Synchronizing systemd conf..."
-		$SUDO rsync -Przcpq --no-t "$ZDOTDIR/conf/etc/systemd/" "/etc/systemd"
+		$SUDO rsync -rzcpq --no-t "$ZDOTDIR/conf/etc/systemd/" "/etc/systemd"
 	fi
 }
 
@@ -123,8 +123,8 @@ function setup_termux {
 	[[ -d ~/storage ]] || termux-setup-storage
 
 	# Add .termux configuration and scripts
-	rsync -Przcq --no-t "$ZDOTDIR/conf/home/termux/" "$HOME/.termux"
-	chmod ug+x "$HOME"/.termux/boot/**/*.sh(-.)
+	rsync -rzcq --no-t "$ZDOTDIR/conf/home/termux/" "$HOME/.termux"
+	chmod ug+x "$HOME"/.termux/boot/**/*.sh(-.N)
 
 	# TODO: Install rish and add it to path
 }
@@ -274,7 +274,7 @@ function main {
 		fn_to_run+=($LINUX_FUNCTIONS)
 		command-has flatpak && fn_to_run+=(setup_flatpak)
 		has_systemd && fn_to_run+=(setup_systemd)
-		whatami Arch && n_to_run+=($ARCH_FUNCTIONS)
+		whatami Arch && fn_to_run+=($ARCH_FUNCTIONS)
 	fi
 
 	local -i fn_completed=0 fn_total=${#fn_to_run}
