@@ -238,7 +238,12 @@ function current_network_json {
 
 	local iface gateway addr cidr ssid network_id network_name route_line gateway_mac subnet
 
-	if command-has ip; then
+	# `getprop` is Android-only; when present, `route -n` and `/proc/net/route`
+	# are both broken (SELinux-restricted), so skip those probes — ifconfig is
+	# the only working source.
+	local -i is_android=$+commands[getprop]
+
+	if (( ! is_android && $+commands[ip] )); then
 		route_line="$(ip route show default 2>/dev/null | head -n 1)"
 		if [[ -n "$route_line" ]]; then
 			local -a words=(${=route_line})
@@ -253,7 +258,7 @@ function current_network_json {
 		[[ -n "$iface" ]] && subnet="$(ip -o -4 route show dev "$iface" 2>/dev/null | awk '$1 ~ /\// && $1 != "default" {print $1; exit}')"
 	fi
 
-	if [[ -z "$iface" ]] && command-has route; then
+	if (( ! is_android )) && [[ -z "$iface" ]] && (( $+commands[route] )); then
 		route_line="$(route -n 2>/dev/null | awk '$1 == "0.0.0.0" {print; exit}')"
 		if [[ -n "$route_line" ]]; then
 			local -a words=(${=route_line})
@@ -262,11 +267,11 @@ function current_network_json {
 		fi
 	fi
 
-	# Fallback (Android/Termux): /proc/net/route is often SELinux-restricted and
-	# `route -n` may produce an unparseable layout. Parse ifconfig directly:
+	# Fallback (Android/Termux primary path): /proc/net/route is SELinux-restricted
+	# and `route -n` produces an unparseable layout. Parse ifconfig directly:
 	# emit one TAB-joined `name<TAB>addr<TAB>netmask` per IPv4 LAN iface, skipping
 	# loopback and point-to-point links (cellular rmnet* is /32).
-	if [[ -z "$iface" ]] && command-has ifconfig; then
+	if [[ -z "$iface" ]] && (( $+commands[ifconfig] )); then
 		local if_name if_addr if_mask
 		while IFS=$'\t' read -r if_name if_addr if_mask; do
 			[[ -n "$if_name" && -n "$if_addr" && -n "$if_mask" ]] || continue
@@ -307,7 +312,7 @@ function current_network_json {
 			}')
 	fi
 
-	if [[ -z "$gateway" && -n "$iface" ]] && command-has getprop; then
+	if [[ -z "$gateway" && -n "$iface" ]] && (( is_android )); then
 		gateway="$(getprop "dhcp.${iface}.gateway" 2>/dev/null)"
 		[[ -z "$gateway" ]] && gateway="$(getprop "net.${iface}.gw" 2>/dev/null)"
 	fi
