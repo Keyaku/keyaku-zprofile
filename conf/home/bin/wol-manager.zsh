@@ -20,7 +20,7 @@ source "${ZDOTDIR}/lib/script/config.zsh"
 source "${ZDOTDIR}/lib/script/json-store.zsh"
 
 # Hard requirements (gpg is needed even for plaintext stores: sync, cloud bootstrap)
-command-has -av jq gpg || exit 1
+command-has -av jaq gpg || exit 1
 # Soft requirements (dig/host); fallbacks exist via getent/ping.
 command-has -o dig host getent ping || \
 	print_fn -w "No hostname/IP resolver tools found; resolution by hostname or IP may fail."
@@ -80,7 +80,7 @@ typeset -gi verbosity=0
 # --- Configuration ---
 
 function _config_default_json {
-	jq -n \
+	jaq -n \
 		--arg local "$DEFAULT_LOCAL_PATH" \
 		--arg cloud "$DEFAULT_CLOUD_PATH" \
 		'{
@@ -93,7 +93,7 @@ function _config_default_json {
 }
 
 function _config_coerce {
-	jq \
+	jaq \
 		--arg local "$DEFAULT_LOCAL_PATH" \
 		--arg cloud "$DEFAULT_CLOUD_PATH" \
 		'{
@@ -111,10 +111,10 @@ function _config_value { config_value "$CONFIG_FILE_PATH" "$1" }
 function _init_paths {
 	config_ensure "$CONFIG_FILE_PATH" _config_default_json _config_coerce || return 1
 
-	# Single jq pass: extract local, cloud, store_path as TSV.
+	# Single jaq pass: extract local, cloud, store_path as TSV.
 	local configured
 	IFS=$'\t' read -r LOCAL_PATH CLOUD_PATH configured < <(
-		jq -r '[.paths.local // "", .paths.cloud // "", .store_path // ""] | @tsv' "$CONFIG_FILE_PATH"
+		jaq -r '[.paths.local // "", .paths.cloud // "", .store_path // ""] | @tsv' "$CONFIG_FILE_PATH"
 	)
 
 	if [[ -n "$WOL_MANAGER_MAC_FILE_PATH" ]]; then
@@ -185,13 +185,13 @@ function _json_read {
 		return 1
 	}
 
-	if ! jq -e 'type == "object"' >/dev/null 2>&1 <<< "$raw"; then
+	if ! jaq -e 'type == "object"' >/dev/null 2>&1 <<< "$raw"; then
 		print_fn -e "Device store is not valid JSON."
 		return 1
 	fi
 
 	# Migrate legacy {hostname: mac, ...} → versioned device list.
-	jq '{
+	jaq '{
 		version: 1,
 		devices: (to_entries | map({
 			id: (.key | ascii_downcase | gsub("[^a-z0-9._-]+";"-") | gsub("^-+|-+$";"")),
@@ -323,7 +323,7 @@ function current_network_json {
 		# Termux/Android: nmcli is absent. Try Termux:API (needs Location perm),
 		# then fall back to Shizuku `rish` for `cmd wifi status`.
 		if [[ -z "$ssid" ]] && command-has termux-wifi-connectioninfo; then
-			ssid="$(termux-wifi-connectioninfo 2>/dev/null | jq -r '.ssid // empty' 2>/dev/null)"
+			ssid="$(termux-wifi-connectioninfo 2>/dev/null | jaq -r '.ssid // empty' 2>/dev/null)"
 			# Strip surrounding quotes Android wraps the SSID in.
 			ssid="${ssid#\"}"; ssid="${ssid%\"}"
 			[[ "$ssid" == "<unknown ssid>" || "$ssid" == "null" ]] && unset ssid
@@ -350,7 +350,7 @@ function current_network_json {
 	fi
 
 	if [[ -n "$network_id" ]]; then
-		jq -n \
+		jaq -n \
 			--arg id "$network_id" \
 			--arg name "$network_name" \
 			--arg iface "$iface" \
@@ -360,7 +360,7 @@ function current_network_json {
 			--arg cidr "$cidr" \
 			'{connected:true,id:$id,name:$name,iface:$iface,gateway:$gateway,gateway_mac:$gateway_mac,subnet:$subnet,cidr:$cidr}'
 	else
-		jq -n '{connected:false,id:null,name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}'
+		jaq -n '{connected:false,id:null,name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}'
 	fi
 }
 
@@ -488,8 +488,8 @@ function _discover_device_json {
 	local mac ip hostname network
 
 	network="$(current_network_json --ssid 2>/dev/null)"
-	jq -e 'type == "object" and has("connected")' >/dev/null 2>&1 <<< "$network" \
-		|| network="$(jq -n '{connected:false,id:null,name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}')"
+	jaq -e 'type == "object" and has("connected")' >/dev/null 2>&1 <<< "$network" \
+		|| network="$(jaq -n '{connected:false,id:null,name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}')"
 
 	if mac_verify "$target"; then
 		mac="$(mac_normalize "$target")"
@@ -515,7 +515,7 @@ function _discover_device_json {
 
 	hostname="$(_qualify_hostname "$hostname" "$ip")"
 
-	jq -n \
+	jaq -n \
 		--arg mac "$(mac_normalize "$mac")" \
 		--arg hostname "$hostname" \
 		--arg ip "$ip" \
@@ -561,7 +561,7 @@ JQ
 
 function _find_device_json {
 	local query="$1"
-	_json_read | jq -e --arg query "$query" \
+	_json_read | jaq -e --arg query "$query" \
 		"$(_device_filter_jq) | if length == 1 then .[0] elif length == 0 then empty else error(\"ambiguous\") end" 2>/dev/null
 }
 
@@ -571,7 +571,7 @@ function _print_devices {
 
 	{
 		print $'HOSTNAME\tMAC\tLAST_IP\tNETWORK\tID'
-		jq -r "$filter | if length == 0 then empty else .[] | [
+		jaq -r "$filter | if length == 0 then empty else .[] | [
 			(.hostname // \"-\"),
 			(.mac // \"-\"),
 			(.last_ip // \"-\"),
@@ -592,7 +592,7 @@ function mac_add {
 	data="$(_json_read)" || return 1
 	when="$(now)"
 
-	jq \
+	jaq \
 		--argjson incoming "$discovered" \
 		--arg now "$when" \
 		'
@@ -626,17 +626,17 @@ function mac_add {
 		' <<< "$data" | _json_write || return 1
 
 	local name mac ip network
-	name="$(jq -r '.hostname // "-"' <<< "$discovered")"
-	mac="$(jq -r '.mac' <<< "$discovered")"
-	ip="$(jq -r '.last_ip // "-"' <<< "$discovered")"
-	network="$(jq -r '.network_name // "-"' <<< "$discovered")"
+	name="$(jaq -r '.hostname // "-"' <<< "$discovered")"
+	mac="$(jaq -r '.mac' <<< "$discovered")"
+	ip="$(jaq -r '.last_ip // "-"' <<< "$discovered")"
+	network="$(jaq -r '.network_name // "-"' <<< "$discovered")"
 	print_fn -s "Registered: %s %s %s [%s]" "$name" "$mac" "$ip" "$network"
 }
 
 function mac_config {
 	case "$1" in
 		""|show)
-			jq \
+			jaq \
 				--arg config_file "$CONFIG_FILE_PATH" \
 				--arg selected "$MAC_FILE_PATH" \
 				'. + { config_file: $config_file, selected_store_path: $selected }' \
@@ -695,7 +695,7 @@ function mac_get {
 
 	# Render a single field's value as a string (arrays → newline-joined; null/empty → "-").
 	function _render_field {
-		jq -r --arg field "$1" '
+		jaq -r --arg field "$1" '
 			.[$field] as $v
 			| if $v == null then "-"
 			  elif ($v | type) == "array" then
@@ -707,7 +707,7 @@ function mac_get {
 
 	if [[ -n "$f_all" ]]; then
 		local key
-		for key in $(jq -r 'keys_unsorted[]' <<< "$device"); do
+		for key in $(jaq -r 'keys_unsorted[]' <<< "$device"); do
 			local value="$(_render_field "$key")"
 			if [[ "$value" == *$'\n'* ]]; then
 				printf '%-13s\n' "$key"
@@ -745,19 +745,19 @@ function mac_remove {
 
 	local data matches count device mac hostname
 	data="$(_json_read)" || return 1
-	matches="$(jq --arg query "$query" "$(_device_filter_jq)" <<< "$data")" || return 1
-	count="$(jq 'length' <<< "$matches")"
+	matches="$(jaq --arg query "$query" "$(_device_filter_jq)" <<< "$data")" || return 1
+	count="$(jaq 'length' <<< "$matches")"
 
 	(( count == 1 )) || {
 		print_fn -e "Device '$query' not found, or query is ambiguous."
 		return 1
 	}
 
-	device="$(jq '.[0]' <<< "$matches")"
-	mac="$(jq -r '.mac' <<< "$device")"
-	hostname="$(jq -r '.hostname // .id // "-"' <<< "$device")"
+	device="$(jaq '.[0]' <<< "$matches")"
+	mac="$(jaq -r '.mac' <<< "$device")"
+	hostname="$(jaq -r '.hostname // .id // "-"' <<< "$device")"
 
-	jq --arg mac "$mac" '.devices |= map(select(.mac != $mac))' <<< "$data" | _json_write || return 1
+	jaq --arg mac "$mac" '.devices |= map(select(.mac != $mac))' <<< "$data" | _json_write || return 1
 	print_fn -s "Removed: %s (%s)" "$hostname" "$mac"
 }
 
@@ -768,14 +768,14 @@ function mac_list {
 	local data network connected network_id
 	data="$(_json_read)" || return 1
 	network="$(current_network_json)"
-	connected="$(jq -r '.connected' <<< "$network")"
-	network_id="$(jq -r '.id // empty' <<< "$network")"
+	connected="$(jaq -r '.connected' <<< "$network")"
+	network_id="$(jaq -r '.id // empty' <<< "$network")"
 
 	if [[ -n "$f_all" || "$connected" != "true" ]]; then
 		[[ "$connected" != "true" && -z "$f_all" ]] && _warn_no_network
 		_print_devices "$data"
 	else
-		_print_devices "$(jq --arg network "$network_id" \
+		_print_devices "$(jaq --arg network "$network_id" \
 			'.devices |= map(select((.network_ids // []) | index($network) != null))' <<< "$data")"
 	fi
 }
@@ -797,14 +797,14 @@ function mac_status {
 	local data network connected network_id rows tmpdir row idx
 	data="$(_json_read)" || return 1
 	network="$(current_network_json)"
-	connected="$(jq -r '.connected' <<< "$network")"
-	network_id="$(jq -r '.id // empty' <<< "$network")"
+	connected="$(jaq -r '.connected' <<< "$network")"
+	network_id="$(jaq -r '.id // empty' <<< "$network")"
 
 	if [[ -n "$f_all" || "$connected" != "true" ]]; then
 		[[ "$connected" != "true" && -z "$f_all" ]] && _warn_no_network
-		rows=("${(@f)$(jq -r '.devices[] | [.hostname // "-", .mac, .last_ip // "-", .network_name // "-", .id] | @tsv' <<< "$data")}")
+		rows=("${(@f)$(jaq -r '.devices[] | [.hostname // "-", .mac, .last_ip // "-", .network_name // "-", .id] | @tsv' <<< "$data")}")
 	else
-		rows=("${(@f)$(jq -r --arg network "$network_id" \
+		rows=("${(@f)$(jaq -r --arg network "$network_id" \
 			'.devices[] | select((.network_ids // []) | index($network) != null) | [.hostname // "-", .mac, .last_ip // "-", .network_name // "-", .id] | @tsv' <<< "$data")}")
 	fi
 
@@ -859,36 +859,36 @@ function mac_edit {
 
 	local data matches count device key when network_id new_id
 	data="$(_json_read)" || return 1
-	matches="$(jq --arg query "$query" "$(_device_filter_jq)" <<< "$data")"
-	count="$(jq 'length' <<< "$matches")"
+	matches="$(jaq --arg query "$query" "$(_device_filter_jq)" <<< "$data")"
+	count="$(jaq 'length' <<< "$matches")"
 
 	(( count == 1 )) || {
 		print_fn -e "Device '$query' not found, or query is ambiguous."
 		return 1
 	}
 
-	device="$(jq '.[0]' <<< "$matches")"
-	key="$(jq -r '.mac' <<< "$device")"
+	device="$(jaq '.[0]' <<< "$matches")"
+	key="$(jaq -r '.mac' <<< "$device")"
 
 	# No field flags → open just this device in $EDITOR.
 	if (( ! ${#f_hostname} && ! ${#f_id} && ! ${#f_ip} && ! ${#f_mac} && ! ${#f_network} )); then
 		local tmp editor
 		tmp="$(mktemp --suffix=.json)" || return 1
-		jq 'del(._uuid)' <<< "$device" > "$tmp"
+		jaq 'del(._uuid)' <<< "$device" > "$tmp"
 		editor="${EDITOR:-${VISUAL:-vi}}"
 		"$editor" "$tmp" || { rm -f "$tmp"; return 1; }
 
-		if ! jq -e 'type == "object" and (.mac | type == "string")' "$tmp" >/dev/null 2>&1; then
+		if ! jaq -e 'type == "object" and (.mac | type == "string")' "$tmp" >/dev/null 2>&1; then
 			rm -f "$tmp"
 			print_fn -e "Edited JSON must be an object with a string 'mac' field; not saving."
 			return 1
 		fi
 
 		local new_device
-		new_device="$(jq --arg now "$(now)" 'del(._uuid) | .updated_at = $now' "$tmp")"
+		new_device="$(jaq --arg now "$(now)" 'del(._uuid) | .updated_at = $now' "$tmp")"
 		rm -f "$tmp"
 
-		jq --arg key "$key" --argjson new "$new_device" \
+		jaq --arg key "$key" --argjson new "$new_device" \
 			'.devices |= map(if .mac == $key then $new else . end)' <<< "$data" | _json_write || return 1
 		print_fn -s "Updated '$query'."
 		return
@@ -898,7 +898,7 @@ function mac_edit {
 	if (( ${#f_id} )); then
 		new_id="${f_id[-1]}"
 		[[ -n "$new_id" ]] || { print_fn -e "Device id cannot be empty."; return 1; }
-		if jq -e --arg key "$key" --arg id "$new_id" \
+		if jaq -e --arg key "$key" --arg id "$new_id" \
 			'.devices | any(.mac != $key and ((.id // "" | ascii_downcase) == ($id | ascii_downcase)))' <<< "$data" >/dev/null; then
 			print_fn -e "Device id already exists: %s" "$new_id"
 			return 1
@@ -914,13 +914,13 @@ function mac_edit {
 	if (( ${#f_network} )); then
 		network_id="${f_network[-1]}"
 		if [[ "$network_id" == "current" ]]; then
-			network_id="$(current_network_json | jq -r '.id // empty')"
+			network_id="$(current_network_json | jaq -r '.id // empty')"
 			[[ -n "$network_id" ]] || { _warn_no_network; return 1; }
 		fi
 	fi
 
 	when="$(now)"
-	jq \
+	jaq \
 		--arg key "$key" \
 		--arg hostname "${f_hostname[-1]}" \
 		--arg id "${new_id}" \
@@ -984,7 +984,7 @@ function mac_sync {
 		# Decrypt cloud and stage as JSON, validate, then write through to local
 		# (which may itself re-encrypt if MAC_FILE_PATH ends in .gpg).
 		local decrypted; decrypted="$(jstore_decrypt "$CLOUD_PATH")" || return 1
-		if ! jq -e 'type == "object" and (.devices | type == "array")' >/dev/null 2>&1 <<< "$decrypted"; then
+		if ! jaq -e 'type == "object" and (.devices | type == "array")' >/dev/null 2>&1 <<< "$decrypted"; then
 			print_fn -e "Decrypted cloud content is not a valid device store."
 			return 1
 		fi

@@ -1,9 +1,9 @@
 # Config-config_path helpers for JSON-backed config under $XDG_CONFIG_HOME/<tool>/.
 
-# config_value FILE FILTER → jq filter applied to FILE, empty string on null.
+# config_value FILE FILTER → jaq filter applied to FILE, empty string on null.
 function config_value {
 	local config_path="$1" filter="$2"
-	jq -r "${filter} // empty" "$config_path"
+	jaq -r "${filter} // empty" "$config_path"
 }
 
 # config_ensure FILE DEFAULT_FN COERCE_FN

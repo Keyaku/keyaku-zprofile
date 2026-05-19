@@ -9,7 +9,7 @@
 
 function jstore_empty {
 	local key="$1"
-	jq -n --arg key "$key" '{version: 1, ($key): []}'
+	jaq -n --arg key "$key" '{version: 1, ($key): []}'
 }
 
 # jstore_decrypt PATH → JSON text on stdout. Pass-through for plain files;
@@ -74,7 +74,7 @@ function jstore_read {
 	[[ -n "$raw" ]] || { jstore_empty "$key"; return 0 }
 
 	local out
-	if ! out="$(jq --arg key "$key" "
+	if ! out="$(jaq --arg key "$key" "
 		if type != \"object\" or (.[\$key] | type) != \"array\"
 		then error(\"shape\") else . end
 		| .version //= 1
@@ -93,7 +93,7 @@ function jstore_read {
 function jstore_write {
 	local store_path="$1" key="$2"
 
-	local validated; validated="$(jq -e --arg key "$key" \
+	local validated; validated="$(jaq -e --arg key "$key" \
 		'select(type == "object" and (.[$key] | type == "array")) | .version = 1')" || {
 		print_fn -e "Refusing to save invalid JSON (missing .%s array)." "$key"
 		return 1
