@@ -20,16 +20,11 @@ function config_ensure {
 		return 0
 	fi
 
-	if ! jq -e 'type == "object"' "$config_path" >/dev/null 2>&1; then
+	local current coerced
+	current="$(<"$config_path")"
+	coerced="$("$coerce_fn" <<< "$current")" || {
 		print_fn -e "Invalid config JSON: %s" "$config_path"
 		return 1
-	fi
-
-	local tmp; tmp="$(mktemp)" || return 1
-	"$coerce_fn" < "$config_path" > "$tmp" || { rm -f "$tmp"; return 1; }
-	if cmp -s "$tmp" "$config_path"; then
-		rm -f "$tmp"
-	else
-		mv "$tmp" "$config_path" || { rm -f "$tmp"; return 1; }
-	fi
+	}
+	[[ "$current" == "$coerced" ]] || print -r -- "$coerced" > "$config_path"
 }
