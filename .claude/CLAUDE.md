@@ -11,6 +11,8 @@ A personal ZSH environment managed as `$ZDOTDIR` (typically `$XDG_CONFIG_HOME/zs
 lib/core/         # Fundamental utilities, loaded in .zshenv for every shell
 lib/interactive/  # Interactive-shell helpers, loaded in .zshrc
 lib/login/        # Login-shell helpers
+lib/script/       # Shared helpers for standalone scripts under conf/home/bin/.
+                  # NOT auto-loaded by any zstage — scripts source these explicitly.
 zstages/env/      # Loaded by .zshenv, numbered by priority (00-, 10-, …)
 zstages/profile/  # Loaded by .zprofile
 zstages/rc/       # Loaded by .zshrc (OMZ loaded at 25-omz-load.zsh)
@@ -20,6 +22,8 @@ completions/      # Zsh `_<funcname>` completions for lib/ functions (prepended 
 custom/           # User plugins/themes/functions (tracked but empty by default)
 vendor/ohmyzsh/   # Git submodule
 conf/             # Setup scripts and config files
+conf/home/bin/    # Standalone zsh scripts symlinked into $HOME/.local/bin/
+                  # (e.g. owrt-config.zsh, wol-manager.zsh). Source lib/script/*.zsh.
 ```
 
 ## Key Conventions
@@ -38,6 +42,15 @@ Numbers in filenames control load order within each stage (lower = earlier).
 - `addvar` / `rmvar` / `hasvar` — manipulate colon-delimited env vars.
 - `command-has` — check for command/function/alias existence with `-a` (AND) / `-o` (OR).
 
+### Script helpers (lib/script/)
+Sourced à la carte by standalone scripts under [conf/home/bin/](conf/home/bin/) — never by `.zshenv`/`.zshrc`/zstages. After the script does its `$0` plugin-standard dance and sets `THIS` / `THIS_NAME`, it sources whichever of these it needs:
+- [lib/script/bootstrap.zsh](lib/script/bootstrap.zsh) — loads `lib/core` + `lib/interactive` so `print_fn`, `command-has`, `ask` etc. are available; also defines `now` (`date -Iseconds`). Source this first.
+- [lib/script/table.zsh](lib/script/table.zsh) — `print_tsv_table` (TSV-in, column-aligned-out).
+- [lib/script/config.zsh](lib/script/config.zsh) — `config_value FILE FILTER` and `config_ensure FILE DEFAULT_FN COERCE_FN` for managing `$XDG_CONFIG_HOME/<tool>/config.json`. Caller defines two functions: `DEFAULT_FN` emits the initial JSON (`jq -n …`); `COERCE_FN` reads existing JSON on stdin and emits migrated JSON on stdout (used to backfill new defaults).
+- [lib/script/json-store.zsh](lib/script/json-store.zsh) — `jstore_empty`, `jstore_decrypt`, `jstore_encrypt`, `jstore_read`, `jstore_write` for versioned `{version: 1, <key>: […]}` stores, transparently gpg-wrapped when the path ends in `.gpg`. `jstore_read PATH KEY [COERCE_FILTER]` validates shape and applies an optional jq coerce filter for per-record migration; legacy-format migration is the caller's responsibility (use `jstore_decrypt` for the raw read).
+
+**Footgun**: never name a local `path` — it's tied to `$PATH` in zsh and `local path=…` silently destroys PATH inside the function. Prefer `store_path`, `config_path`, `target_dir`, etc. Same caution for `file` (shadows the `file(1)` command).
+
 ### Extensions
 Each extension in `extensions/` starts with guard lines that `return` early if the relevant tool is not installed — this is intentional and must be preserved. Guards use `command-has` or direct `(( $+commands[...] ))` checks.
 
@@ -54,7 +67,7 @@ Use **POSIX ERE** patterns, not PCRE. Termux (Android) `zsh` builds without PCRE
 - Function definition forms carry meaning: `function NAME { … }` for top-level (public) functions, `name() { … }` for nested locals. The completions drift checker uses this distinction.
 
 ### Completions (`completions/`)
-- One `_<funcname>` file per user-facing function in `lib/`. Files start with `#compdef NAME` and use `_arguments -s -S`. Style reference: [custom/plugins/owrt-config/_owrt-config](custom/plugins/owrt-config/_owrt-config).
+- One `_<funcname>` file per user-facing function in `lib/core/` and `lib/interactive/` (the checker only scans those two — `lib/login/`, `lib/script/` and `extensions/` are out of scope). Files start with `#compdef NAME` and use `_arguments -s -S`. Style reference: [custom/plugins/owrt-config/_owrt-config](custom/plugins/owrt-config/_owrt-config).
 - `completions/.skip` lists `lib/` functions that intentionally have no completion (internal helpers, free-value checkers). Underscore-prefixed names are auto-skipped.
 - Drift between `lib/` and `completions/` is caught by [conf/check-completions.zsh](conf/check-completions.zsh) — invoked at the tail of `zupdate` (warn-only) and by the pre-commit hook at [conf/hooks/pre-commit](conf/hooks/pre-commit) (blocking; bypass with `--no-verify`). Hook is enabled by `setup_git_hooks` in `first_init.zsh` via `git config core.hooksPath conf/hooks`. The hook is POSIX sh and re-execs the checker through `flatpak-spawn --host` when `/.flatpak-info` is present, so it works from Flatpak-sandboxed git clients (e.g. VSCode-in-Flatpak).
 

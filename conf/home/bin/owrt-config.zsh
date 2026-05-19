@@ -13,9 +13,11 @@ setopt pipefail extendedglob
 readonly THIS=${0:t}
 readonly THIS_NAME=${THIS:r}
 
-# Loading required libraries
-_zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
-_zsh_source_dir "${ZDOTDIR}/lib/interactive" "lib/interactive"
+# Shared script libs (bootstrap pulls in lib/core + lib/interactive).
+source "${ZDOTDIR}/lib/script/bootstrap.zsh"
+source "${ZDOTDIR}/lib/script/table.zsh"
+source "${ZDOTDIR}/lib/script/config.zsh"
+source "${ZDOTDIR}/lib/script/json-store.zsh"
 
 command-has -av jq ssh || exit 1
 
@@ -141,20 +143,7 @@ function _config_default_json {
 		}'
 }
 
-function _config_ensure {
-	[[ -d "$CONFIG_DIR" ]] || mkdir -p "$CONFIG_DIR" || return 1
-
-	if [[ ! -f "$CONFIG_FILE_PATH" ]]; then
-		_config_default_json > "$CONFIG_FILE_PATH" || return 1
-		return 0
-	fi
-
-	if ! jq -e 'type == "object"' "$CONFIG_FILE_PATH" >/dev/null 2>&1; then
-		print_fn -e "Invalid config JSON: %s" "$CONFIG_FILE_PATH"
-		return 1
-	fi
-
-	local tmp; tmp="$(mktemp)" || return 1
+function _config_coerce {
 	jq \
 		--arg store "$DEFAULT_STORE_PATH" \
 		'{
@@ -166,59 +155,30 @@ function _config_ensure {
 				domain: (.defaults.domain // ".lan")
 			},
 			tasks: (.tasks // {})
-		}' "$CONFIG_FILE_PATH" > "$tmp" \
-		&& mv "$tmp" "$CONFIG_FILE_PATH" \
-		|| { rm -f "$tmp"; return 1; }
+		}'
 }
 
-function _config_value { jq -r "$1 // empty" "$CONFIG_FILE_PATH" }
+function _config_value { config_value "$CONFIG_FILE_PATH" "$1" }
 
 function _init_paths {
-	_config_ensure || return 1
+	config_ensure "$CONFIG_FILE_PATH" _config_default_json _config_coerce || return 1
 	STORE_PATH="${OWRT_CONFIG_STORE_PATH:-$(_config_value '.store_path')}"
 	[[ -n "$STORE_PATH" ]] || STORE_PATH="$DEFAULT_STORE_PATH"
 }
 
-# --- Generic helpers ---
-
-function _now { date -Iseconds }
-
-function _json_empty { print '{"version":1,"routers":[]}' }
+# --- Store helpers ---
 
 function _json_read {
-	[[ -f "$STORE_PATH" ]] || { _json_empty; return 0 }
-
-	local raw; raw="$(< "$STORE_PATH")" || return 1
-	[[ -n "$raw" ]] || { _json_empty; return 0 }
-
-	if ! jq -e 'type == "object" and (.routers | type == "array")' >/dev/null 2>&1 <<< "$raw"; then
-		print_fn -e "Router store is not valid JSON: %s" "$STORE_PATH"
-		return 1
-	fi
-
-	jq '
-		.version //= 1
-		| .routers //= []
-		| .routers |= map(
+	jstore_read "$STORE_PATH" routers '
+		.routers |= map(
 			.tags //= []
 			| .port //= null
 			| .user //= null
 		)
-	' <<< "$raw"
+	'
 }
 
-function _json_write {
-	local tmp; tmp="$(mktemp)" || return 1
-	if ! jq -e 'select(type == "object" and (.routers | type == "array")) | .version = 1' > "$tmp"; then
-		print_fn -e "Refusing to save invalid router JSON."
-		rm -f "$tmp"
-		return 1
-	fi
-	[[ -s "$tmp" ]] || { print_fn -e "Refusing to save empty router JSON."; rm -f "$tmp"; return 1; }
-
-	[[ -d "${STORE_PATH:h}" ]] || mkdir -p "${STORE_PATH:h}" || { rm -f "$tmp"; return 1; }
-	mv "$tmp" "$STORE_PATH"
-}
+function _json_write { jstore_write "$STORE_PATH" routers }
 
 function _id_normalize {
 	local id="${1:l}"
@@ -273,26 +233,6 @@ function _resolve_columns {
 		[[ -n "${names[$col]-}" ]] || { print_fn -e "Unknown column: %s (try --columns help)" "$col"; return 1; }
 	done
 	print -r -- "$picked"
-}
-
-function _print_tsv_table {
-	awk -F '\t' '
-	{
-		rows[NR] = $0
-		if (NF > max_nf) max_nf = NF
-		for (i = 1; i <= NF; i++) if (length($i) > width[i]) width[i] = length($i)
-	}
-	END {
-		for (row = 1; row <= NR; row++) {
-			split(rows[row], fields, FS)
-			for (i = 1; i <= max_nf; i++) {
-				value = fields[i]
-				if (i == max_nf) printf "%s", value
-				else printf "%-*s  ", width[i], value
-			}
-			printf "\n"
-		}
-	}'
 }
 
 # --- Router lookup ---
@@ -362,7 +302,7 @@ function owrt_list {
 			      } as $row
 			    | [ $picked[] as $c | $row[$c] ] | @tsv
 			  end' <<< "$data"
-	} | _print_tsv_table
+	} | print_tsv_table
 }
 
 function owrt_add {
@@ -397,7 +337,7 @@ function owrt_add {
 		port_arg="${f_port[-1]}"
 	fi
 
-	local now; now="$(_now)"
+	local now; now="$(now)"
 	jq \
 		--arg id "$id" \
 		--arg host "$host" \
@@ -470,7 +410,7 @@ function owrt_edit {
 			rm -f "$tmp"; return 1
 		fi
 
-		local new_router; new_router="$(jq --arg now "$(_now)" '.updated_at = $now' "$tmp")"
+		local new_router; new_router="$(jq --arg now "$(now)" '.updated_at = $now' "$tmp")"
 		rm -f "$tmp"
 
 		jq --arg id "$id" --argjson new "$new_router" \
@@ -507,7 +447,7 @@ function owrt_edit {
 		--argjson port "$port_arg" \
 		--argjson add "$(print -r -- "$add_tags" | jq -R 'split(" ") | map(select(length>0))')" \
 		--argjson del "$(print -r -- "$del_tags" | jq -R 'split(" ") | map(select(length>0))')" \
-		--arg now "$(_now)" \
+		--arg now "$(now)" \
 		'.routers |= map(
 			if .id == $id then
 				.id = $new_id
@@ -663,7 +603,7 @@ function owrt_task {
 					done
 					print -r -- "${(pj:\t:)row}"
 				done
-			} | _print_tsv_table
+			} | print_tsv_table
 		;;
 		rm|remove|delete)
 			local name="$1"
@@ -928,7 +868,7 @@ function owrt_run {
 			fi
 			printf '%s\t%s\t%s\n' "$row_state" "$row_id" "$row_ec"
 		done
-	} | _print_tsv_table
+	} | print_tsv_table
 
 	if (( ${#failures} )); then
 		print
