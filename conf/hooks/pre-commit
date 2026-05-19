@@ -90,7 +90,7 @@ fi
 # -----------------------------------------------------------------------
 if git diff --cached --name-only --diff-filter=ACMR | \
 		grep -qE '^(lib/.*\.zsh|completions/_.+|completions/\.skip)$'; then
-	if ! run_host "$checker" -q; then
+	if ! run_host zsh "$checker" -q; then
 		{
 			echo ""
 			echo "pre-commit: completions drift detected."
