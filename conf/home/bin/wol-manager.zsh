@@ -765,11 +765,15 @@ function mac_list {
 	local -a f_all
 	zparseopts -D -F -K -- {a,-all}=f_all || return 1
 
-	local data network connected network_id
+	local data connected network_id
 	data="$(_json_read)" || return 1
-	network="$(current_network_json)"
-	connected="$(jaq -r '.connected' <<< "$network")"
-	network_id="$(jaq -r '.id // empty' <<< "$network")"
+
+	# Only probe the network when we actually filter by it.
+	if (( ! ${#f_all} )); then
+		IFS=$'\t' read -r connected network_id < <(
+			current_network_json | jaq -r '[.connected, (.id // "")] | @tsv'
+		)
+	fi
 
 	if [[ -n "$f_all" || "$connected" != "true" ]]; then
 		[[ "$connected" != "true" && -z "$f_all" ]] && _warn_no_network
@@ -794,11 +798,15 @@ function mac_status {
 	local -a f_all
 	zparseopts -D -F -K -- {a,-all}=f_all || return 1
 
-	local data network connected network_id rows tmpdir row idx
+	local data connected network_id rows tmpdir row idx
 	data="$(_json_read)" || return 1
-	network="$(current_network_json)"
-	connected="$(jaq -r '.connected' <<< "$network")"
-	network_id="$(jaq -r '.id // empty' <<< "$network")"
+
+	# Only probe the network when we actually filter by it.
+	if (( ! ${#f_all} )); then
+		IFS=$'\t' read -r connected network_id < <(
+			current_network_json | jaq -r '[.connected, (.id // "")] | @tsv'
+		)
+	fi
 
 	if [[ -n "$f_all" || "$connected" != "true" ]]; then
 		[[ "$connected" != "true" && -z "$f_all" ]] && _warn_no_network
