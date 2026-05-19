@@ -229,11 +229,32 @@ function ip_verify {
 
 # --- Network discovery ---
 
+# Run a single command via `rish` (Shizuku) and retry on empty output. The
+# Shizuku binder bridge sometimes returns empty stdout for short-output
+# commands when the capture starts after the child has already exited. We
+# retry up to 3 times with a brief backoff; long-output commands almost
+# always succeed on the first try.
+function _rish_retry {
+	local cmd="$1" out
+	local -i i
+	for (( i = 1; i <= 3; i++ )); do
+		out="$(rish -c "$cmd" </dev/null 2>/dev/null)"
+		[[ -n "$out" ]] && { print -r -- "$out"; return 0 }
+		sleep 0.1
+	done
+	return 1
+}
+
 function current_network_json {
-	local -a f_ssid
-	zparseopts -D -F -K -- {s,-ssid}=f_ssid || return 1
+	# -f / --full enables the expensive Android-side probes (rish call to fetch
+	# SSID, gateway IP, ARP table). Without it, only cheap sources (ifconfig
+	# fallback, /proc, native `ip` on non-Android) are consulted — used by the
+	# hot `list`/`status` paths.
+	local -a f_full
+	zparseopts -D -F -K -- {f,-full}=f_full -ssid=f_full || return 1
 
 	local iface gateway addr cidr ssid network_id network_name route_line gateway_mac subnet
+	local -a network_ids
 
 	# `getprop` is Android-only; when present, `route -n` and `/proc/net/route`
 	# are both broken (SELinux-restricted), so skip those probes — ifconfig is
@@ -309,61 +330,90 @@ function current_network_json {
 			}')
 	fi
 
-	# Skip getprop gateway lookup on Android — the `dhcp.<iface>.gateway` and
-	# `net.<iface>.gw` keys were removed around Android 7; on modern releases
-	# they always return empty, so a non-Android `ip route` is the only way to
-	# get a gateway IP here. Without it, network_id falls back to subnet, which
-	# is still stable per LAN.
+	# Android-side full probe: three separate rish (Shizuku) calls because all
+	# of route/arp/wifi-status require shell uid (Termux can't read /proc/net/*
+	# or use netlink). Chained `sh -c` inside rish is unreliable — short-output
+	# commands sometimes return empty before the bridge captures their stdout,
+	# so each goes through `_rish_retry` (up to 3 attempts).
+	# Cost: ~600 ms × 3 = ~2 s on cold add. Skipped when --full isn't requested.
+	if (( ${#f_full} && is_android )) && [[ -n "$iface" ]] && command-has rish; then
+		# `ip route get 8.8.8.8` uses the kernel's authoritative resolution of
+		# the active default route, regardless of which routing table holds it
+		# — Android shuffles the default route around per-iface tables.
+		local route_out arp_out wifi_out
+		route_out="$(_rish_retry '/system/bin/ip -4 route get 8.8.8.8')"
+		arp_out="$(_rish_retry 'cat /proc/net/arp')"
+		wifi_out="$(_rish_retry 'cmd -w wifi status')"
 
-	# SSID lookup is expensive on Termux (~500 ms binder cold-start per backend)
-	# and only needed for the human-readable network_name shown when a device is
-	# added. Filtering uses network_id (gateway MAC / subnet), so skip by default.
-	if (( ${#f_ssid} )) && [[ -n "$iface" ]]; then
+		# Gateway IP: first `via X` token.
+		gateway="$(awk '{for(i=1;i<=NF;i++) if($i=="via"){print $(i+1); exit}}' <<< "$route_out")"
+
+		# Gateway MAC: row in /proc/net/arp where col 1 == gateway IP.
+		[[ -n "$gateway" ]] && gateway_mac="$(awk -v ip="$gateway" \
+			'NR>1 && $1==ip {print $4; exit}' <<< "$arp_out")"
+
+		# SSID: `WifiInfo: SSID: "…"` line.
+		ssid="$(awk -F'"' '/WifiInfo: SSID:/ {print $2; exit}' <<< "$wifi_out")"
+		[[ "$ssid" == "<unknown ssid>" ]] && unset ssid
+	fi
+
+	# Non-Android SSID fallbacks.
+	if (( ${#f_full} && ! is_android )) && [[ -n "$iface" && -z "$ssid" ]]; then
 		if command-has nmcli; then
 			ssid="$(nmcli -t -f GENERAL.CONNECTION device show "$iface" 2>/dev/null | sed 's/^GENERAL.CONNECTION://')"
 			[[ "$ssid" == "--" ]] && unset ssid
 		fi
-		# Termux/Android: nmcli is absent. Try Termux:API (needs Location perm),
-		# then fall back to Shizuku `rish` for `cmd wifi status`.
-		if [[ -z "$ssid" ]] && command-has termux-wifi-connectioninfo; then
-			ssid="$(termux-wifi-connectioninfo 2>/dev/null | jaq -r '.ssid // empty' 2>/dev/null)"
-			# Strip surrounding quotes Android wraps the SSID in.
-			ssid="${ssid#\"}"; ssid="${ssid%\"}"
-			[[ "$ssid" == "<unknown ssid>" || "$ssid" == "null" ]] && unset ssid
-		fi
-		if [[ -z "$ssid" ]] && command-has rish; then
-			ssid="$(rish -c 'cmd -w wifi status' 2>/dev/null \
-				| awk -F'"' '/SSID:/ {print $2; exit}')"
-			[[ "$ssid" == "<unknown ssid>" ]] && unset ssid
-		fi
 	fi
 
-	# System-independent ID: gateway MAC (most stable), else subnet, else legacy fallback.
-	[[ -n "$gateway" ]] && gateway_mac="$(_mac_from_ip "$gateway" 2>/dev/null)"
+	# Termux:API last-resort SSID fallback (e.g. rish unavailable). Same binder
+	# cost as the rish call but observed to silently return empty when the
+	# Termux:API service has lost its background connection.
+	if (( ${#f_full} && is_android )) && [[ -n "$iface" && -z "$ssid" ]] && command-has termux-wifi-connectioninfo; then
+		ssid="$(termux-wifi-connectioninfo 2>/dev/null | jaq -r '.ssid // empty' 2>/dev/null)"
+		ssid="${ssid#\"}"; ssid="${ssid%\"}"
+		[[ "$ssid" == "<unknown ssid>" || "$ssid" == "null" ]] && unset ssid
+	fi
+
+	# Non-Android: resolve gateway MAC via the local ARP cache.
+	if (( ! is_android )) && [[ -n "$gateway" && -z "$gateway_mac" ]]; then
+		gateway_mac="$(_mac_from_ip "$gateway" 2>/dev/null)"
+	fi
 
 	cidr="${addr:-unknown}"
 	network_name="${ssid:-${iface:-unknown}}"
 
-	if [[ -n "$gateway_mac" ]]; then
-		network_id="mac:$gateway_mac"
-	elif [[ -n "$subnet" ]]; then
-		network_id="net:$subnet"
-	elif [[ -n "$iface" || -n "$gateway" || -n "$addr" ]]; then
-		network_id="${ssid:-$iface}:${cidr}:${gateway:-no-gateway}"
+	# Compose network_ids[]: prefer gateway-MAC (per-LAN unique), include subnet
+	# too (cheap to verify on list/status). The primary `id` is the first entry.
+	[[ -n "$gateway_mac" ]] && network_ids+=( "mac:$gateway_mac" )
+	[[ -n "$subnet" ]] && network_ids+=( "net:$subnet" )
+	if (( ! ${#network_ids} )) && [[ -n "$iface" || -n "$gateway" || -n "$addr" ]]; then
+		network_ids+=( "${ssid:-$iface}:${cidr}:${gateway:-no-gateway}" )
+	fi
+
+	network_id="${network_ids[1]:-}"
+
+	# Build ids JSON array directly (no extra jaq forks). Safe because
+	# all id elements are constrained to mac/subnet/iface formats — no
+	# quotes or backslashes.
+	local ids_json="[]"
+	if (( ${#network_ids} )); then
+		ids_json="$(printf '"%s",' "${network_ids[@]}")"
+		ids_json="[${ids_json%,}]"
 	fi
 
 	if [[ -n "$network_id" ]]; then
 		jaq -n \
 			--arg id "$network_id" \
+			--argjson ids "$ids_json" \
 			--arg name "$network_name" \
 			--arg iface "$iface" \
 			--arg gateway "$gateway" \
 			--arg gateway_mac "$gateway_mac" \
 			--arg subnet "$subnet" \
 			--arg cidr "$cidr" \
-			'{connected:true,id:$id,name:$name,iface:$iface,gateway:$gateway,gateway_mac:$gateway_mac,subnet:$subnet,cidr:$cidr}'
+			'{connected:true,id:$id,ids:$ids,name:$name,iface:$iface,gateway:$gateway,gateway_mac:$gateway_mac,subnet:$subnet,cidr:$cidr}'
 	else
-		jaq -n '{connected:false,id:null,name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}'
+		jaq -n '{connected:false,id:null,ids:[],name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}'
 	fi
 }
 
@@ -467,19 +517,11 @@ function _mac_from_ip {
 		mac="$(awk -v ip="$ip" 'NR > 1 && $1 == ip {print $4; exit}' /proc/net/arp)"
 
 	# Fallback (Termux/Android): /proc/net/arp is SELinux-restricted for non-root
-	# apps; rish (Shizuku) runs as shell uid and can read it. The Shizuku/app_process
-	# bridge is occasionally racy and returns an empty result, so retry briefly.
+	# apps; rish (Shizuku) runs as shell uid and can read it.
 	if [[ -z "$mac" ]] && command-has rish; then
 		print_fn -i "Falling back to rish (Shizuku) to read /proc/net/arp for $ip"
-		local -i _attempt
-		local _arp_tmp="${TMPDIR:-${PREFIX:-/var}/tmp}/wol-mgr-arp.$$"
-		for _attempt in 1 2 3; do
-			rish -c 'cat /proc/net/arp' </dev/null >"$_arp_tmp" 2>/dev/null
-			[[ -s "$_arp_tmp" ]] && break
-			sleep 0.2
-		done
-		mac="$(awk -v ip="$ip" 'NR > 1 && $1 == ip {print $4; exit}' "$_arp_tmp" 2>/dev/null)"
-		rm -f "$_arp_tmp"
+		mac="$(_rish_retry 'cat /proc/net/arp' \
+			| awk -v ip="$ip" 'NR > 1 && $1 == ip {print $4; exit}')"
 	fi
 
 	mac_verify "$mac" && { mac_normalize "$mac"; return 0 }
@@ -490,9 +532,9 @@ function _discover_device_json {
 	local target="$1"
 	local mac ip hostname network
 
-	network="$(current_network_json --ssid 2>/dev/null)"
+	network="$(current_network_json --full 2>/dev/null)"
 	jaq -e 'type == "object" and has("connected")' >/dev/null 2>&1 <<< "$network" \
-		|| network="$(jaq -n '{connected:false,id:null,name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}')"
+		|| network="$(jaq -n '{connected:false,id:null,ids:[],name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}')"
 
 	if mac_verify "$target"; then
 		mac="$(mac_normalize "$target")"
@@ -527,7 +569,7 @@ function _discover_device_json {
 			mac: $mac,
 			hostname: (if ($hostname | length) > 0 then $hostname else null end),
 			last_ip: (if ($ip | length) > 0 then $ip else null end),
-			network_id: (if $network.connected then $network.id else null end),
+			network_ids: (if $network.connected then ($network.ids // []) else [] end),
 			network_name: (if $network.connected then $network.name else null end)
 		}'
 }
@@ -595,14 +637,12 @@ function mac_add {
 	local target="$1"
 	[[ -n "$target" ]] || { print -u2 "Usage: $THIS add <MAC|hostname|IP>"; return 1; }
 
-	local discovered data when
+	local discovered
 	discovered="$(_discover_device_json "$target")" || return 1
-	data="$(_json_read)" || return 1
-	when="$(now)"
 
-	jaq \
+	_json_read | jaq \
 		--argjson incoming "$discovered" \
-		--arg now "$when" \
+		--arg now "$(now)" \
 		'
 		def slug:
 			ascii_downcase | gsub("[^a-z0-9._-]+";"-") | gsub("^-+|-+$";"");
@@ -611,9 +651,8 @@ function mac_add {
 		| (($incoming.hostname // "") as $h
 			| if $h != "" then ($h | split(".")[0]) else ($incoming.last_ip // $incoming.mac) end
 			| slug) as $base_id
-		| ($incoming.network_id // null) as $cur_id
-		| (if $cur_id then [$cur_id] else [] end) as $cur_ids
-		| ($incoming | del(.network_id)) as $payload
+		| ($incoming.network_ids // []) as $cur_ids
+		| ($incoming | del(.network_ids)) as $payload
 		| ($incoming.mac | ascii_downcase) as $mac
 		| (.devices | map(.mac | ascii_downcase) | index($mac)) as $idx
 		| if $idx == null then
@@ -631,13 +670,13 @@ function mac_add {
 				| .updated_at = $now
 			)
 		end
-		' <<< "$data" | _json_write || return 1
+		' | _json_write || return 1
 
+	# One jaq -r pass to extract all four fields from $discovered as TSV.
 	local name mac ip network
-	name="$(jaq -r '.hostname // "-"' <<< "$discovered")"
-	mac="$(jaq -r '.mac' <<< "$discovered")"
-	ip="$(jaq -r '.last_ip // "-"' <<< "$discovered")"
-	network="$(jaq -r '.network_name // "-"' <<< "$discovered")"
+	IFS=$'\t' read -r name mac ip network < <(
+		jaq -r '[(.hostname // "-"), .mac, (.last_ip // "-"), (.network_name // "-")] | @tsv' <<< "$discovered"
+	)
 	print_fn -s "Registered: %s %s %s [%s]" "$name" "$mac" "$ip" "$network"
 }
 
@@ -701,9 +740,12 @@ function mac_get {
 		return 1
 	}
 
-	# Render a single field's value as a string (arrays → newline-joined; null/empty → "-").
-	function _render_field {
-		jaq -r --arg field "$1" '
+	(( ${#fields} )) || fields=(mac)
+
+	# Single field, no --all: emit just the value (preserves the pipe-friendly
+	# contract of `wol-manager get foo --mac`).
+	if [[ -z "$f_all" && ${#fields} == 1 ]]; then
+		jaq -r --arg field "${fields[1]}" '
 			.[$field] as $v
 			| if $v == null then "-"
 			  elif ($v | type) == "array" then
@@ -711,40 +753,43 @@ function mac_get {
 			  else ($v | tostring)
 			  end
 		' <<< "$device"
-	}
-
-	if [[ -n "$f_all" ]]; then
-		local key
-		for key in $(jaq -r 'keys_unsorted[]' <<< "$device"); do
-			local value="$(_render_field "$key")"
-			if [[ "$value" == *$'\n'* ]]; then
-				printf '%-13s\n' "$key"
-				print -- "$value" | sed 's/^/                /'
-			else
-				printf '%-13s %s\n' "$key" "$value"
-			fi
-		done
-		unfunction _render_field
 		return
 	fi
 
-	(( ${#fields} )) || fields=(mac)
-
-	if (( ${#fields} == 1 )); then
-		_render_field "${fields[1]}"
+	# Multi-field or --all: one jaq pass emits tagged rows for a tiny shell
+	# formatter. Tag is always followed by exactly one (H, C) or two (S) tab-
+	# separated fields — `read` with `IFS=$'\t'` collapses consecutive tabs,
+	# so empty middle columns would silently disappear.
+	#   S\tKEY\tVALUE   → printed inline (`KEY value`)
+	#   H\tKEY          → header for a multi-line array (`KEY` alone)
+	#   C\tVALUE        → continuation line (16-space indent)
+	local _filter
+	if [[ -n "$f_all" ]]; then
+		_filter='to_entries'
 	else
-		for field in "${fields[@]}"; do
-			local value="$(_render_field "$field")"
-			if [[ "$value" == *$'\n'* ]]; then
-				printf '%-13s\n' "$field"
-				print -- "$value" | sed 's/^/                /'
-			else
-				printf '%-13s %s\n' "$field" "$value"
-			fi
-		done
+		_filter='[. as $d | $fields | split(",")[] | {key:., value: $d[.]}]'
 	fi
 
-	unfunction _render_field
+	local tag col1 col2
+	jaq -r --arg fields "${(j:,:)fields}" "
+		$_filter
+		| .[]
+		| .key as \$k | .value as \$v
+		| if \$v == null then \"S\t\(\$k)\t-\"
+		  elif (\$v|type) == \"array\" then
+		      if (\$v|length) == 0 then \"S\t\(\$k)\t-\"
+		      elif (\$v|length) == 1 then \"S\t\(\$k)\t\(\$v[0])\"
+		      else ([\"H\t\(\$k)\"] + (\$v | map(\"C\t\(.)\"))) | .[]
+		      end
+		  else \"S\t\(\$k)\t\(\$v|tostring)\"
+		  end
+	" <<< "$device" | while IFS=$'\t' read -r tag col1 col2; do
+		case $tag in
+			S) printf '%-13s %s\n' "$col1" "$col2" ;;
+			H) printf '%-13s\n' "$col1" ;;
+			C) printf '                %s\n' "$col1" ;;
+		esac
+	done
 }
 
 function mac_remove {
@@ -797,8 +842,18 @@ function _device_online {
 
 	command-has ping && ping -c 1 -W 1 "$ip" >/dev/null 2>&1 && return 0
 
-	local seen; seen="$(_mac_from_ip "$ip" 2>/dev/null)"
-	[[ -n "$seen" && "$seen" == "$mac" ]]
+	# Firewalled-host fallback: check the neighbor table — but only fast paths.
+	# `_mac_from_ip` would prime with another 1s ping and (on Termux) burn
+	# ~1.5 s on rish retries, multiplying status time per offline device.
+	local seen
+	if command-has ip; then
+		seen="$(ip neigh show "$ip" 2>/dev/null \
+			| awk '{for(i=1;i<NF;i++) if($i=="lladdr"){print $(i+1); exit}}')"
+	fi
+	[[ -z "$seen" && -r /proc/net/arp ]] && \
+		seen="$(awk -v ip="$ip" 'NR>1 && $1==ip {print $4; exit}' /proc/net/arp)"
+
+	[[ -n "$seen" && "${seen:l}" == "${mac:l}" ]]
 }
 
 function mac_status {

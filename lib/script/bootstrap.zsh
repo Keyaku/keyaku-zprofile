@@ -8,4 +8,11 @@
 _zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
 _zsh_source_dir "${ZDOTDIR}/lib/interactive" "lib/interactive"
 
-function now { date -Iseconds }
+zmodload zsh/datetime
+
+function now {
+	# strftime's `%z` emits `+0100`; splice to ISO-8601 `+01:00` to match `date -Iseconds`.
+	local s
+	strftime -s s '%FT%T%z' $EPOCHSECONDS
+	print -- "${s[1,-3]}:${s[-2,-1]}"
+}
