@@ -312,10 +312,11 @@ function current_network_json {
 			}')
 	fi
 
-	if [[ -z "$gateway" && -n "$iface" ]] && (( is_android )); then
-		gateway="$(getprop "dhcp.${iface}.gateway" 2>/dev/null)"
-		[[ -z "$gateway" ]] && gateway="$(getprop "net.${iface}.gw" 2>/dev/null)"
-	fi
+	# Skip getprop gateway lookup on Android — the `dhcp.<iface>.gateway` and
+	# `net.<iface>.gw` keys were removed around Android 7; on modern releases
+	# they always return empty, so a non-Android `ip route` is the only way to
+	# get a gateway IP here. Without it, network_id falls back to subnet, which
+	# is still stable per LAN.
 
 	# SSID lookup is expensive on Termux (~500 ms binder cold-start per backend)
 	# and only needed for the human-readable network_name shown when a device is
