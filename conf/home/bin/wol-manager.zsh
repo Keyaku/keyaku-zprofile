@@ -79,43 +79,40 @@ typeset -gi verbosity=0
 
 # --- Configuration ---
 
-function _config_default_json {
-	jaq -n \
-		--arg local "$DEFAULT_LOCAL_PATH" \
-		--arg cloud "$DEFAULT_CLOUD_PATH" \
-		'{
-			store_path: null,
-			paths: {
-				local: $local,
-				cloud: (if $cloud == "" then null else $cloud end)
-			}
-		}'
-}
+# Resolve MAC_FILE_PATH and (optionally) bootstrap from cloud.
+function _init_paths {
+	[[ -d "${CONFIG_FILE_PATH:h}" ]] || mkdir -p "${CONFIG_FILE_PATH:h}" || return 1
 
-function _config_coerce {
-	jaq \
-		--arg local "$DEFAULT_LOCAL_PATH" \
-		--arg cloud "$DEFAULT_CLOUD_PATH" \
-		'{
+	# Read current config (missing → start from "{}"; jaq applies defaults).
+	local current="{}"
+	[[ -f "$CONFIG_FILE_PATH" ]] && current="$(<"$CONFIG_FILE_PATH")"
+
+	# Single jaq pass: validate, fill defaults, and emit
+	#   line 1:    TSV of (paths.local, paths.cloud, store_path)
+	#   line 2..N: pretty-printed coerced JSON
+	local out
+	out="$(jaq -r --arg local "$DEFAULT_LOCAL_PATH" --arg cloud "$DEFAULT_CLOUD_PATH" '
+		if type != "object" then error("not an object") else . end
+		| {
 			store_path: (.store_path // null),
 			paths: {
 				local: (.paths.local // $local),
 				cloud: (.paths.cloud // (if $cloud == "" then null else $cloud end))
 			}
-		}'
-}
+		}
+		| "\(.paths.local // "")\t\(.paths.cloud // "")\t\(.store_path // "")", .
+	' <<< "$current" 2>/dev/null)" || {
+		print_fn -e "Invalid config JSON: %s" "$CONFIG_FILE_PATH"
+		return 1
+	}
 
-function _config_value { config_value "$CONFIG_FILE_PATH" "$1" }
+	local configured tsv coerced
+	tsv="${out%%$'\n'*}"
+	coerced="${out#*$'\n'}"
+	IFS=$'\t' read -r LOCAL_PATH CLOUD_PATH configured <<< "$tsv"
 
-# Resolve MAC_FILE_PATH and (optionally) bootstrap from cloud.
-function _init_paths {
-	config_ensure "$CONFIG_FILE_PATH" _config_default_json _config_coerce || return 1
-
-	# Single jaq pass: extract local, cloud, store_path as TSV.
-	local configured
-	IFS=$'\t' read -r LOCAL_PATH CLOUD_PATH configured < <(
-		jaq -r '[.paths.local // "", .paths.cloud // "", .store_path // ""] | @tsv' "$CONFIG_FILE_PATH"
-	)
+	# Persist only when content actually changed (also handles initial creation).
+	[[ "$current" == "$coerced" ]] || print -r -- "$coerced" > "$CONFIG_FILE_PATH"
 
 	if [[ -n "$WOL_MANAGER_MAC_FILE_PATH" ]]; then
 		MAC_FILE_PATH="$WOL_MANAGER_MAC_FILE_PATH"
@@ -573,17 +570,22 @@ function _find_device_json {
 
 function _print_devices {
 	local json="$1"
-	local filter="${2:-.devices}"
+	local network_id="$2"  # optional; if set, restrict output to that network
 
 	{
 		print $'HOSTNAME\tMAC\tLAST_IP\tNETWORK\tID'
-		jaq -r "$filter | if length == 0 then empty else .[] | [
-			(.hostname // \"-\"),
-			(.mac // \"-\"),
-			(.last_ip // \"-\"),
-			(.network_name // \"-\"),
-			(.id // \"-\")
-		] | @tsv end" <<< "$json"
+		jaq -r --arg network "$network_id" '
+			(if $network == "" then .devices
+			 else .devices | map(select((.network_ids // []) | index($network) != null))
+			 end)
+			| if length == 0 then empty else .[] | [
+				(.hostname // "-"),
+				(.mac // "-"),
+				(.last_ip // "-"),
+				(.network_name // "-"),
+				(.id // "-")
+			] | @tsv end
+		' <<< "$json"
 	} | print_tsv_table
 }
 
@@ -785,8 +787,7 @@ function mac_list {
 		[[ "$connected" != "true" && -z "$f_all" ]] && _warn_no_network
 		_print_devices "$data"
 	else
-		_print_devices "$(jaq --arg network "$network_id" \
-			'.devices |= map(select((.network_ids // []) | index($network) != null))' <<< "$data")"
+		_print_devices "$data" "$network_id"
 	fi
 }
 
