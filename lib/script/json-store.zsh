@@ -73,16 +73,18 @@ function jstore_read {
 	local raw; raw="$(jstore_decrypt "$store_path")" || return 1
 	[[ -n "$raw" ]] || { jstore_empty "$key"; return 0 }
 
-	if ! jq -e --arg key "$key" 'type == "object" and (.[$key] | type == "array")' <<< "$raw" >/dev/null 2>&1; then
+	local out
+	if ! out="$(jq --arg key "$key" "
+		if type != \"object\" or (.[\$key] | type) != \"array\"
+		then error(\"shape\") else . end
+		| .version //= 1
+		| .[\$key] //= []
+		| $coerce
+	" <<< "$raw" 2>/dev/null)"; then
 		print_fn -e "Store is not valid JSON or missing .%s array: %s" "$key" "$store_path"
 		return 1
 	fi
-
-	jq --arg key "$key" "
-		.version //= 1
-		| .[\$key] //= []
-		| $coerce
-	" <<< "$raw"
+	printf '%s\n' "$out"
 }
 
 # jstore_write PATH KEY < json-on-stdin → write atomically.
