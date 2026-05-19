@@ -341,6 +341,109 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 		EOF
 	}
 
+	function termux_phantom_killer {
+		local -ra usage=(
+			"Usage: $0 [-v|-q] [on|off|enable|disable]"
+			"Inspect or toggle Android's phantom process killer for Termux."
+			""
+			"  on,  enable    Re-enable the killer (Android default)"
+			"  off, disable   Disable the killer so Termux background tasks survive"
+			"  (no arg)       Print current state and what it means"
+			""
+			"  -v, --verbose  Echo each underlying command as it runs"
+			"  -q, --quiet    Suppress informational output (errors still print)"
+			"  -h, --help     Show this help"
+			""
+			"Requires shell-user (UID 2000) via rish (Shizuku); falls back to adb."
+		)
+		local -a o_verbose o_quiet o_help
+		zparseopts -D -F -K -- \
+			{v,-verbose}=o_verbose \
+			{q,-quiet}=o_quiet \
+			{h,-help}=o_help \
+		|| { >&2 print -l $usage; return 2 }
+		if (( ${#o_help} )); then >&2 print -l $usage; return 0; fi
+		check_argc $# 0 1 || { >&2 print -l $usage; return 2 }
+
+		local -ri verbose=${#o_verbose} quiet=${#o_quiet}
+		if (( verbose && quiet )); then
+			print_fn -e "--verbose and --quiet are mutually exclusive"
+			return 2
+		fi
+
+		# Pick escalation: rish (Shizuku) preferred, adb as fallback.
+		local -a runner
+		if (( ${+commands[rish]} )); then
+			runner=(rish -c)
+		elif (( ${+commands[adb]} )); then
+			runner=(adb shell)
+		else
+			print_fn -e "Neither rish (Shizuku) nor adb is available"
+			return 1
+		fi
+		(( verbose )) && print_fn -d "Escalation: ${runner[1]}"
+
+		local -r key="settings_enable_monitor_phantom_procs"
+		local -r action="${1:-status}"
+
+		case "$action" in
+		status)
+			local raw
+			if ! raw=$("${runner[@]}" "settings get global ${key}" 2>/dev/null); then
+				print_fn -e "Could not read setting via ${runner[1]}"
+				return 1
+			fi
+			(( verbose )) && print_fn -d "raw value: ${raw}"
+			raw="${raw//[$'\r\n\t ']/}"
+			local state desc
+			case "$raw" in
+			false|0)
+				state="disabled"
+				desc="Termux background processes will NOT be killed by Android."
+				;;
+			true|1|null|"")
+				state="enabled"
+				desc="Android may kill Termux background processes (the default)."
+				;;
+			*)
+				state="unknown (${raw})"
+				desc="Unrecognized value; manual inspection recommended."
+				;;
+			esac
+			if (( quiet )); then
+				print -- "$state"
+			else
+				print_fn -i "Phantom process killer: ${state}"
+				print_fn -i "${desc}"
+			fi
+			;;
+		off|disable)
+			(( verbose )) && print_fn -d "${runner[1]} :: settings put global ${key} false"
+			if ! "${runner[@]}" "settings put global ${key} false"; then
+				print_fn -e "Failed to disable phantom process killer"
+				return 1
+			fi
+			(( quiet )) || print_fn -s "Phantom process killer disabled"
+			;;
+		on|enable)
+			(( verbose )) && print_fn -d "${runner[1]} :: settings put global ${key} true"
+			if ! "${runner[@]}" "settings put global ${key} true"; then
+				print_fn -e "Failed to enable phantom process killer"
+				return 1
+			fi
+			# Defensive: clear any device_config override that may also be in play.
+			(( verbose )) && print_fn -d "${runner[1]} :: device_config delete activity_manager max_phantom_processes"
+			"${runner[@]}" "device_config delete activity_manager max_phantom_processes" >/dev/null 2>&1
+			(( quiet )) || print_fn -s "Phantom process killer enabled (Android default)"
+			;;
+		*)
+			print_fn -e "Unknown command: ${action}"
+			>&2 print -l $usage
+			return 2
+			;;
+		esac
+	}
+
 	# Post-migration breadcrumbs left by termux_pkgmgr. Both checks are
 	# self-clearing: remove the pkglist file when done, and pacman-key --init
 	# creates the gnupg dir so this stops triggering.
