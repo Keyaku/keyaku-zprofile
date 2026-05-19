@@ -111,16 +111,17 @@ function _config_value { config_value "$CONFIG_FILE_PATH" "$1" }
 function _init_paths {
 	config_ensure "$CONFIG_FILE_PATH" _config_default_json _config_coerce || return 1
 
-	LOCAL_PATH="$(_config_value '.paths.local')"
-	CLOUD_PATH="$(_config_value '.paths.cloud')"
+	# Single jq pass: extract local, cloud, store_path as TSV.
+	local configured
+	IFS=$'\t' read -r LOCAL_PATH CLOUD_PATH configured < <(
+		jq -r '[.paths.local // "", .paths.cloud // "", .store_path // ""] | @tsv' "$CONFIG_FILE_PATH"
+	)
 
 	if [[ -n "$WOL_MANAGER_MAC_FILE_PATH" ]]; then
 		MAC_FILE_PATH="$WOL_MANAGER_MAC_FILE_PATH"
 		return 0
 	fi
 
-	local configured
-	configured="$(_config_value '.store_path')"
 	if [[ -n "$configured" ]]; then
 		MAC_FILE_PATH="$configured"
 		return 0

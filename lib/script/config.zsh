@@ -26,7 +26,10 @@ function config_ensure {
 	fi
 
 	local tmp; tmp="$(mktemp)" || return 1
-	"$coerce_fn" < "$config_path" > "$tmp" \
-		&& mv "$tmp" "$config_path" \
-		|| { rm -f "$tmp"; return 1; }
+	"$coerce_fn" < "$config_path" > "$tmp" || { rm -f "$tmp"; return 1; }
+	if cmp -s "$tmp" "$config_path"; then
+		rm -f "$tmp"
+	else
+		mv "$tmp" "$config_path" || { rm -f "$tmp"; return 1; }
+	fi
 }
