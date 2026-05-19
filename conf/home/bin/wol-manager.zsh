@@ -232,6 +232,9 @@ function ip_verify {
 # --- Network discovery ---
 
 function current_network_json {
+	local -a f_ssid
+	zparseopts -D -F -K -- {s,-ssid}=f_ssid || return 1
+
 	local iface gateway addr cidr ssid network_id network_name route_line gateway_mac subnet
 
 	if command-has ip; then
@@ -308,9 +311,27 @@ function current_network_json {
 		[[ -z "$gateway" ]] && gateway="$(getprop "net.${iface}.gw" 2>/dev/null)"
 	fi
 
-	if [[ -n "$iface" ]] && command-has nmcli; then
-		ssid="$(nmcli -t -f GENERAL.CONNECTION device show "$iface" 2>/dev/null | sed 's/^GENERAL.CONNECTION://')"
-		[[ "$ssid" == "--" ]] && unset ssid
+	# SSID lookup is expensive on Termux (~500 ms binder cold-start per backend)
+	# and only needed for the human-readable network_name shown when a device is
+	# added. Filtering uses network_id (gateway MAC / subnet), so skip by default.
+	if (( ${#f_ssid} )) && [[ -n "$iface" ]]; then
+		if command-has nmcli; then
+			ssid="$(nmcli -t -f GENERAL.CONNECTION device show "$iface" 2>/dev/null | sed 's/^GENERAL.CONNECTION://')"
+			[[ "$ssid" == "--" ]] && unset ssid
+		fi
+		# Termux/Android: nmcli is absent. Try Termux:API (needs Location perm),
+		# then fall back to Shizuku `rish` for `cmd wifi status`.
+		if [[ -z "$ssid" ]] && command-has termux-wifi-connectioninfo; then
+			ssid="$(termux-wifi-connectioninfo 2>/dev/null | jq -r '.ssid // empty' 2>/dev/null)"
+			# Strip surrounding quotes Android wraps the SSID in.
+			ssid="${ssid#\"}"; ssid="${ssid%\"}"
+			[[ "$ssid" == "<unknown ssid>" || "$ssid" == "null" ]] && unset ssid
+		fi
+		if [[ -z "$ssid" ]] && command-has rish; then
+			ssid="$(rish -c 'cmd -w wifi status' 2>/dev/null \
+				| awk -F'"' '/SSID:/ {print $2; exit}')"
+			[[ "$ssid" == "<unknown ssid>" ]] && unset ssid
+		fi
 	fi
 
 	# System-independent ID: gateway MAC (most stable), else subnet, else legacy fallback.
@@ -465,7 +486,7 @@ function _discover_device_json {
 	local target="$1"
 	local mac ip hostname network
 
-	network="$(current_network_json 2>/dev/null)"
+	network="$(current_network_json --ssid 2>/dev/null)"
 	jq -e 'type == "object" and has("connected")' >/dev/null 2>&1 <<< "$network" \
 		|| network="$(jq -n '{connected:false,id:null,name:null,iface:null,gateway:null,gateway_mac:null,subnet:null,cidr:null}')"
 
