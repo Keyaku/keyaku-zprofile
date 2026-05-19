@@ -134,7 +134,7 @@ function _config_default_json {
 			defaults: {
 				user: "root",
 				port: 22,
-				prefix: "router",
+				prefix: "",
 				domain: ".lan"
 			},
 			tasks: {}
@@ -162,7 +162,7 @@ function _config_ensure {
 			defaults: {
 				user:   (.defaults.user   // "root"),
 				port:   (.defaults.port   // 22),
-				prefix: (.defaults.prefix // "router"),
+				prefix: (.defaults.prefix // ""),
 				domain: (.defaults.domain // ".lan")
 			},
 			tasks: (.tasks // {})
@@ -229,11 +229,14 @@ function _id_normalize {
 }
 
 function _default_host_for_id {
-	local id="$1" prefix domain
+	local id="$1" prefix domain core="$1"
 	prefix="$(_config_value '.defaults.prefix')"
 	domain="$(_config_value '.defaults.domain')"
 	[[ "${domain[1]}" == "." || -z "$domain" ]] || domain=".$domain"
-	print -r -- "${prefix}${id}${domain}"
+	# Avoid double-prefixing/suffixing when the id was given as a full hostname.
+	[[ -n "$prefix" && "${core[1,${#prefix}]:l}" == "${prefix:l}" ]] && core="${core[${#prefix}+1,-1]}"
+	[[ -n "$domain" && "${core[-${#domain},-1]:l}" == "${domain:l}" ]] && core="${core[1,-${#domain}-1]}"
+	print -r -- "${prefix}${core}${domain}"
 }
 
 # Resolve --columns selection (Flatpak-style column picker).
@@ -709,10 +712,13 @@ function owrt_ssh {
 function _select_routers {
 	# Args: parsed selector arrays via name reference.
 	# Echoes selected router ids (one per line) in registry order.
-	local -a includes excludes tags
-	includes=("${(@P)1}")
-	excludes=("${(@P)2}")
-	tags=("${(@P)3}")
+	# NOTE: locals must NOT share names with the caller's arrays — zsh's (@P)
+	# name-reference resolves in the current scope first, so a local `includes`
+	# would shadow the caller's array and silently match nothing (→ no filter).
+	local -a _includes _excludes _tags
+	_includes=("${(@P)1}")
+	_excludes=("${(@P)2}")
+	_tags=("${(@P)3}")
 	local all_flag="$4"
 
 	local data; data="$(_json_read)" || return 1
@@ -720,8 +726,8 @@ function _select_routers {
 	# Normalize selectors
 	local -a inc_norm exc_norm
 	local r
-	for r in "${includes[@]}"; do inc_norm+=("$(_id_normalize "$r")"); done
-	for r in "${excludes[@]}"; do exc_norm+=("$(_id_normalize "$r")"); done
+	for r in "${_includes[@]}"; do inc_norm+=("$(_id_normalize "$r")"); done
+	for r in "${_excludes[@]}"; do exc_norm+=("$(_id_normalize "$r")"); done
 
 	# Validate includes
 	local -a known
@@ -741,7 +747,7 @@ function _select_routers {
 	local inc_json exc_json tags_json
 	inc_json="$(jq -n '$ARGS.positional' --args -- "${inc_norm[@]}")"
 	exc_json="$(jq -n '$ARGS.positional' --args -- "${exc_norm[@]}")"
-	tags_json="$(jq -n '$ARGS.positional' --args -- "${tags[@]}")"
+	tags_json="$(jq -n '$ARGS.positional' --args -- "${_tags[@]}")"
 
 	jq -r \
 		--argjson inc "$inc_json" \
