@@ -92,7 +92,7 @@ Because entry points and stage files use `$ZDOTDIR` at runtime (which expands to
 
 - **`ZSH_DISABLE_COMPFIX=true`** is set in `20-omz-setup.zsh` when `EUID == 0`, suppressing OMZ's insecure-completion-directory warnings.
 - **fastfetch is skipped** (`10-setup.zsh`) — cosmetic, not needed for root.
-- Root has no `.p10k.zsh` by default → falls back to the theme set in `21-omz-config.zsh`.
+- Root has no `.p10k.zsh` by default → falls back to the theme set in `21-omz-config.zsh`. The powerlevel10k theme file itself is symlinked into root's `custom/themes/` by `setup_root`, so dropping a `.p10k.zsh` into root's `$ZDOTDIR` is enough to opt in.
 - Pattern for new EUID guards: `(( EUID != 0 ))` wrapping the body, or `(( EUID == 0 )) && return` at the top of something that should never run as root.
 
 ### Security note

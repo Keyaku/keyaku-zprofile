@@ -185,7 +185,14 @@ function setup_root {
 	done
 
 	# Independent: root has its own custom dir and no .p10k.zsh by default
-	sudo mkdir -p "$root_zdotdir/custom"
+	sudo mkdir -p "$root_zdotdir/custom/themes"
+
+	# Symlink the powerlevel10k theme so root can opt into p10k by dropping a
+	# .p10k.zsh into its $ZDOTDIR (10-setup.zsh gates ZSH_THEME on this file).
+	if [[ -e "$ZDOTDIR/vendor/themes/powerlevel10k/powerlevel10k.zsh-theme" ]]; then
+		sudo ln -sfn "$ZDOTDIR/vendor/themes/powerlevel10k/powerlevel10k.zsh-theme" \
+			"$root_zdotdir/custom/themes/powerlevel10k.zsh-theme"
+	fi
 
 	# Copy startup entry point files (stable boilerplate; sync manually if they change)
 	local f
