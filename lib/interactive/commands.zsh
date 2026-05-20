@@ -46,9 +46,13 @@ function command-has {
 	# # function logic
 	local args="${(j:|:)@}"
 
+	# Deduplicate matches across commands, functions, and aliases (a command can be
+	# both a real binary and an alias, which would double-count without -aU here).
+	local -aU valid=(${commands[(I)($args)]} ${functions[(I)($args)]} ${aliases[(I)($args)]})
+	local results=${#valid}
+
 	## Print invalid commands
 	if (( $verbosity )); then
-		local -aU valid=(${commands[(I)($args)]} ${functions[(I)($args)]} ${aliases[(I)($args)]})
 		local -aU invalid=(${@:|valid})
 		if (( ${#invalid} )); then
 			print_fn -e "Not found:"
@@ -56,9 +60,6 @@ function command-has {
 		fi
 	fi
 
-	# Fastest process to check for commands
-	# Count total matches across commands, functions and aliases
-	local results=$(( ${(v)#commands[(I)($args)]} + ${#functions[(I)($args)]} + ${#aliases[(I)($args)]} ))
 	{ [[ "${logical}" == (a|and) ]] && (( $# == $results )) } ||
 	{ [[ "${logical}" == (o|or) ]] && (( $results )) }
 }
