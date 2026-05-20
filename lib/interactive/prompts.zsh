@@ -39,10 +39,6 @@ function ask {
 	## Parse arguments
 	local v_prompt v_default v_options=()
 	(( ${#f_prompt} )) && v_prompt="${f_prompt[-1]}"
-	# If yesno was requested, override options and enable strict
-	(( ${#f_yesno} )) && {
-		f_options=(-o${^valid_yn})
-	}
 
 	[[ "${f_options}" ]] && {
 		local i
@@ -50,7 +46,10 @@ function ask {
 			v_options+=("${f_options[$i]}")
 		done
 	}
+	# If yesno was requested, override options
+	(( ${#f_yesno} )) && v_options=(${valid_yn})
 	local -a printed_opts=(${v_options})
+	(( ${#f_yesno} )) && printed_opts=(${valid_yn_short})
 
 	[[ "${f_default}" ]] && {
 		# If default was defined but nonEmpty is set to true, throw error
@@ -97,10 +96,8 @@ function ask {
 	done
 
 	## Prepare prompt message
-	(( ${#f_yesno} )) && printed_opts=(${printed_opts//(yes|ye|no)/})
-
 	v_prompt="${v_prompt:+$v_prompt }${printed_opts:+[${(j:/:)printed_opts}]}"
-	[[ "${v_prompt}" ]] && v_prompt="${v_prompt}\n"
+	[[ "${v_prompt}" ]] && v_prompt="${v_prompt}"$'\n'
 
 	## Begin prompting
 	local -i retval=0
