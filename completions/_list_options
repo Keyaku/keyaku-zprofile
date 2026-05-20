@@ -1,0 +1,8 @@
+#compdef list_options
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'(-n --noun)'{-n,--noun}'[label for current value]:noun' \
+	'(-c --current)'{-c,--current}'[current value to exclude]:current value' \
+	'(-H --hint)'{-H,--hint}'[extra line when alternatives exist]:hint' \
+	'*:option'

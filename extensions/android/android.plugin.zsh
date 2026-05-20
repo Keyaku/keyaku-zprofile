@@ -163,18 +163,11 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 
 		# Bare invocation: report current + alternatives and exit.
 		if (( $# == 0 )); then
-			print_fn -i "Current package manager: ${current:-unknown}"
-			local m
-			local -a alternatives=()
-			for m in ${(ko)managers}; do
-				[[ "$m" == "$current" ]] || alternatives+=("$m")
-			done
-			if (( ${#alternatives} )); then
-				print_fn -i "Alternatives: ${(j:, :)alternatives}"
-				print_fn -i "Run '$0 set [TARGET]' to stage a switch."
-			else
-				print_fn -i "No alternatives available."
-			fi
+			list_options \
+				-n "package manager" \
+				-c "$current" \
+				-H "Run '$0 set [TARGET]' to stage a switch." \
+				${(ko)managers}
 			return 0
 		fi
 

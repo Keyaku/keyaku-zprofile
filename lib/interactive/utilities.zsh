@@ -3,6 +3,50 @@
 ##############################################################################
 
 # ============================================================================
+# Output helpers
+# ============================================================================
+# Print "Current <noun>: <current>" plus the remaining OPTIONs as alternatives.
+# Designed for the bare-call branch of CLIs that switch between named modes
+# (e.g. termux_pkgmgr), so they don't each re-roll the same loop+join.
+function list_options {
+	local -ra usage=(
+		"Usage: ${funcstack[1]} [-n NOUN] [-c CURRENT] [-H HINT] OPTION..."
+		"Print the current value and the remaining OPTIONs as alternatives."
+		""
+		"  -n, --noun=NOUN     Label for the current value (default: 'value')"
+		"  -c, --current=VAL   Current value to exclude from alternatives"
+		"  -H, --hint=TEXT     Extra line printed when alternatives exist"
+		"  -h, --help          Show this help"
+	)
+	local -a o_noun o_current o_hint o_help
+	zparseopts -D -F -K -- \
+		{n,-noun}:=o_noun \
+		{c,-current}:=o_current \
+		{H,-hint}:=o_hint \
+		{h,-help}=o_help \
+	|| { >&2 print -l $usage; return 2 }
+	if (( ${#o_help} )); then >&2 print -l $usage; return 0; fi
+	check_argc $# 1 || { >&2 print -l $usage; return 2 }
+
+	local -r noun="${o_noun[2]:-value}"
+	local -r current="${o_current[2]:-}"
+	local -r hint="${o_hint[2]:-}"
+
+	print -- "Current ${noun}: ${current:-unknown}"
+	local opt
+	local -a alternatives=()
+	for opt in "$@"; do
+		[[ "$opt" == "$current" ]] || alternatives+=("$opt")
+	done
+	if (( ${#alternatives} )); then
+		print -- "Alternatives: ${(j:, :)alternatives}"
+		[[ -n "$hint" ]] && print -- "$hint"
+	else
+		print -- "No alternatives available."
+	fi
+}
+
+# ============================================================================
 # Network tools
 # ============================================================================
 # Define listen_ports as one of these, in order of preference
