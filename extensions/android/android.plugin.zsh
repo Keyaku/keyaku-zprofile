@@ -112,19 +112,22 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 
 	function termux_pkgmgr {
 		local -ra usage=(
-			"Usage: $0 [-c|-l] [TARGET]"
+			"Usage: $0 [-c|-l]"
+			"       $0 set [TARGET]"
 			"Inspect or stage a Termux package-manager bootstrap switch."
+			""
+			"  (no args)       Print current package manager and alternatives"
+			"  set [TARGET]    Stage a switch to TARGET (interactive if omitted)"
+			"                  TARGET is one of: apt, pacman"
 			""
 			"  -c, --current   Print current package manager and exit"
 			"  -l, --list      List supported managers"
 			"  -h, --help      Show this help"
 			""
-			"TARGET            One of: apt, pacman. Interactive prompt if omitted."
-			""
 			"Switching downloads the target bootstrap zip into ~/storage/downloads,"
-			"verifies it where possible, and prints manual extraction instructions."
-			"This function NEVER modifies \$PREFIX. Replacing a live \$PREFIX from"
-			"within a shell that lives in it is unsafe."
+			"verifies it, extracts it aside into usr-n/, and prints manual instructions"
+			"for the failsafe-mode swap. This function NEVER modifies \$PREFIX."
+			"Replacing a live \$PREFIX from within a shell that lives in it is unsafe."
 		)
 		local -a o_current o_list o_help
 		zparseopts -D -F -K -- \
@@ -158,6 +161,30 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			return 1
 		fi
 
+		# Bare invocation: report current + alternatives and exit.
+		if (( $# == 0 )); then
+			print_fn -i "Current package manager: ${current:-unknown}"
+			local m
+			local -a alternatives=()
+			for m in ${(ko)managers}; do
+				[[ "$m" == "$current" ]] || alternatives+=("$m")
+			done
+			if (( ${#alternatives} )); then
+				print_fn -i "Alternatives: ${(j:, :)alternatives}"
+				print_fn -i "Run '$0 set [TARGET]' to stage a switch."
+			else
+				print_fn -i "No alternatives available."
+			fi
+			return 0
+		fi
+
+		# Sole supported subcommand.
+		if [[ "$1" != "set" ]]; then
+			print_fn -e "Unknown command: $1"
+			>&2 print -l $usage
+			return 2
+		fi
+		shift
 		check_argc $# 0 1 || { >&2 print -l $usage; return 2 }
 
 		# Hard guard: must be inside Termux.
@@ -172,12 +199,21 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			print_fn -i "Current package manager: ${current:-unknown}"
 			local -a choices=(${(ko)managers})
 			local m reply i=1
+			print -u2 "  0) cancel"
 			for m in $choices; do
 				print -u2 "  $i) $m"
 				((i++))
 			done
-			printf 'Select target [1-%d]: ' ${#choices} >&2
-			read -r reply
+			printf 'Select target [0-%d]: ' ${#choices} >&2
+			if ! read -r reply; then
+				print -u2
+				print_fn -i "Cancelled."
+				return 0
+			fi
+			if [[ "$reply" == 0 ]]; then
+				print_fn -i "Cancelled."
+				return 0
+			fi
 			if [[ "$reply" != <-> ]] || (( reply < 1 || reply > ${#choices} )); then
 				print_fn -e "Invalid selection"
 				return 2
@@ -290,23 +326,45 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			fi
 		fi
 
+		# Extract the bootstrap aside into usr-n/ (do NOT touch usr/). Replacing
+		# a live $PREFIX needs failsafe mode, which is the user's job; staging
+		# the new tree next to it is safe and saves manual steps.
+		local -r files_dir="${HOME}/.."
+		local -r staging="${files_dir}/usr-n"
+		if ! (( ${+commands[unzip]} )); then
+			print_fn -e "unzip is required to extract the bootstrap"
+			return 1
+		fi
+		if [[ -e "$staging" ]]; then
+			print_fn -e "${staging} already exists; remove it before re-running"
+			return 1
+		fi
+		print_fn -i "Extracting bootstrap into ${staging}..."
+		if ! mkdir -p "$staging"; then
+			print_fn -e "Could not create ${staging}"
+			return 1
+		fi
+		if ! unzip -o -q "$dest" -d "$staging"; then
+			print_fn -e "Extraction failed"
+			rm -rf "$staging"
+			return 1
+		fi
+		if [[ -f "$staging/SYMLINKS.txt" ]]; then
+			print_fn -i "Re-creating symlinks from SYMLINKS.txt..."
+			( cd "$staging" && awk -F '←' '{ system("ln -s -- \"" $1 "\" \"" $2 "\"") }' SYMLINKS.txt ) \
+				|| print_fn -w "Symlink replay reported errors"
+		else
+			print_fn -w "No SYMLINKS.txt in bootstrap; skipping symlink replay"
+		fi
+		print_fn -s "Bootstrap extracted to ${staging}"
+
 		print_fn -s "Bootstrap staged. To complete the switch (manually):"
 		cat >&2 <<-EOF
 
 			  1. Back up first. Run:
 			         termux_backup
 
-			  2. Extract the bootstrap aside (do NOT touch usr/ yet):
-			         cd /data/data/com.termux/files
-			         unzip -l "${dest}" | head        # verify contents first
-			         mkdir -p usr-n
-			         unzip -o "${dest}" -d usr-n
-			         # Re-create symlinks listed in the bootstrap manifest:
-			         cd usr-n
-			         awk -F '←' '{system("ln -s '"'"'"\$1"'"'"' '"'"'"\$2"'"'"'")}' SYMLINKS.txt
-			         cd ..
-
-			  3. Enter Termux failsafe mode so \$PREFIX is not in use by the
+			  2. Enter Termux failsafe mode so \$PREFIX is not in use by the
 			     running shell. To launch failsafe:
 			       a. Close ALL Termux sessions.
 			       b. Long-press the Termux launcher icon and tap "Failsafe"
@@ -317,19 +375,19 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			         rm -fr usr/
 			         mv usr-n/ usr/
 
-			  4. Exit failsafe, start Termux normally. If switching to pacman,
+			  3. Exit failsafe, start Termux normally. If switching to pacman,
 			     initialize the keyring:
 			         pacman-key --init
 			         pacman-key --populate
 
-			  5. The fresh bootstrap ships only a minimal base; zsh and this
+			  4. The fresh bootstrap ships only a minimal base; zsh and this
 			     environment are gone (\$PREFIX/etc was wiped). From the default
 			     bash/sh, install zsh first, then re-bootstrap:
 			         # apt variant:    pkg install zsh
 			         # pacman variant: pacman -Sy zsh
 			         zsh ${ZDOTDIR:-$HOME/.local/config/zsh}/conf/first_init.zsh
 
-			  6. Re-install packages from the exported list (names may differ
+			  5. Re-install packages from the exported list (names may differ
 			     between repos. Review before bulk-installing):
 			         ${pkglist}
 
@@ -337,7 +395,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			         tar -zxf <backup>.tar.gz -C /data/data/com.termux/files \\
 			           --recursive-unlink --preserve-permissions
 
-			This function deliberately does NOT perform steps 2-5.
+			This function deliberately does NOT perform the failsafe swap.
 		EOF
 	}
 
