@@ -19,7 +19,7 @@ source "${ZDOTDIR}/lib/script/table.zsh"
 source "${ZDOTDIR}/lib/script/config.zsh"
 source "${ZDOTDIR}/lib/script/json-store.zsh"
 
-command-has -av jq ssh || exit 1
+command-has -av jaq ssh || exit 1
 
 readonly -a usage=(
 	"Usage: ${THIS} [OPTION...] COMMAND [ARGUMENT...]"
@@ -113,7 +113,7 @@ function _task_cmds {
 		*)
 			# Fall back to a user-defined task in the config file.
 			local custom
-			custom="$(jq -r --arg name "$1" \
+			custom="$(jaq -r --arg name "$1" \
 				'(.tasks // {})[$name].commands // [] | if type == "array" then .[] else empty end' \
 				"$CONFIG_FILE_PATH" 2>/dev/null)"
 			if [[ -n "$custom" ]]; then
@@ -129,7 +129,7 @@ function _task_cmds {
 # --- Configuration ---
 
 function _config_default_json {
-	jq -n \
+	jaq -n \
 		--arg store "$DEFAULT_STORE_PATH" \
 		'{
 			store_path: $store,
@@ -144,7 +144,7 @@ function _config_default_json {
 }
 
 function _config_coerce {
-	jq \
+	jaq \
 		--arg store "$DEFAULT_STORE_PATH" \
 		'{
 			store_path: (.store_path // $store),
@@ -239,7 +239,7 @@ function _resolve_columns {
 
 function _find_router {
 	local id; id="$(_id_normalize "$1")"
-	_json_read | jq -e --arg id "$id" \
+	_json_read | jaq -e --arg id "$id" \
 		'.routers | map(select((.id | ascii_downcase) == $id)) | if length == 1 then .[0] else empty end' \
 		2>/dev/null
 }
@@ -249,7 +249,7 @@ function _resolve_endpoint {
 	local default_user default_port
 	default_user="$(_config_value '.defaults.user')"
 	default_port="$(_config_value '.defaults.port')"
-	jq -r \
+	jaq -r \
 		--arg user "$default_user" \
 		--arg port "$default_port" \
 		'"\(.user // $user)@\(.host) \(.port // ($port | tonumber))"'
@@ -279,7 +279,7 @@ function owrt_list {
 		local -a header_cols=("${(@s:,:)cols:u}")
 		print -r -- "${(pj:\t:)header_cols}"
 
-		jq -r \
+		jaq -r \
 			--arg tag "$tag" \
 			--arg default_user "$(_config_value '.defaults.user')" \
 			--arg default_port "$(_config_value '.defaults.port')" \
@@ -321,7 +321,7 @@ function owrt_add {
 	[[ -n "$id" ]] || { print_fn -e "Router id can't be empty."; return 1; }
 
 	local data; data="$(_json_read)" || return 1
-	if jq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
+	if jaq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
 		print_fn -e "Router already registered: %s (use 'edit')" "$id"
 		return 1
 	fi
@@ -338,12 +338,12 @@ function owrt_add {
 	fi
 
 	local now; now="$(now)"
-	jq \
+	jaq \
 		--arg id "$id" \
 		--arg host "$host" \
 		--arg user "${f_user[-1]}" \
 		--argjson port "$port_arg" \
-		--argjson tags "$(print -r -- "$tags" | jq -R 'split(" ") | map(select(length>0))')" \
+		--argjson tags "$(print -r -- "$tags" | jaq -R 'split(" ") | map(select(length>0))')" \
 		--arg now "$now" \
 		'.routers += [{
 			id: $id,
@@ -363,12 +363,12 @@ function owrt_remove {
 	[[ -n "$id" ]] || { print -u2 "Usage: $THIS remove ID"; return 1; }
 
 	local data; data="$(_json_read)" || return 1
-	if ! jq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
+	if ! jaq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
 		print_fn -e "Router not found: %s" "$id"
 		return 1
 	fi
 
-	jq --arg id "$id" '.routers |= map(select(.id != $id))' <<< "$data" | _json_write || return 1
+	jaq --arg id "$id" '.routers |= map(select(.id != $id))' <<< "$data" | _json_write || return 1
 	print_fn -s "Removed: %s" "$id"
 }
 
@@ -392,7 +392,7 @@ function owrt_edit {
 
 	local data router
 	data="$(_json_read)" || return 1
-	router="$(jq -e --arg id "$id" '.routers | map(select(.id == $id)) | if length == 1 then .[0] else empty end' <<< "$data")" || {
+	router="$(jaq -e --arg id "$id" '.routers | map(select(.id == $id)) | if length == 1 then .[0] else empty end' <<< "$data")" || {
 		print_fn -e "Router not found: %s" "$id"
 		return 1
 	}
@@ -401,19 +401,19 @@ function owrt_edit {
 	if (( ! ${#f_host} && ! ${#f_user} && ! ${#f_port} && ! ${#f_id} && ! ${#f_tag} && ! ${#f_untag} )); then
 		local tmp editor
 		tmp="$(mktemp --suffix=.json)" || return 1
-		print -r -- "$router" | jq . > "$tmp"
+		print -r -- "$router" | jaq . > "$tmp"
 		editor="${EDITOR:-${VISUAL:-vi}}"
 		"$editor" "$tmp" || { rm -f "$tmp"; return 1; }
 
-		if ! jq -e 'type == "object" and (.id | type == "string") and (.host | type == "string")' "$tmp" >/dev/null 2>&1; then
+		if ! jaq -e 'type == "object" and (.id | type == "string") and (.host | type == "string")' "$tmp" >/dev/null 2>&1; then
 			print_fn -e "Edited JSON must have string 'id' and 'host' fields; not saving."
 			rm -f "$tmp"; return 1
 		fi
 
-		local new_router; new_router="$(jq --arg now "$(now)" '.updated_at = $now' "$tmp")"
+		local new_router; new_router="$(jaq --arg now "$(now)" '.updated_at = $now' "$tmp")"
 		rm -f "$tmp"
 
-		jq --arg id "$id" --argjson new "$new_router" \
+		jaq --arg id "$id" --argjson new "$new_router" \
 			'.routers |= map(if .id == $id then $new else . end)' <<< "$data" | _json_write || return 1
 		print_fn -s "Updated: %s" "$id"
 		return 0
@@ -424,7 +424,7 @@ function owrt_edit {
 	if (( ${#f_id} )); then
 		new_id="$(_id_normalize "${f_id[-1]}")"
 		[[ -n "$new_id" ]] || { print_fn -e "New id can't be empty."; return 1; }
-		if [[ "$new_id" != "$id" ]] && jq -e --arg id "$new_id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
+		if [[ "$new_id" != "$id" ]] && jaq -e --arg id "$new_id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
 			print_fn -e "Router id already exists: %s" "$new_id"
 			return 1
 		fi
@@ -439,14 +439,14 @@ function owrt_edit {
 	local -a add_tags=("${(@)f_tag:#(-t|--tag)}")
 	local -a del_tags=("${(@)f_untag:#--untag}")
 
-	jq \
+	jaq \
 		--arg id "$id" \
 		--arg new_id "$new_id" \
 		--arg host "${f_host[-1]}" \
 		--arg user "${f_user[-1]}" \
 		--argjson port "$port_arg" \
-		--argjson add "$(print -r -- "$add_tags" | jq -R 'split(" ") | map(select(length>0))')" \
-		--argjson del "$(print -r -- "$del_tags" | jq -R 'split(" ") | map(select(length>0))')" \
+		--argjson add "$(print -r -- "$add_tags" | jaq -R 'split(" ") | map(select(length>0))')" \
+		--argjson del "$(print -r -- "$del_tags" | jaq -R 'split(" ") | map(select(length>0))')" \
 		--arg now "$(now)" \
 		'.routers |= map(
 			if .id == $id then
@@ -464,7 +464,7 @@ function owrt_edit {
 function owrt_config {
 	case "$1" in
 		""|show)
-			jq --arg config_file "$CONFIG_FILE_PATH" \
+			jaq --arg config_file "$CONFIG_FILE_PATH" \
 				'. + { config_file: $config_file }' "$CONFIG_FILE_PATH"
 		;;
 		path) print -r -- "$CONFIG_FILE_PATH" ;;
@@ -482,13 +482,13 @@ function owrt_config {
 			local tmp; tmp="$(mktemp)" || return 1
 			case "$key" in
 				store_path)
-					jq --arg v "$value" '.store_path = $v' "$CONFIG_FILE_PATH" > "$tmp"
+					jaq --arg v "$value" '.store_path = $v' "$CONFIG_FILE_PATH" > "$tmp"
 				;;
 				port)
-					jq --argjson v "$value" '.defaults.port = $v' "$CONFIG_FILE_PATH" > "$tmp"
+					jaq --argjson v "$value" '.defaults.port = $v' "$CONFIG_FILE_PATH" > "$tmp"
 				;;
 				*)
-					jq --arg k "$key" --arg v "$value" '.defaults[$k] = $v' "$CONFIG_FILE_PATH" > "$tmp"
+					jaq --arg k "$key" --arg v "$value" '.defaults[$k] = $v' "$CONFIG_FILE_PATH" > "$tmp"
 				;;
 			esac
 			[[ -s "$tmp" ]] && mv "$tmp" "$CONFIG_FILE_PATH" || { rm -f "$tmp"; return 1; }
@@ -523,10 +523,10 @@ function owrt_task {
 			local desc="${f_desc[-1]}"
 
 			local tmp; tmp="$(mktemp)" || return 1
-			jq \
+			jaq \
 				--arg name "$name" \
 				--arg desc "$desc" \
-				--argjson cmds "$(jq -n '$ARGS.positional' --args -- "${cmds[@]}")" \
+				--argjson cmds "$(jaq -n '$ARGS.positional' --args -- "${cmds[@]}")" \
 				'.tasks //= {}
 				 | .tasks[$name] = (
 				     {commands: $cmds}
@@ -557,7 +557,7 @@ function owrt_task {
 			done
 
 			local -a entries
-			entries=("${(@f)$(jq -r '.tasks // {} | to_entries[] | "\(.key)\t\(.value.description // "(no description)")\t\((.value.commands // []) | join(" && "))"' \
+			entries=("${(@f)$(jaq -r '.tasks // {} | to_entries[] | "\(.key)\t\(.value.description // "(no description)")\t\((.value.commands // []) | join(" && "))"' \
 				"$CONFIG_FILE_PATH" 2>/dev/null)}")
 			local entry desc cmds
 			for entry in "${entries[@]}"; do
@@ -612,12 +612,12 @@ function owrt_task {
 				print_fn -e "Cannot remove built-in task: %s" "$name"
 				return 1
 			fi
-			if ! jq -e --arg name "$name" '(.tasks // {}) | has($name)' "$CONFIG_FILE_PATH" >/dev/null 2>&1; then
+			if ! jaq -e --arg name "$name" '(.tasks // {}) | has($name)' "$CONFIG_FILE_PATH" >/dev/null 2>&1; then
 				print_fn -e "Task not found in config: %s" "$name"
 				return 1
 			fi
 			local tmp; tmp="$(mktemp)" || return 1
-			jq --arg name "$name" 'del(.tasks[$name])' "$CONFIG_FILE_PATH" > "$tmp" \
+			jaq --arg name "$name" 'del(.tasks[$name])' "$CONFIG_FILE_PATH" > "$tmp" \
 				&& mv "$tmp" "$CONFIG_FILE_PATH" \
 				|| { rm -f "$tmp"; return 1; }
 			print_fn -s "Removed task: %s" "$name"
@@ -671,7 +671,7 @@ function _select_routers {
 
 	# Validate includes
 	local -a known
-	known=("${(@f)$(jq -r '.routers[].id' <<< "$data")}")
+	known=("${(@f)$(jaq -r '.routers[].id' <<< "$data")}")
 	local missing=()
 	for r in "${inc_norm[@]}"; do
 		[[ -n "$r" && ${known[(I)$r]} -gt 0 ]] || missing+=("$r")
@@ -681,15 +681,15 @@ function _select_routers {
 		return 1
 	fi
 
-	# Build JSON arrays via jq -n so empty zsh arrays stay empty in jq (a bare
+	# Build JSON arrays via jaq -n so empty zsh arrays stay empty in jaq (a bare
 	# `printf '%s\n' "${empty[@]}"` still emits a blank line, which would turn
 	# into [""] and filter out everything).
 	local inc_json exc_json tags_json
-	inc_json="$(jq -n '$ARGS.positional' --args -- "${inc_norm[@]}")"
-	exc_json="$(jq -n '$ARGS.positional' --args -- "${exc_norm[@]}")"
-	tags_json="$(jq -n '$ARGS.positional' --args -- "${_tags[@]}")"
+	inc_json="$(jaq -n '$ARGS.positional' --args -- "${inc_norm[@]}")"
+	exc_json="$(jaq -n '$ARGS.positional' --args -- "${exc_norm[@]}")"
+	tags_json="$(jaq -n '$ARGS.positional' --args -- "${_tags[@]}")"
 
-	jq -r \
+	jaq -r \
 		--argjson inc "$inc_json" \
 		--argjson exc "$exc_json" \
 		--argjson tags "$tags_json" \
