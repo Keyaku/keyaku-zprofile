@@ -192,12 +192,12 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			print_fn -i "Current package manager: ${current:-unknown}"
 			local -a choices=(${(ko)managers})
 			local m reply i=1
-			print -u2 "  0) cancel"
 			for m in $choices; do
 				print -u2 "  $i) $m"
 				((i++))
 			done
-			printf 'Select target [0-%d]: ' ${#choices} >&2
+			print -u2 "  (0 or Ctrl-D to cancel)"
+			printf 'Select target [1-%d]: ' ${#choices} >&2
 			if ! read -r reply; then
 				print -u2
 				print_fn -i "Cancelled."
