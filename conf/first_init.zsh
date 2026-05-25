@@ -271,13 +271,17 @@ function setup_borg {
 	ln -sfn "$src" "$dest"
 	print_fn -s "Borg config linked: $dest -> $src"
 
-	# Expose the runner on sudo's secure_path so `sudo borg-backup` works.
-	local script="$ZDOTDIR/conf/home/bin/borg-backup.zsh"
-	local bin=/usr/local/bin/borg-backup.zsh
-	if [[ ! -L "$bin" || "$(readlink -f "$bin")" != "$script" ]]; then
-		$SUDO ln -sfn "$script" "$bin"
-		print_fn -s "Borg runner linked: $bin -> $script"
-	fi
+	# Expose the runner and target provisioner on sudo's secure_path so
+	# `sudo borg-backup.zsh` / `sudo borg-target.zsh` work.
+	local borg_script
+	for borg_script in borg-backup borg-target; do
+		local script="$ZDOTDIR/conf/home/bin/$borg_script.zsh"
+		local bin="/usr/local/bin/$borg_script.zsh"
+		if [[ ! -L "$bin" || "$(readlink -f "$bin")" != "$script" ]]; then
+			$SUDO ln -sfn "$script" "$bin"
+			print_fn -s "Borg script linked: $bin -> $script"
+		fi
+	done
 }
 
 ### Repo-local setup

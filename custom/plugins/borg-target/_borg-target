@@ -1,0 +1,30 @@
+#compdef borg-target borg-target.zsh
+
+# Zsh completion for borg-target.zsh
+# Drop into $fpath (e.g. add 'borg-target' to $plugins so this dir gets fpath'd).
+
+local curcontext="$curcontext" state line
+typeset -A opt_args
+
+_borg-target_devices() {
+	local -a devs
+	if (( $+commands[lsblk] )); then
+		devs=("${(@f)$(lsblk -dpno NAME,SIZE,MODEL 2>/dev/null | sed 's/  */:/')}")
+	fi
+	(( ${#devs} )) && _describe -t devices 'block device' devs || _files -g '/dev/*'
+}
+
+_borg-target() {
+	_arguments -s -S \
+		'(-h --help)'{-h,--help}'[Print help]' \
+		'(-l --label)'{-l,--label}'[btrfs filesystem label]:label:' \
+		'(-m --mountpoint)'{-m,--mountpoint}'[Mountpoint]:mountpoint:_files -/' \
+		'(-d --device)'{-d,--device}'[Block device to format]:device:_borg-target_devices' \
+		'(-f --format)'{-f,--format}'[wipefs + mkfs.btrfs the device (destructive)]' \
+		'(-e --encryption)'{-e,--encryption}'[borg init encryption mode]:mode:(repokey-blake2 keyfile-blake2 repokey keyfile none)' \
+		'(-o --mount-options)'{-o,--mount-options}'[Override btrfs mount options]:options:' \
+		'--no-init[Skip borg init]' \
+		'--no-credential[Skip deriving the systemd-creds credential]'
+}
+
+_borg-target "$@"
