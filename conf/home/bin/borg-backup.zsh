@@ -201,7 +201,7 @@ function main {
 
 	# --- rclone configuration ---
 	local RCLONE_ENABLED=$(_cfg '.rclone.enabled')
-	local RCLONE_CONFIG="${XDG_CONFIG_HOME:-$BORG_USER_HOME/.local/config}/rclone/rclone.conf"
+	local RCLONE_CONFIG="$_xdg/rclone/rclone.conf"
 	local RCLONE_NAME=$(_cfg '.rclone.name')
 	local RCLONE_REMOTE_PATH=$(_cfg '.rclone.remote_path')
 
