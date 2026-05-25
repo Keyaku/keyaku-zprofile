@@ -23,7 +23,7 @@ readonly THIS_NAME=${THIS:r}
 # Shared script libs (bootstrap pulls in lib/core + lib/interactive).
 source "${ZDOTDIR}/lib/script/bootstrap.zsh"
 
-command-has borg || exit 1
+command-has -v borg || exit 1
 if command-has jaq; then
 	readonly JQ=jaq
 elif command-has jq; then
