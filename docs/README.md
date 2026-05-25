@@ -52,10 +52,11 @@ It's structured as follows:
 	* The above ensure extensions are loaded only if the appropriate conditions are met, minimizing session login times while keeping the environment well equipped.
 	* Completion files (`_*`) are not loaded or considered, avoiding `fpath` pollution.
 	* They follow the same naming schemes and structure as `plugins`, including the `.plugin.zsh` filename extension.
+	* A few extensions also provision host state on first load. For example, `ssh-agent` symlinks its user unit from `conf/home/systemd/user/ssh-agent.service` into `${XDG_CONFIG_HOME}/systemd/user/` (the repo copy is the source of truth, so the unit travels and self-heals across machines) and exports `SSH_AUTH_SOCK` from the agent's deterministic socket. The unit itself publishes `SSH_AUTH_SOCK` into the systemd/D-Bus session environment so graphical and Flatpak apps inherit it, while the extension covers shells that don't descend from the session manager (TTY logins, `--host` shells).
 3. Zsh completions for `lib/` functions under `completions/`. One `_<funcname>` file per public function, prepended to `$fpath` before OMZ runs `compinit`. Drift between `lib/` and `completions/` is checked by `conf/check-completions.zsh` (invoked by `zupdate` and by the pre-commit hook at `conf/hooks/pre-commit`); `completions/.skip` lists intentionally uncompleted functions.
 4. Custom functions under `custom/functions/`.
 5. Custom plugins under `custom/plugins/`.
-6. Custom plugins under `custom/themes/`.
+6. Custom themes under `custom/themes/`.
 
 ### Dependencies
 

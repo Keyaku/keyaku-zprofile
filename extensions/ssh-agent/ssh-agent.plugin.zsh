@@ -24,3 +24,7 @@ has_user_systemd || return
 	# keys mid-session — the export takes effect on next restart or login.
 	print_fn -i "Linked ssh-agent.service from repo. To apply now: systemctl --user restart ssh-agent.service"
 }
+
+if [[ -z "${SSH_AUTH_SOCK}" && -S "${XDG_RUNTIME_DIR}/ssh-agent.socket" ]]; then
+	export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR}/ssh-agent.socket"
+fi

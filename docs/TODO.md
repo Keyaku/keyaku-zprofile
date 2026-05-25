@@ -57,3 +57,14 @@ All cleaned up! But there'll be more to come.
 
 * [ ] Initialize password store with existing GPG key (e.g. `pass init GPGKEY`).
 * [ ] Create skeleton for a synchronization software (e.g. SyncThing) to do its thing for multi-platform configuration (SSH, vimrc, etc.).
+
+
+### SSH agent
+
+Background: the user-level `ssh-agent.service` (`conf/home/systemd/user/ssh-agent.service`, symlinked into `${XDG_CONFIG_HOME}/systemd/user/` by `extensions/ssh-agent`) runs `/usr/bin/ssh-agent -D -a %t/ssh-agent.socket`, so the socket sits at the deterministic path `${XDG_RUNTIME_DIR}/ssh-agent.socket`. The unit also publishes `SSH_AUTH_SOCK` into the systemd/D-Bus session environment via `ExecStartPost`, so graphical and Flatpak sessions inherit it. Shells that don't descend from the session manager (plain TTY logins, `--host` shells) won't, so zsh exports it itself from the known socket path.
+
+* [x] Export `SSH_AUTH_SOCK` to the session environment so graphical/Flatpak apps inherit it without per-app overrides — handled by the service's `ExecStartPost` (`systemctl --user set-environment` + `dbus-update-activation-environment`), deliberately avoiding any `environment.d` drop-in.
+* [x] Export `SSH_AUTH_SOCK` to zsh for shells that don't inherit the session environment (TTY, `--host`): the `ssh-agent` extension sets it from `${XDG_RUNTIME_DIR}/ssh-agent.socket` when the socket exists and the variable is unset.
+* [x] Auto-load keys into the agent so connections don't need a manual `ssh-add` each session: `AddKeysToAgent yes` (`${XDG_CONFIG_HOME}/ssh/config.d/user.conf`, under `Host *`) seeds the agent passively on any successful key use — works for every key, no extra unit.
+	* [ ] Optional, more proactive alternative: a oneshot `ssh-add.service` (`Wants=`/`After=ssh-agent.service`) that pre-loads selected passphrase-less keys at agent start. Encrypted keys would block it unless paired with a `pinentry` agent, so only worth adding if pre-seeding specific keys before first use is actually needed.
+* [ ] Document the agent setup in `docs/README.md` (no SSH/XDG section exists yet — would be a new one).
