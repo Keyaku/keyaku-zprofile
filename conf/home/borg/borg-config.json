@@ -6,8 +6,7 @@
 		"/etc",
 		"/home",
 		"/root",
-		"/usr/local",
-		"/var/lib/bluetooth"
+		"/usr/local"
 	],
 	"exclude_patterns": [
 	],

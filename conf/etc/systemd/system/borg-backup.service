@@ -1,0 +1,13 @@
+[Unit]
+Description=Borg Backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/borg-backup.zsh
+Environment=SUDO_USER=antion
+LoadCredentialEncrypted=borg-passphrase:/etc/credstore.encrypted/borg-passphrase.cred
+# Give it plenty of time to finish
+TimeoutStartSec=infinity
+TimeoutStopSec=30

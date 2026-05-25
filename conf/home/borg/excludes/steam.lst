@@ -1,0 +1,26 @@
+# =============================================================================
+# steam.lst — Steam game installs, caches, and Proton compat state
+# =============================================================================
+# Kept: appmanifest_*.acf, libraryfolders.vdf, userdata/ (local saves &
+# per-user config), Steam client config — enough to reinstall the same set of
+# games and pick up where you left off after a restore.
+#
+# Excluded: actual game payloads (common/), in-flight downloads, shader caches,
+# workshop content, Proton compatdata (regenerated on first launch), and
+# Steam-side caches/logs.
+
+# --- Primary library: ~/.steam/steam/steamapps ---
+home/*/.steam/steam/steamapps/common
+home/*/.steam/steam/steamapps/downloading
+home/*/.steam/steam/steamapps/shadercache
+home/*/.steam/steam/steamapps/workshop/content
+home/*/.steam/steam/steamapps/compatdata
+home/*/.steam/steam/steamapps/temp
+home/*/.steam/steam/steamapps/music
+
+# --- Steam client caches and ephemeral state ---
+home/*/.steam/steam/depotcache
+home/*/.steam/steam/appcache
+home/*/.steam/steam/package
+home/*/.steam/steam/logs
+home/*/.steam/steam/dumps

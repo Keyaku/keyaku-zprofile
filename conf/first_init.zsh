@@ -243,6 +243,20 @@ function setup_de {
 function setup_borg {
 	command-has borg || return 0
 
+	# Repo passphrase: /etc/borg (0700) holds the plaintext passphrase (0400),
+	# the source of truth from which a host can derive a systemd-creds encrypted
+	# credential. Generate once and never overwrite — clobbering it would orphan
+	# any existing repo. SD formatting, the mount unit, the encrypted credential
+	# and the per-host override config are deliberately NOT handled here; those
+	# are one-shots that vary per machine.
+	$SUDO install -d -m 0700 -o root -g root /etc/borg
+	if ! $SUDO test -f /etc/borg/passphrase; then
+		openssl rand -base64 48 | $SUDO tee /etc/borg/passphrase >/dev/null
+		$SUDO chmod 0400 /etc/borg/passphrase
+		$SUDO chown root:root /etc/borg/passphrase
+		print_fn -s "Generated borg passphrase: /etc/borg/passphrase"
+	fi
+
 	local src="$ZDOTDIR/conf/home/borg"
 	local dest="${XDG_CONFIG_HOME:-$HOME/.local/config}/borg"
 
