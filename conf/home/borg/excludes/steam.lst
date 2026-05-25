@@ -9,18 +9,18 @@
 # workshop content, Proton compatdata (regenerated on first launch), and
 # Steam-side caches/logs.
 
-# --- Primary library: ~/.steam/steam/steamapps ---
-home/*/.steam/steam/steamapps/common
-home/*/.steam/steam/steamapps/downloading
-home/*/.steam/steam/steamapps/shadercache
-home/*/.steam/steam/steamapps/workshop/content
-home/*/.steam/steam/steamapps/compatdata
-home/*/.steam/steam/steamapps/temp
-home/*/.steam/steam/steamapps/music
+# --- Primary library: ~/.local/share/Steam/steamapps ---
+home/*/.local/share/Steam/steamapps/common
+home/*/.local/share/Steam/steamapps/downloading
+home/*/.local/share/Steam/steamapps/shadercache
+home/*/.local/share/Steam/steamapps/workshop/content
+home/*/.local/share/Steam/steamapps/compatdata
+home/*/.local/share/Steam/steamapps/temp
+home/*/.local/share/Steam/steamapps/music
 
 # --- Steam client caches and ephemeral state ---
-home/*/.steam/steam/depotcache
-home/*/.steam/steam/appcache
-home/*/.steam/steam/package
-home/*/.steam/steam/logs
-home/*/.steam/steam/dumps
+home/*/.local/share/Steam/depotcache
+home/*/.local/share/Steam/appcache
+home/*/.local/share/Steam/package
+home/*/.local/share/Steam/logs
+home/*/.local/share/Steam/dumps
