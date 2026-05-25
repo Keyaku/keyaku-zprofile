@@ -1,0 +1,7 @@
+# =============================================================================
+# arch.lst — Arch Linux (and derivatives) specific exclusions
+# =============================================================================
+
+# Package signing keys — Arch and derivatives maintain separate keyring sets;
+# these are regenerated with pacman-key --init on a fresh install.
+etc/pacman.d/gnupg

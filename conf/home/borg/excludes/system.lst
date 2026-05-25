@@ -1,0 +1,14 @@
+# =============================================================================
+# system.lst — Distro-agnostic /var/lib exclusions
+# =============================================================================
+# Large or regeneratable runtime/cache directories that don't belong in a
+# system-state backup regardless of distribution.
+
+# Firmware update cache — repopulated by fwupd on next check
+var/lib/fwupd
+
+# manpage index — rebuilt by `mandb` or equivalent
+var/lib/man-db
+
+# Python byte-code cache
+var/lib/python

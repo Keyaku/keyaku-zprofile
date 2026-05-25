@@ -237,6 +237,35 @@ function setup_de {
 	return 0
 }
 
+# Symlinks this repo's borg config into $XDG_CONFIG_HOME/borg so borg-backup.zsh
+# (run as root via sudo) finds borg-config.json + excludes/. Per-host settings
+# go in borg-config.override.json — gitignored via `*.override.*`.
+function setup_borg {
+	command-has borg || return 0
+
+	local src="$ZDOTDIR/conf/home/borg"
+	local dest="${XDG_CONFIG_HOME:-$HOME/.local/config}/borg"
+
+	[[ -L "$dest" && "$(readlink -f "$dest")" == "$src" ]] && return 0
+
+	if [[ -e "$dest" && ! -L "$dest" ]]; then
+		mv "$dest" "${dest}.bak"
+		print_fn -i "Backed up $dest to ${dest}.bak"
+	fi
+
+	mkdir -p "${dest:h}"
+	ln -sfn "$src" "$dest"
+	print_fn -s "Borg config linked: $dest -> $src"
+
+	# Expose the runner on sudo's secure_path so `sudo borg-backup` works.
+	local script="$ZDOTDIR/conf/home/bin/borg-backup.zsh"
+	local bin=/usr/local/bin/borg-backup.zsh
+	if [[ ! -L "$bin" || "$(readlink -f "$bin")" != "$script" ]]; then
+		$SUDO ln -sfn "$script" "$bin"
+		print_fn -s "Borg runner linked: $bin -> $script"
+	fi
+}
+
 ### Repo-local setup
 
 # Points this repo's git hooksPath at conf/hooks so the pre-commit completion
@@ -267,7 +296,7 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh setup_git_hooks)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
-typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_root)
+typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_root setup_borg)
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 

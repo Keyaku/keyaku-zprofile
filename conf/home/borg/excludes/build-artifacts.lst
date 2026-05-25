@@ -1,0 +1,93 @@
+# =============================================================================
+# build-artifacts.lst — Build system output and dependency caches
+# =============================================================================
+# Consolidates C/C++ compiler output with higher-level build artifacts
+# across common languages and tools.
+
+# --- C / C++ ---
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+*.slo
+*.lo
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Compiled dynamic libraries
+# *.so
+# *.so.*
+# *.dylib
+# *.dll
+
+# Compiled static libraries
+# *.lai
+# *.la
+# *.a
+# *.lib
+
+# Executables
+# *.exe
+# *.out
+# *.app
+
+# --- Python ---
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/.tox
+**/*.egg-info
+**/.eggs
+
+# --- Node.js / JavaScript ---
+**/node_modules
+**/.npm/_cacache
+**/.yarn/cache
+**/.yarn/unplugged
+**/.pnpm-store
+
+# --- Rust ---
+# Uncomment if you build Rust projects on this machine:
+# sh:**/target/debug
+# sh:**/target/release
+
+# --- Java / JVM ---
+**/.gradle/caches
+**/.gradle/wrapper
+**/.m2/repository
+**/*.class
+
+# --- Go ---
+**/vendor
+
+# --- Frontend build output ---
+sh:**/dist/css
+sh:**/dist/js
+sh:**/.next
+sh:**/.nuxt
+sh:**/.svelte-kit
+
+# --- Editor artifacts ---
+sh:**/.?vscode-*/**

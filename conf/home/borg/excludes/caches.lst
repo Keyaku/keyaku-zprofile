@@ -1,0 +1,13 @@
+**/*[Cc]ache/**
+**/*[Ll]ogs?/**
+**/[Mm]etadata/**
+**/etc/adguard/**/querylog.json
+
+# Temporary files
+var/tmp/*
+
+# Trash
+home/*/.local/share/Trash
+root/.local/share/Trash
+# Mountpoint-specific trash directories (e.g. external drives)
+home/*/.Trash-*

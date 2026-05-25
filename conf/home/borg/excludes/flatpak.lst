@@ -1,0 +1,16 @@
+# =============================================================================
+# flatpak.lst — Flatpak exclusions
+# =============================================================================
+# System-wide Flatpak runtimes and application bundles.
+# These are large and fully reinstallable from the saved app list.
+var/lib/flatpak
+
+# Per-user Flatpak runtime installations
+home/*/.local/share/flatpak
+root/.local/share/flatpak
+
+# Per-user Flatpak app caches only — ~/.var/app/<app>/data is kept
+home/*/.var/app/*/cache
+home/*/.var/app/*/.cache
+root/.var/app/*/cache
+root/.var/app/*/.cache

@@ -1,0 +1,29 @@
+{
+	"repo": "",
+	"log_dir": "/var/log/borg",
+	"compression": "zstd,16",
+	"backup_paths": [
+		"/etc",
+		"/home",
+		"/root",
+		"/usr/local",
+		"/var/lib/bluetooth"
+	],
+	"exclude_patterns": [
+	],
+	"exclude_lists": {
+		"all": false,
+		"files": [
+			"build-artifacts",
+			"caches",
+			"containers",
+			"flatpak",
+			"system"
+		]
+	},
+	"rclone": {
+		"enabled": false,
+		"name": "",
+		"remote_path": ""
+	}
+}

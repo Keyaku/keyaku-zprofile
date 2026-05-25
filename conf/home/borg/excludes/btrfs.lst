@@ -1,0 +1,9 @@
+# =============================================================================
+# btrfs.lst — btrfs-specific exclusions
+# =============================================================================
+
+# Snapper snapshot directories — backed up by borg separately if needed,
+# but including them here avoids massive duplication.
+.snapshots
+home/.snapshots
+home/*/.snapshots
