@@ -1,0 +1,8 @@
+[Unit]
+Description=Audit DB docker volumes for nodatacow, alert via ntfy on drift
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nodatacow-apply.zsh --audit

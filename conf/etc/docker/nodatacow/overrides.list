@@ -1,0 +1,3 @@
+# Extra volume names to treat as DB-bearing even when name regex + on-disk
+# fingerprints (InnoDB/Aria/Postgres markers, SQLite header at depth <=1)
+# miss them. One per line. Kept near-empty by design.

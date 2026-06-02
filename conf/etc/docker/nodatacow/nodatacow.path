@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch docker volumes dir, flag new DB volumes nodatacow
+After=docker.service
+Requires=docker.service
+
+[Path]
+PathModified=/var/lib/docker/volumes
+Unit=nodatacow.service
+
+[Install]
+WantedBy=multi-user.target

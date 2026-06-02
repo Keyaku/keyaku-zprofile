@@ -385,6 +385,69 @@ if (( ! $+commands[podman] )); then
 		docker context use rootless-ssh
 	}
 
+	# Install the btrfs nodatacow watcher + weekly audit for DB docker volumes,
+	# if the Docker daemon root sits on btrfs. Idempotent. Needs sudo.
+	function docker-nodatacow-install {
+		local -r usage=(
+			"Usage: $(get_funcname) [-h|--help] [-n|--dry-run]"
+		)
+		local f_help f_dryrun
+		zparseopts -D -F -K -- \
+			{h,-help}=f_help \
+			{n,-dry-run}=f_dryrun \
+			|| return 1
+
+		if [[ -n "$f_help" ]]; then
+			>&2 print -l $usage
+			return 0
+		fi
+
+		local root="$(docker info -f '{{.DockerRootDir}}' 2>/dev/null)"
+		if [[ -z "$root" || ! -d "$root" ]]; then
+			print_fn -e "could not determine Docker root dir (is the daemon running?)"
+			return 1
+		fi
+		local fstype="$(command stat -f -c %T "$root" 2>/dev/null)"
+		if [[ "$fstype" != btrfs ]]; then
+			print_fn -w "Docker root '$root' is on '$fstype', not btrfs - nothing to install"
+			return 0
+		fi
+		# Rootful-only: this function installs system-wide systemd units and
+		# targets /var/lib/docker/volumes. Bail if Docker is rootless.
+		if [[ "$root" != /var/lib/docker* ]]; then
+			print_fn -e "Docker root '$root' looks rootless; this installer only supports rootful Docker"
+			return 1
+		fi
+
+		local SRC="$ZDOTDIR/conf/etc/docker/nodatacow"
+		local run="${f_dryrun:+echo}"
+		echo "Installing nodatacow watcher + audit (rootful Docker on btrfs)"
+		# Symlink code so plugin-repo updates flow through live; copy
+		# overrides.list as a template only if absent (preserves local edits).
+		$run sudo install -d -m 0755 /usr/local/etc/nodatacow
+		if [[ ! -e /usr/local/etc/nodatacow/overrides.list ]]; then
+			$run sudo install -m 0644 "$SRC/overrides.list" /usr/local/etc/nodatacow/overrides.list
+		fi
+		$run sudo ln -sfn "$SRC/nodatacow-apply.zsh"     /usr/local/bin/nodatacow-apply.zsh
+		$run sudo ln -sfn "$SRC/nodatacow.path"          /etc/systemd/system/nodatacow.path
+		$run sudo ln -sfn "$SRC/nodatacow.service"       /etc/systemd/system/nodatacow.service
+		$run sudo ln -sfn "$SRC/nodatacow-audit.service" /etc/systemd/system/nodatacow-audit.service
+		$run sudo ln -sfn "$SRC/nodatacow-audit.timer"   /etc/systemd/system/nodatacow-audit.timer
+		$run sudo systemctl daemon-reload
+		$run sudo systemctl enable --now nodatacow.path nodatacow-audit.timer
+
+		print -l \
+			"" \
+			"Done. Verify with: sudo /usr/local/bin/nodatacow-apply.zsh --audit" \
+			"" \
+			"Audit ntfy notifications (optional but recommended):" \
+			"  The weekly audit posts high-priority alerts to ${NTFY_URL:-http://127.0.0.1:2586}/nodatacow" \
+			"  when a DB volume drifts back to CoW. Without a token it logs to journal only." \
+			"  To enable:" \
+			"    echo 'tk_YOUR_TOKEN' | sudo tee /usr/local/etc/nodatacow/ntfy-token >/dev/null" \
+			"    sudo chmod 600 /usr/local/etc/nodatacow/ntfy-token"
+	}
+
 ### In case of Podman being installed
 else
 	# Don't set anything. Podman isn't picky.

@@ -1,0 +1,8 @@
+[Unit]
+Description=Apply btrfs nodatacow (+C) to new database docker volumes
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nodatacow-apply.zsh
