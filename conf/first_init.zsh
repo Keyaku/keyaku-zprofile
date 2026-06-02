@@ -282,6 +282,28 @@ function setup_borg {
 	fi
 }
 
+# Provisions the least-privilege `claude` automation user for Claude Code: its
+# restricted sudo policy, the dctl Docker-control wrapper and the SessionStart
+# profile hook. Skipped if docker is absent. The provisioner is a once-per-host
+# one-shot (it creates a user), so it is run by path rather than auto-applied
+# on every login. Re-running is idempotent.
+function setup_claude {
+	command-has docker || return 0
+
+	local script="$ZDOTDIR/conf/tools/claude-sandbox.zsh"
+	[[ -x "$script" ]] || return 0
+
+	if id claude &>/dev/null; then
+		print_fn -i "claude automation user already present — re-run $script by hand to refresh policy"
+		return 0
+	fi
+
+	if ask -B -d n "Provision the least-privilege 'claude' user for Claude Code now?"; then
+		"$script" || { print_fn -w "claude-sandbox provisioning failed"; return 1; }
+		print_fn -s "claude automation user provisioned."
+	fi
+}
+
 ### Repo-local setup
 
 # Points this repo's git hooksPath at conf/hooks so the pre-commit completion
@@ -312,7 +334,7 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh setup_git_hooks)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
-typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_root setup_borg)
+typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_root setup_borg setup_claude)
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
