@@ -32,8 +32,8 @@ readonly THIS_NAME=${THIS:r}
 #
 # Never trust an inherited ZDOTDIR: under `sudo` (no -E) it points at root's
 # tree (or is unset), not ours. Find the repo root by walking up from the
-# script's own resolved location ($0 is the /usr/local/bin symlink; :A follows
-# it) to the nearest ancestor holding .zshenv — which is, by definition, ZDOTDIR.
+# script's own resolved location (:A resolves $0 to its real path in the repo)
+# to the nearest ancestor holding .zshenv — which is, by definition, ZDOTDIR.
 ZDOTDIR=$(
 	d=${0:A:h}
 	while [[ $d != / && ! -e $d/.zshenv ]]; do d=${d:h}; done
