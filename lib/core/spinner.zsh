@@ -1,7 +1,9 @@
 ##############################################################################
 # Spinner animations
 #
-# Console-safe spinner helpers for interactive shells. Two public APIs:
+# Console-safe spinner helpers. Lives in lib/core/ so the functions are defined
+# in *every* shell (interactive or not); the non-TTY guard below makes them an
+# inert command passthrough wherever there is no terminal to draw on. Two APIs:
 #
 #   spin "Message" -- cmd args...     # run a command with a spinner (preferred)
 #   spinner_start "Message"           # block form: wrap arbitrary work
