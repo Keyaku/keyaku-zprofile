@@ -28,7 +28,7 @@ alias apt-holds="apt-mark showhold"
 # `spin` (lib/interactive/spinner.zsh) for a liveness indicator.
 function apt-orphans {
 	local -a libs
-	libs=( ${(f)"$(dpkg-query -W -f='${Package} ${Section}\n' | awk '$2~/libs|oldlibs/{print $1}')"} )
+	libs=( ${(f)"$(dpkg-query -W -f='${Package} ${Section} ${Essential} ${Priority}\n' | awk '$2~/libs|oldlibs/ && $3!="yes" && $4!~/required|important/{print $1}')"} )
 	local -ir total=${#libs}
 
 	spinner_start "Scanning ${total} library packages for orphans"
