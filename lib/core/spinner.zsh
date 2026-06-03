@@ -112,11 +112,12 @@ function spinner_start {
 	_SPINNER_TTY=1
 
 	tput civis 2>/dev/null
-	# no_monitor + disown keep job-control messages off the screen.
+	# `&!` backgrounds *and* disowns atomically: the job is removed from the
+	# job table so no "[n] + terminated" notice fires when we kill it later.
+	# `$!` is still set. no_monitor/no_notify is belt-and-suspenders.
 	setopt localoptions no_monitor no_notify
-	_spinner_run "$style" "$message" &
+	_spinner_run "$style" "$message" &!
 	_SPINNER_PID=$!
-	disown $_SPINNER_PID 2>/dev/null
 }
 
 # Stop the running spinner and print a final status line.
@@ -128,8 +129,8 @@ function spinner_stop {
 	local final=${2-__SPINNER_KEEP__}
 
 	if [[ -n "$_SPINNER_PID" ]]; then
+		# Already disowned (see spinner_start), no wait necessary.
 		kill $_SPINNER_PID 2>/dev/null
-		wait $_SPINNER_PID 2>/dev/null
 		_SPINNER_PID=
 	fi
 
