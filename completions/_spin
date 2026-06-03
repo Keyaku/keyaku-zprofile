@@ -1,0 +1,9 @@
+#compdef spin
+
+local -a styles=( ${(ok)_SPINNER_FRAMES} )
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help and available styles]' \
+	{-s,--style}'[spinner style]:style:($styles)' \
+	{-m,--message}'[final-line message]:message' \
+	'*::command:_command_names -e'

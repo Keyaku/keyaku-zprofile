@@ -8,6 +8,7 @@ is_sourced_by
 assign
 hasvar
 get-prompt
+spinner_stop
 
 # Free-value checkers (any string is valid input — nothing useful to suggest):
 is_int

@@ -1,0 +1,8 @@
+#compdef spinner_start
+
+local -a styles=( ${(ok)_SPINNER_FRAMES} )
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	{-s,--style}'[spinner style]:style:($styles)' \
+	'1:message'

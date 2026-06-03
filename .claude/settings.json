@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(command -v flatpak-spawn)",
       "Bash(date *)",
       "Bash(echo *)",
       "Bash(free *)",
