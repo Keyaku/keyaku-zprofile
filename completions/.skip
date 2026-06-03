@@ -9,6 +9,7 @@ assign
 hasvar
 get-prompt
 spinner_stop
+spinner_print
 
 # Free-value checkers (any string is valid input — nothing useful to suggest):
 is_int

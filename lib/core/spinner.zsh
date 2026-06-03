@@ -8,6 +8,7 @@
 #   spin "Message" -- cmd args...     # run a command with a spinner (preferred)
 #   spinner_start "Message"           # block form: wrap arbitrary work
 #   ...do work...
+#   spinner_print "result line"       # emit output cleanly above the spinner
 #   spinner_stop $?
 #
 # Safety guarantees:
@@ -158,6 +159,24 @@ function spinner_stop {
 		printf '\r%s%s%s %s\e[0K\n' "$color" "$mark" "${reset_color:-}" "$final" >&2
 	fi
 	return $code
+}
+
+# Emit a line cleanly *above* a running spinner. Use this instead of `print`
+# for any output produced while a spinner is active, otherwise the data and the
+# in-place spinner row collide. Args are printed to stdout (so the output stays
+# pipe-safe and is treated as real data), then the spinner redraws on the fresh
+# line. With no active spinner it is a plain `print -r -- "$@"`.
+#   spinner_print [print-args...]
+function spinner_print {
+	if [[ "$_SPINNER_TTY" == 1 && -n "$_SPINNER_PID" ]]; then
+		# Freeze the animator so it can't draw between our clear and our write.
+		kill -STOP $_SPINNER_PID 2>/dev/null
+		printf '\r\e[0K' >&2          # wipe the spinner row
+		print -r -- "$@"              # data to stdout, scrolls above
+		kill -CONT $_SPINNER_PID 2>/dev/null   # animator redraws on new line
+	else
+		print -r -- "$@"
+	fi
 }
 
 # ============================================================================

@@ -35,7 +35,7 @@ function apt-orphans {
 	local p
 	for p in $libs; do
 		apt-cache rdepends --installed "$p" 2>/dev/null | sed '1,2d' | grep -q . \
-			|| print -- "$p"
+			|| spinner_print "$p"
 	done
 	spinner_stop 0 "Scanned ${total} library packages"
 }
