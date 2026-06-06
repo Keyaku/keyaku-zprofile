@@ -133,8 +133,12 @@ trap 'rm -rf "$tmp"' EXIT
 cat > "$tmp/claude-run" <<EOF
 #!/usr/bin/env bash
 # Launch Claude Code as the \`${CLAUDE_USER}\` user with its XDG environment.
-# Invoked via: sudo -u ${CLAUDE_USER} /usr/local/bin/claude-run [args]
-# cwd is inherited from the caller (sudo does not reset it).
+# Run directly (e.g. \`claude-run\`) from the launching account; if not already
+# the \`${CLAUDE_USER}\` user, this self-elevates via sudo (NOPASSWD per 10-claude-run).
+# cwd is preserved across the sudo hop, so the new session lands in \$PWD.
+if [ "\$(id -un)" != ${CLAUDE_USER} ]; then
+	exec sudo -u ${CLAUDE_USER} /usr/local/bin/claude-run "\$@"
+fi
 export HOME=${CLAUDE_HOME}
 export XDG_CONFIG_HOME="\$HOME/.local/config"
 export XDG_DATA_HOME="\$HOME/.local/share"
