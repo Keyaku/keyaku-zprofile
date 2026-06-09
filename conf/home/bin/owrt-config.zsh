@@ -28,16 +28,22 @@ readonly -a usage=(
 	""
 	"COMMANDS"
 	"\tlist [--tag TAG] [--columns COLS]  List registered routers"
-	"\tadd ID [--host H] [--user U] [--port N] [--tag T]...   Register a router"
-	"\tremove ID                       Remove a router"
+	"\tadd ID... [--host H] [--user U] [--port N] [--tag T]...  Register one or more routers"
+	"\tremove ID...                    Remove one or more routers"
 	"\tedit ID [--host H] [--user U] [--port N] [--id NEW]"
 	"\t        [--tag T]... [--untag T]...                    Edit a router (or open in \$EDITOR)"
 	"\tssh ID [CMD...]                 Open SSH session, or run a one-shot command"
+	"\tscan [--subnet CIDR] [--add] [--columns COLS]"
+	"\t     [--user U] [--port N] [--tag T]...               Discover OpenWRT devices on the LAN"
 	"\trun [SELECTORS] [-c CMD]... [--task NAME]...           Batch-run commands across routers"
 	"\ttask list [--columns COLS]       List available named tasks"
 	"\ttask add NAME [-d DESC] -c CMD [-c CMD]...   Save a task to the config"
 	"\ttask rm NAME                    Remove a config-defined task"
 	"\tconfig [path|show|set KEY VAL]  View / edit defaults (prefix, domain, user, port)"
+	""
+	"COMMAND ALIASES"
+	"\tlist=ls,l   add=a   remove=rm,delete,del   edit=ed,e"
+	"\tssh=connect,sh   scan=sc   run=r   task=tasks,t   config=cfg,conf"
 	""
 	"RUN SELECTORS (default: all)"
 	"\t-r, --router ID                 Include router (repeatable)"
@@ -52,6 +58,12 @@ readonly -a usage=(
 	"\t-i, --interactive               Prompt before run, and between routers in sequential mode"
 	"\t-e, --exit-on-error             Stop on first failed router"
 	"\t-n, --dry-run                   Print what would run, don't connect"
+	""
+	"SCAN OPTIONS (requires nmap; curl/avahi-browse enrich detection)"
+	"\t    --subnet CIDR               Subnet to scan (default: derived from default route)"
+	"\t    --add                       Register newly-found devices (default: dry-run)"
+	"\t    --user U / --port N         SSH user/port to store on added devices"
+	"\t-t, --tag TAG                   Tag applied to added devices (repeatable)"
 )
 
 # --- Storage paths ---
@@ -306,30 +318,31 @@ function owrt_list {
 }
 
 function owrt_add {
-	local id_raw="$1"; shift
-	[[ -n "$id_raw" ]] || { print -u2 "Usage: $THIS add ID [--host H] [--user U] [--port N] [--tag T]..."; return 1; }
-
+	# zparseopts stops at the first operand, so parse in passes: consume leading
+	# options, grab one id, repeat — this lets flags appear in any position.
+	# Tags are drained each pass because -K keeps only the last repeatable match.
 	local f_host f_user f_port f_tag
-	zparseopts -D -F -K -- \
-		-host:=f_host \
-		-user:=f_user \
-		-port:=f_port \
-		{t,-tag}+:=f_tag \
-		|| return 1
+	local -a id_args=() tags=()
+	while (( $# )); do
+		f_tag=()
+		zparseopts -D -F -K -- \
+			-host:=f_host \
+			-user:=f_user \
+			-port:=f_port \
+			{t,-tag}+:=f_tag \
+			|| return 1
+		tags+=("${(@)f_tag:#(-t|--tag)}")
+		(( $# )) || break
+		id_args+=("$1"); shift
+	done
+	(( ${#id_args} )) || { print -u2 "Usage: $THIS add ID... [--host H] [--user U] [--port N] [--tag T]..."; return 1; }
 
-	local id; id="$(_id_normalize "$id_raw")"
-	[[ -n "$id" ]] || { print_fn -e "Router id can't be empty."; return 1; }
-
-	local data; data="$(_json_read)" || return 1
-	if jaq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
-		print_fn -e "Router already registered: %s (use 'edit')" "$id"
+	# --host is per-device, so it only makes sense for a single id; other flags
+	# (user/port/tag) apply to every id in the batch.
+	if (( ${#f_host} && ${#id_args} > 1 )); then
+		print_fn -e "Option --host can only be used when adding a single router."
 		return 1
 	fi
-
-	local host="${f_host[-1]}"
-	[[ -n "$host" ]] || host="$(_default_host_for_id "$id")"
-
-	local -a tags=("${(@)f_tag:#(-t|--tag)}")
 
 	local port_arg=null
 	if (( ${#f_port} )); then
@@ -337,39 +350,70 @@ function owrt_add {
 		port_arg="${f_port[-1]}"
 	fi
 
-	local now; now="$(now)"
-	jaq \
-		--arg id "$id" \
-		--arg host "$host" \
-		--arg user "${f_user[-1]}" \
-		--argjson port "$port_arg" \
-		--argjson tags "$(print -r -- "$tags" | jaq -R 'split(" ") | map(select(length>0))')" \
-		--arg now "$now" \
-		'.routers += [{
-			id: $id,
-			host: $host,
-			user: (if $user != "" then $user else null end),
-			port: $port,
-			tags: $tags,
-			created_at: $now,
-			updated_at: $now
-		}]' <<< "$data" | _json_write || return 1
+	local tags_json; tags_json="$(jaq -n '$ARGS.positional' --args -- "${tags[@]}")"
 
-	print_fn -s "Registered: %s → %s" "$id" "$host"
+	local data; data="$(_json_read)" || return 1
+
+	local now; now="$(now)"
+	local -a added=()
+	local raw id host
+	for raw in "${id_args[@]}"; do
+		id="$(_id_normalize "$raw")"
+		[[ -n "$id" ]] || { print_fn -w "Skipping empty id: %s" "$raw"; continue; }
+		if jaq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
+			print_fn -w "Already registered, skipping: %s (use 'edit')" "$id"
+			continue
+		fi
+
+		host="${f_host[-1]}"
+		[[ -n "$host" ]] || host="$(_default_host_for_id "$id")"
+
+		data="$(jaq \
+			--arg id "$id" \
+			--arg host "$host" \
+			--arg user "${f_user[-1]}" \
+			--argjson port "$port_arg" \
+			--argjson tags "$tags_json" \
+			--arg now "$now" \
+			'.routers += [{
+				id: $id,
+				host: $host,
+				user: (if $user != "" then $user else null end),
+				port: $port,
+				tags: $tags,
+				created_at: $now,
+				updated_at: $now
+			}]' <<< "$data")" || return 1
+		added+=("$id")
+		print_fn -s "Registered: %s → %s" "$id" "$host"
+	done
+
+	(( ${#added} )) || { print_fn -e "No routers added."; return 1; }
+	print -r -- "$data" | _json_write || return 1
 }
 
 function owrt_remove {
-	local id; id="$(_id_normalize "$1")"
-	[[ -n "$id" ]] || { print -u2 "Usage: $THIS remove ID"; return 1; }
+	local -a id_args=("$@")
+	(( ${#id_args} )) || { print -u2 "Usage: $THIS remove ID..."; return 1; }
 
 	local data; data="$(_json_read)" || return 1
-	if ! jaq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
-		print_fn -e "Router not found: %s" "$id"
-		return 1
-	fi
 
-	jaq --arg id "$id" '.routers |= map(select(.id != $id))' <<< "$data" | _json_write || return 1
-	print_fn -s "Removed: %s" "$id"
+	local -a removed=()
+	local raw id
+	for raw in "${id_args[@]}"; do
+		id="$(_id_normalize "$raw")"
+		[[ -n "$id" ]] || { print_fn -w "Skipping empty id: %s" "$raw"; continue; }
+		if jaq -e --arg id "$id" '.routers | any(.id == $id)' <<< "$data" >/dev/null; then
+			data="$(jaq --arg id "$id" '.routers |= map(select(.id != $id))' <<< "$data")" || return 1
+			removed+=("$id")
+		else
+			print_fn -w "Not found, skipping: %s" "$id"
+		fi
+	done
+
+	(( ${#removed} )) || { print_fn -e "No routers removed."; return 1; }
+	print -r -- "$data" | _json_write || return 1
+	print_fn -s "Removed: %s" "${(j:, :)removed}"
 }
 
 function owrt_edit {
@@ -885,6 +929,256 @@ function owrt_run {
 	(( ${#failures} == 0 && ! aborted ))
 }
 
+# --- Network scan ---
+
+function _scan_default_cidr {
+	# Derive the local IPv4 CIDR from the interface backing the default route.
+	local iface cidr
+	iface="$(ip -o route show default 2>/dev/null | awk '{print $5; exit}')"
+	[[ -n "$iface" ]] || return 1
+	cidr="$(ip -o -f inet addr show dev "$iface" 2>/dev/null | awk '{print $4; exit}')"
+	[[ -n "$cidr" ]] || return 1
+	print -r -- "$cidr"
+}
+
+function _scan_live_hosts {
+	# Args: CIDR. Echo "IP<TAB>HOSTNAME<TAB>PORTSCSV" for each up host that has
+	# at least one of ports 22/80/443 open. PTR hostname filled in by nmap.
+	local cidr="$1" line ip hostname portfield ports tok
+	for line in "${(@f)$(nmap -p 22,80,443 --open -oG - "$cidr" 2>/dev/null)}"; do
+		[[ "$line" == Host:\ * && "$line" == *Ports:* ]] || continue
+		ip="${${(s: :)line}[2]}"
+		hostname=""
+		[[ "$line" =~ '\(([^)]+)\)' ]] && hostname="${match[1]}"
+		portfield="${line#*Ports: }"
+		portfield="${portfield%%	*}"
+		ports=""
+		for tok in "${(@s:, :)portfield}"; do
+			[[ "$tok" == *open* ]] && ports="${ports:+$ports,}${tok%%/*}"
+		done
+		print -r -- "$ip	$hostname	$ports"
+	done
+}
+
+function _scan_gateway {
+	ip -o route show default 2>/dev/null | awk '{print $3; exit}'
+}
+
+function _scan_ptr {
+	# Reverse-lookup IP directly against the LAN gateway's DNS. The system
+	# resolver (e.g. systemd-resolved) often can't answer the router's private
+	# PTR zone, so nmap sees only IPs — but the router itself knows the names.
+	# Echo a bare hostname, or nothing.
+	local ip="$1" gw="$2" name=
+	[[ -n "$gw" ]] || return 0
+	if command-has dig; then
+		name="$(dig +short +time=2 +tries=1 -x "$ip" @"$gw" 2>/dev/null | head -1)"
+	elif command-has host; then
+		name="$(host -W2 "$ip" "$gw" 2>/dev/null | awk '/domain name pointer/ {print $NF; exit}')"
+	elif command-has nslookup; then
+		name="$(nslookup "$ip" "$gw" 2>/dev/null | awk '/name =/ {print $NF; exit}')"
+	fi
+	print -r -- "${name%.}"
+}
+
+function _scan_mdns_map {
+	# Best-effort. Echo "IP<TAB>HOSTNAME" lines from resolved mDNS records.
+	command-has avahi-browse || return 0
+	avahi-browse -atrp 2>/dev/null | awk -F';' '$1=="=" && $3=="IPv4" {print $8"\t"$7}'
+}
+
+function _scan_probe_http {
+	# Fingerprint OpenWRT from its web stack. Follow redirects (-L) and include
+	# both headers and body (-i): stock OpenWRT often redirects http→https and
+	# exposes no 'Server: uhttpd', so the only tell is LuCI in the served page.
+	command-has curl || return 1
+	local ip="$1" scheme out
+	for scheme in http https; do
+		out="$(curl -s -k -L -i --max-time 4 "$scheme://$ip/" 2>/dev/null)" || continue
+		[[ -n "$out" ]] || continue
+		print -r -- "$out" | grep -qiE 'luci|openwrt|uhttpd|dropbear|x-luci' && return 0
+	done
+	return 1
+}
+
+function _scan_probe_ssh {
+	# Fingerprint OpenWRT by reading its release files. Key-auth only and
+	# non-interactive, so a host without a usable key fails silently.
+	local ip="$1" user out
+	user="$(_config_value '.defaults.user')"
+	out="$(ssh \
+		-o BatchMode=yes \
+		-o ConnectTimeout=4 \
+		-o StrictHostKeyChecking=accept-new \
+		-o PreferredAuthentications=publickey \
+		"${user:+$user@}$ip" \
+		'cat /etc/openwrt_release /etc/os-release 2>/dev/null' \
+		</dev/null 2>/dev/null)"
+	[[ "${out:l}" == *openwrt* ]]
+}
+
+function owrt_scan {
+	local f_subnet f_columns f_user f_port f_tag f_add
+	zparseopts -D -F -K -- \
+		-subnet:=f_subnet \
+		-columns:=f_columns \
+		-user:=f_user \
+		-port:=f_port \
+		{t,-tag}+:=f_tag \
+		-add=f_add \
+		|| return 1
+
+	command-has -av nmap || { print_fn -e "scan requires nmap."; return 1; }
+
+	local cidr="${f_subnet[-1]}"
+	[[ -n "$cidr" ]] || cidr="$(_scan_default_cidr)" || {
+		print_fn -e "Couldn't determine local subnet; pass --subnet CIDR."
+		return 1
+	}
+	local gw; gw="$(_scan_gateway)"
+
+	local available="ip:Discovered IP|host:SSH host (the IP)|hostname:Resolved hostname|id:Proposed router id|detect:Matched fingerprints|status:new or existing"
+	local cols rc
+	cols="$(_resolve_columns "$available" "${f_columns[-1]}" "id,host,hostname,detect,status")"
+	rc=$?
+	(( rc == 2 )) && return 0
+	(( rc == 0 )) || return $rc
+
+	local port_arg=null
+	if (( ${#f_port} )); then
+		[[ "${f_port[-1]}" =~ '^[0-9]+$' ]] || { print_fn -e "Invalid port: %s" "${f_port[-1]}"; return 1; }
+		port_arg="${f_port[-1]}"
+	fi
+	local -a tags=("${(@)f_tag:#(-t|--tag)}")
+	local tags_json; tags_json="$(jaq -n '$ARGS.positional' --args -- "${tags[@]}")"
+	local -i do_add=${#f_add}
+
+	local data; data="$(_json_read)" || return 1
+
+	local -a chosen=("${(@s:,:)cols}")
+	local -a rows=()
+	local -i found=0 add_count=0 scan_rc=0
+
+	# The slow work — avahi (a few seconds), nmap, and per-host probes — runs
+	# under a spinner so the terminal shows progress instead of looking frozen.
+	# Confirmed devices print above the live spinner as they are found.
+	{
+	spinner_start "Scanning ${cidr} (nmap + fingerprint) ..."
+
+	# Build the mDNS IP→hostname map once.
+	local -A mdns
+	local ml
+	for ml in "${(@f)$(_scan_mdns_map)}"; do
+		[[ -n "$ml" ]] || continue
+		mdns[${ml%%	*}]="${ml#*	}"
+	done
+
+	# Loop-locals declared once here: re-running `local NAME` each iteration
+	# would make zsh echo "NAME=value" (typeset prints already-set params).
+	local line ip rest ptr ports mdns_host hostname host_field id_src id dev_state detect col
+	local -a sig row
+	for line in "${(@f)$(_scan_live_hosts "$cidr")}"; do
+		[[ -n "$line" ]] || continue
+		ip="${line%%	*}"
+		rest="${line#*	}"
+		ptr="${rest%%	*}"
+		ports="${rest#*	}"
+
+		sig=()
+		[[ ",$ports," == *,80,* || ",$ports," == *,443,* ]] && _scan_probe_http "$ip" && sig+=(http)
+		[[ ",$ports," == *,22,* ]] && _scan_probe_ssh "$ip" && sig+=(ssh)
+		mdns_host="${mdns[$ip]-}"
+		[[ -n "$mdns_host" && "${mdns_host:l}" == *openwrt* ]] && sig+=(mdns)
+
+		(( ${#sig} )) || continue
+		found+=1
+
+		# Resolve a hostname. The gateway's DNS is authoritative for this LAN, so
+		# query it first (the system resolver, hence nmap, often can't answer the
+		# router's zone); fall back to nmap's PTR, then mDNS. Drop the synthetic
+		# "_gateway" name systemd-resolved hands out for the default route.
+		hostname="$(_scan_ptr "$ip" "$gw")"
+		[[ -n "$hostname" ]] || hostname="${ptr%.}"
+		[[ -n "$hostname" ]] || hostname="$mdns_host"
+		[[ "$hostname" == _gateway ]] && hostname=""
+
+		# id derives from the hostname's leading label; host stays the IP so SSH
+		# connects even when .lan names don't resolve forward on this machine.
+		if [[ -n "$hostname" ]]; then
+			id_src="${${hostname%.local}%%.*}"
+		else
+			id_src="$ip"
+		fi
+		host_field="$ip"
+		id="$(_id_normalize "$id_src")"
+
+		dev_state="$(jaq -r --arg id "$id" --arg host "$host_field" --arg ip "$ip" \
+			'if (.routers | any(.id == $id or .host == $host or .host == $ip)) then "existing" else "new" end' <<< "$data")"
+
+		if [[ "$dev_state" == new ]]; then
+			# Append in-memory so later same-scan duplicates dedupe too; only
+			# persisted when --add is set.
+			data="$(jaq \
+				--arg id "$id" \
+				--arg host "$host_field" \
+				--argjson port "$port_arg" \
+				--arg user "${f_user[-1]}" \
+				--argjson tags "$tags_json" \
+				--arg now "$(now)" \
+				'.routers += [{
+					id: $id,
+					host: $host,
+					user: (if $user != "" then $user else null end),
+					port: $port,
+					tags: $tags,
+					created_at: $now,
+					updated_at: $now
+				}]' <<< "$data")" || { scan_rc=1; break; }
+			add_count+=1
+		fi
+
+		detect="${(j:,:)sig}"
+		print_fn -s "Found %s (%s) [%s] (%s)" "${hostname:-$ip}" "$ip" "$dev_state" "$detect"
+		row=()
+		for col in "${chosen[@]}"; do
+			case "$col" in
+				ip)       row+=("$ip") ;;
+				host)     row+=("$host_field") ;;
+				hostname) row+=("${hostname:--}") ;;
+				id)       row+=("$id") ;;
+				detect) row+=("$detect") ;;
+				status) row+=("$dev_state") ;;
+			esac
+		done
+		rows+=("${(pj:\t:)row}")
+	done
+	} always {
+		spinner_stop 0 ''
+	}
+
+	(( scan_rc == 0 )) || return 1
+
+	if (( ! found )); then
+		print_fn -w "No OpenWRT devices found on %s." "$cidr"
+		return 0
+	fi
+
+	{
+		local -a header=("${(@)chosen:u}")
+		print -r -- "${(pj:\t:)header}"
+		print -rl -- "${rows[@]}"
+	} | print_tsv_table
+
+	if (( do_add && add_count )); then
+		print -r -- "$data" | _json_write || return 1
+		print_fn -s "Registered %d new device(s)." "$add_count"
+	elif (( add_count )); then
+		print_fn -i "%d new device(s) found; re-run with --add to register them." "$add_count"
+	else
+		print_fn -i "All discovered devices already registered."
+	fi
+}
+
 ### MAIN
 
 ## Setup func opts
@@ -908,14 +1202,15 @@ if (( ! $# )); then
 	owrt_list
 else
 	case $1 in
-		list|ls)               shift; owrt_list "$@" ;;
-		add)                   shift; owrt_add "$@" ;;
-		remove|rm|delete)      shift; owrt_remove "$@" ;;
-		edit)                  shift; owrt_edit "$@" ;;
-		ssh)                   shift; owrt_ssh "$@" ;;
-		run)                   shift; owrt_run "$@" ;;
-		task)                  shift; owrt_task "$@" ;;
-		config)                shift; owrt_config "$@" ;;
+		list|ls|l)                 shift; owrt_list "$@" ;;
+		add|a)                     shift; owrt_add "$@" ;;
+		remove|rm|delete|del)      shift; owrt_remove "$@" ;;
+		edit|ed|e)                 shift; owrt_edit "$@" ;;
+		ssh|connect|sh)            shift; owrt_ssh "$@" ;;
+		scan|sc)                   shift; owrt_scan "$@" ;;
+		run|r)                     shift; owrt_run "$@" ;;
+		task|tasks|t)              shift; owrt_task "$@" ;;
+		config|cfg|conf)           shift; owrt_config "$@" ;;
 		*)
 			>&2 print -l $usage
 			exit 1

@@ -64,15 +64,29 @@ _owrt-config_commands() {
 	cmds=(
 		'list:List registered routers'
 		'ls:List registered routers'
+		'l:List registered routers'
 		'add:Register a router'
+		'a:Register a router'
 		'remove:Remove a router'
 		'rm:Remove a router'
 		'delete:Remove a router'
+		'del:Remove a router'
 		'edit:Edit a router (or open in $EDITOR)'
+		'ed:Edit a router (or open in $EDITOR)'
+		'e:Edit a router (or open in $EDITOR)'
 		'ssh:Open SSH session, or run a one-shot command'
+		'connect:Open SSH session, or run a one-shot command'
+		'sh:Open SSH session, or run a one-shot command'
+		'scan:Discover OpenWRT devices on the LAN'
+		'sc:Discover OpenWRT devices on the LAN'
 		'run:Batch-run commands across routers'
+		'r:Batch-run commands across routers'
 		'task:Manage / list named tasks'
+		'tasks:Manage / list named tasks'
+		't:Manage / list named tasks'
 		'config:View / edit defaults'
+		'cfg:View / edit defaults'
+		'conf:View / edit defaults'
 	)
 	_describe -t commands 'command' cmds
 }
@@ -85,8 +99,8 @@ _owrt-config_cmd_list() {
 
 _owrt-config_cmd_add() {
 	_arguments -s -S \
-		'1:router id:' \
-		'--host[Hostname or IP]:host:_hosts' \
+		'*:router id:' \
+		'--host[Hostname or IP (single id only)]:host:_hosts' \
 		'--user[SSH user]:user:_users' \
 		'--port[SSH port]:port:' \
 		'*'{-t,--tag}'[Tag (repeatable)]:tag:_owrt-config_tags'
@@ -94,7 +108,7 @@ _owrt-config_cmd_add() {
 
 _owrt-config_cmd_remove() {
 	_arguments -s -S \
-		'1:router:_owrt-config_router_ids'
+		'*:router:_owrt-config_router_ids'
 }
 
 _owrt-config_cmd_edit() {
@@ -112,6 +126,16 @@ _owrt-config_cmd_ssh() {
 	_arguments -s -S \
 		'1:router:_owrt-config_router_ids' \
 		'*:remote command:_command_names -e'
+}
+
+_owrt-config_cmd_scan() {
+	_arguments -s -S \
+		'--subnet[Subnet to scan (CIDR; default: from default route)]:cidr:' \
+		'--add[Register newly-found devices (default: dry-run)]' \
+		'--user[SSH user to store on added devices]:user:_users' \
+		'--port[SSH port to store on added devices]:port:' \
+		'*'{-t,--tag}'[Tag applied to added devices]:tag:_owrt-config_tags' \
+		'--columns[Pick columns (comma list; "help" lists names)]:columns:(id host hostname ip detect status help)'
 }
 
 _owrt-config_cmd_run() {
@@ -210,14 +234,15 @@ _owrt-config() {
 		cmd) _owrt-config_commands ;;
 		args)
 			case ${words[1]} in
-				list|ls)            _owrt-config_cmd_list ;;
-				add)                _owrt-config_cmd_add ;;
-				remove|rm|delete)   _owrt-config_cmd_remove ;;
-				edit)               _owrt-config_cmd_edit ;;
-				ssh)                _owrt-config_cmd_ssh ;;
-				run)                _owrt-config_cmd_run ;;
-				task)               _owrt-config_cmd_task ;;
-				config)             _owrt-config_cmd_config ;;
+				list|ls|l)             _owrt-config_cmd_list ;;
+				add|a)                 _owrt-config_cmd_add ;;
+				remove|rm|delete|del)  _owrt-config_cmd_remove ;;
+				edit|ed|e)             _owrt-config_cmd_edit ;;
+				ssh|connect|sh)        _owrt-config_cmd_ssh ;;
+				scan|sc)               _owrt-config_cmd_scan ;;
+				run|r)                 _owrt-config_cmd_run ;;
+				task|tasks|t)          _owrt-config_cmd_task ;;
+				config|cfg|conf)       _owrt-config_cmd_config ;;
 			esac
 		;;
 	esac
