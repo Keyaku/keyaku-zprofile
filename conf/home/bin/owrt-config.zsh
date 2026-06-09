@@ -944,8 +944,11 @@ function _scan_default_cidr {
 function _scan_live_hosts {
 	# Args: CIDR. Echo "IP<TAB>HOSTNAME<TAB>PORTSCSV" for each up host that has
 	# at least one of ports 22/80/443 open. PTR hostname filled in by nmap.
+	# -n skips nmap's own reverse DNS: it would query the system resolver for
+	# every host, which stalls on the router's private PTR zone. We resolve
+	# names ourselves against the gateway (_scan_ptr), so the PTR field is moot.
 	local cidr="$1" line ip hostname portfield ports tok
-	for line in "${(@f)$(nmap -p 22,80,443 --open -oG - "$cidr" 2>/dev/null)}"; do
+	for line in "${(@f)$(nmap -n -p 22,80,443 --open -oG - "$cidr" 2>/dev/null)}"; do
 		[[ "$line" == Host:\ * && "$line" == *Ports:* ]] || continue
 		ip="${${(s: :)line}[2]}"
 		hostname=""
@@ -992,9 +995,14 @@ function _scan_probe_http {
 	# both headers and body (-i): stock OpenWRT often redirects http→https and
 	# exposes no 'Server: uhttpd', so the only tell is LuCI in the served page.
 	command-has curl || return 1
-	local ip="$1" scheme out
-	for scheme in http https; do
-		out="$(curl -s -k -L -i --max-time 4 "$scheme://$ip/" 2>/dev/null)" || continue
+	# Only probe schemes whose port nmap reported open, so we never wait out a
+	# connect timeout on a closed port.
+	local ip="$1" ports="$2" scheme out
+	local -a schemes=()
+	[[ ",$ports," == *,80,* ]]  && schemes+=(http)
+	[[ ",$ports," == *,443,* ]] && schemes+=(https)
+	for scheme in "${schemes[@]}"; do
+		out="$(curl -s -k -L -i --max-time 3 "$scheme://$ip/" 2>/dev/null)" || continue
 		[[ -n "$out" ]] || continue
 		print -r -- "$out" | grep -qiE 'luci|openwrt|uhttpd|dropbear|x-luci' && return 0
 	done
@@ -1008,13 +1016,36 @@ function _scan_probe_ssh {
 	user="$(_config_value '.defaults.user')"
 	out="$(ssh \
 		-o BatchMode=yes \
-		-o ConnectTimeout=4 \
+		-o ConnectTimeout=3 \
 		-o StrictHostKeyChecking=accept-new \
 		-o PreferredAuthentications=publickey \
 		"${user:+$user@}$ip" \
 		'cat /etc/openwrt_release /etc/os-release 2>/dev/null' \
 		</dev/null 2>/dev/null)"
 	[[ "${out:l}" == *openwrt* ]]
+}
+
+function _scan_fingerprint {
+	# Probe a single host (HTTP/SSH/mDNS) and, if it looks like OpenWRT, resolve
+	# its name and write "IP<TAB>HOSTNAME<TAB>DETECT" to $out. Designed to run in
+	# the background — it touches no shared shell state, only its own out file.
+	emulate -L zsh
+	local ip="$1" ptr="$2" ports="$3" gw="$4" mdns_host="$5" out="$6"
+	local -a sig=()
+	[[ ",$ports," == *,80,* || ",$ports," == *,443,* ]] && _scan_probe_http "$ip" "$ports" && sig+=(http)
+	[[ ",$ports," == *,22,* ]] && _scan_probe_ssh "$ip" && sig+=(ssh)
+	[[ -n "$mdns_host" && "${mdns_host:l}" == *openwrt* ]] && sig+=(mdns)
+	(( ${#sig} )) || return 0
+
+	# Gateway DNS is authoritative for the LAN; fall back to nmap PTR, then mDNS.
+	# Drop the synthetic "_gateway" name systemd-resolved hands out.
+	local hostname
+	hostname="$(_scan_ptr "$ip" "$gw")"
+	[[ -n "$hostname" ]] || hostname="${ptr%.}"
+	[[ -n "$hostname" ]] || hostname="$mdns_host"
+	[[ "$hostname" == _gateway ]] && hostname=""
+
+	print -r -- "$ip	$hostname	${(j:,:)sig}" > "$out"
 }
 
 function owrt_scan {
@@ -1065,95 +1096,109 @@ function owrt_scan {
 	{
 	spinner_start "Scanning ${cidr} (nmap + fingerprint) ..."
 
-	# Build the mDNS IP→hostname map once.
-	local -A mdns
-	local ml
-	for ml in "${(@f)$(_scan_mdns_map)}"; do
-		[[ -n "$ml" ]] || continue
-		mdns[${ml%%	*}]="${ml#*	}"
-	done
-
 	# Loop-locals declared once here: re-running `local NAME` each iteration
 	# would make zsh echo "NAME=value" (typeset prints already-set params).
-	local line ip rest ptr ports mdns_host hostname host_field id_src id dev_state detect col
-	local -a sig row
-	for line in "${(@f)$(_scan_live_hosts "$cidr")}"; do
-		[[ -n "$line" ]] || continue
-		ip="${line%%	*}"
-		rest="${line#*	}"
-		ptr="${rest%%	*}"
-		ports="${rest#*	}"
+	local line ip rest ptr ports hostname host_field id_src id dev_state detect col f ml
+	local -a row live
+	local -A mdns
+	local tmpdir; tmpdir="$(mktemp -d)" || scan_rc=1
 
-		sig=()
-		[[ ",$ports," == *,80,* || ",$ports," == *,443,* ]] && _scan_probe_http "$ip" && sig+=(http)
-		[[ ",$ports," == *,22,* ]] && _scan_probe_ssh "$ip" && sig+=(ssh)
-		mdns_host="${mdns[$ip]-}"
-		[[ -n "$mdns_host" && "${mdns_host:l}" == *openwrt* ]] && sig+=(mdns)
+	# Phase 1: discover live hosts (nmap), then fingerprint them in parallel.
+	# The probes are network-bound (HTTP/SSH/DNS timeouts), so running them
+	# concurrently turns an O(hosts) wall-clock into roughly O(hosts/MAXJOBS).
+	if (( ! scan_rc )); then
+		# mDNS browse has a fixed ~5s settle, so run it in the background
+		# (dotfile, excluded from the result glob) overlapped with the nmap
+		# sweep rather than paying both serially.
+		_scan_mdns_map > "$tmpdir/.mdns" &
+		local -i mdns_pid=$!
 
-		(( ${#sig} )) || continue
-		found+=1
+		live=("${(@f)$(_scan_live_hosts "$cidr")}")
 
-		# Resolve a hostname. The gateway's DNS is authoritative for this LAN, so
-		# query it first (the system resolver, hence nmap, often can't answer the
-		# router's zone); fall back to nmap's PTR, then mDNS. Drop the synthetic
-		# "_gateway" name systemd-resolved hands out for the default route.
-		hostname="$(_scan_ptr "$ip" "$gw")"
-		[[ -n "$hostname" ]] || hostname="${ptr%.}"
-		[[ -n "$hostname" ]] || hostname="$mdns_host"
-		[[ "$hostname" == _gateway ]] && hostname=""
-
-		# id derives from the hostname's leading label; host stays the IP so SSH
-		# connects even when .lan names don't resolve forward on this machine.
-		if [[ -n "$hostname" ]]; then
-			id_src="${${hostname%.local}%%.*}"
-		else
-			id_src="$ip"
-		fi
-		host_field="$ip"
-		id="$(_id_normalize "$id_src")"
-
-		dev_state="$(jaq -r --arg id "$id" --arg host "$host_field" --arg ip "$ip" \
-			'if (.routers | any(.id == $id or .host == $host or .host == $ip)) then "existing" else "new" end' <<< "$data")"
-
-		if [[ "$dev_state" == new ]]; then
-			# Append in-memory so later same-scan duplicates dedupe too; only
-			# persisted when --add is set.
-			data="$(jaq \
-				--arg id "$id" \
-				--arg host "$host_field" \
-				--argjson port "$port_arg" \
-				--arg user "${f_user[-1]}" \
-				--argjson tags "$tags_json" \
-				--arg now "$(now)" \
-				'.routers += [{
-					id: $id,
-					host: $host,
-					user: (if $user != "" then $user else null end),
-					port: $port,
-					tags: $tags,
-					created_at: $now,
-					updated_at: $now
-				}]' <<< "$data")" || { scan_rc=1; break; }
-			add_count+=1
-		fi
-
-		detect="${(j:,:)sig}"
-		print_fn -s "Found %s (%s) [%s] (%s)" "${hostname:-$ip}" "$ip" "$dev_state" "$detect"
-		row=()
-		for col in "${chosen[@]}"; do
-			case "$col" in
-				ip)       row+=("$ip") ;;
-				host)     row+=("$host_field") ;;
-				hostname) row+=("${hostname:--}") ;;
-				id)       row+=("$id") ;;
-				detect) row+=("$detect") ;;
-				status) row+=("$dev_state") ;;
-			esac
+		wait $mdns_pid
+		for ml in "${(@f)$(< "$tmpdir/.mdns")}"; do
+			[[ -n "$ml" ]] || continue
+			mdns[${ml%%	*}]="${ml#*	}"
 		done
-		rows+=("${(pj:\t:)row}")
-	done
+
+		local -i idx=0 inflight=0
+		local -ri MAXJOBS=24
+		for line in "${live[@]}"; do
+			[[ -n "$line" ]] || continue
+			ip="${line%%	*}"
+			rest="${line#*	}"
+			ptr="${rest%%	*}"
+			ports="${rest#*	}"
+			_scan_fingerprint "$ip" "$ptr" "$ports" "$gw" "${mdns[$ip]-}" "$tmpdir/$(printf '%05d' $idx)" &
+			(( idx++, inflight++ ))
+			(( inflight < MAXJOBS )) || { wait; inflight=0 }
+		done
+		wait
+
+		# Phase 2: collect hits in IP order (zero-padded filenames sort to nmap's
+		# order) and update the store serially, so dedup and writes stay race-free.
+		for f in "$tmpdir"/*(N.); do
+			[[ -s "$f" ]] || continue
+			line="$(< "$f")"
+			ip="${line%%	*}"
+			rest="${line#*	}"
+			hostname="${rest%%	*}"
+			detect="${rest#*	}"
+			found+=1
+
+			# id derives from the hostname's leading label; host stays the IP so
+			# SSH connects even when .lan names don't resolve forward here.
+			if [[ -n "$hostname" ]]; then
+				id_src="${${hostname%.local}%%.*}"
+			else
+				id_src="$ip"
+			fi
+			host_field="$ip"
+			id="$(_id_normalize "$id_src")"
+
+			dev_state="$(jaq -r --arg id "$id" --arg host "$host_field" --arg ip "$ip" \
+				'if (.routers | any(.id == $id or .host == $host or .host == $ip)) then "existing" else "new" end' <<< "$data")"
+
+			if [[ "$dev_state" == new ]]; then
+				# Append in-memory so later same-scan duplicates dedupe too; only
+				# persisted when --add is set.
+				data="$(jaq \
+					--arg id "$id" \
+					--arg host "$host_field" \
+					--argjson port "$port_arg" \
+					--arg user "${f_user[-1]}" \
+					--argjson tags "$tags_json" \
+					--arg now "$(now)" \
+					'.routers += [{
+						id: $id,
+						host: $host,
+						user: (if $user != "" then $user else null end),
+						port: $port,
+						tags: $tags,
+						created_at: $now,
+						updated_at: $now
+					}]' <<< "$data")" || { scan_rc=1; break; }
+				add_count+=1
+			fi
+
+			print_fn -s "Found %s (%s) [%s] (%s)" "${hostname:-$ip}" "$ip" "$dev_state" "$detect"
+			row=()
+			for col in "${chosen[@]}"; do
+				case "$col" in
+					ip)       row+=("$ip") ;;
+					host)     row+=("$host_field") ;;
+					hostname) row+=("${hostname:--}") ;;
+					id)       row+=("$id") ;;
+					detect)   row+=("$detect") ;;
+					status)   row+=("$dev_state") ;;
+				esac
+			done
+			rows+=("${(pj:\t:)row}")
+		done
+	fi
 	} always {
 		spinner_stop 0 ''
+		[[ -n "$tmpdir" ]] && rm -rf "$tmpdir"
 	}
 
 	(( scan_rc == 0 )) || return 1
