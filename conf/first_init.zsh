@@ -321,6 +321,14 @@ function setup_git_hooks {
 		return 0
 	fi
 
+	# Only prompt when the remote is cloned over SSH; HTTPS clones are typically
+	# read-only mirrors where pushing (and thus the hook) doesn't apply.
+	local origin_url
+	origin_url=$(git -C "$ZDOTDIR" config --local --default '' remote.origin.url)
+	if [[ "$origin_url" != (git@*|ssh://*) ]]; then
+		return 0
+	fi
+
 	ask -Bd y -p "Enable repo pre-commit hook for completions drift check (sets core.hooksPath=conf/hooks)?" || return 0
 
 	git -C "$ZDOTDIR" config --local core.hooksPath conf/hooks
