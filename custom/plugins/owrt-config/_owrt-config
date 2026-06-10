@@ -44,6 +44,15 @@ _owrt-config_tags() {
 	(( ${#tags} )) && _describe -t tags 'tag' tags
 }
 
+_owrt-config_networks() {
+	local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/owrt-config"
+	local config_file="$config_dir/config.json"
+	[[ -f "$config_file" ]] && (( $+commands[jq] )) || return
+	local -a nets
+	nets=("${(@f)$(jq -r '.networks // {} | to_entries[] | "\(.value):\(.key)"' "$config_file" 2>/dev/null)}")
+	(( ${#nets} )) && _describe -t networks 'network' nets
+}
+
 _owrt-config_tasks() {
 	local -a tasks
 	# Ask the script for the canonical list; fall back to a hardcoded set if
@@ -94,7 +103,8 @@ _owrt-config_commands() {
 _owrt-config_cmd_list() {
 	_arguments -s -S \
 		'(-t --tag)'{-t,--tag}'[Filter by tag]:tag:_owrt-config_tags' \
-		'--columns[Pick columns (comma list; "help" lists names)]:columns:(id host user port tags created updated help)'
+		'(-a --all)'{-a,--all}'[Show routers from every network, not just the current one]' \
+		'--columns[Pick columns (comma list; "help" lists names)]:columns:(id host user port tags net created updated help)'
 }
 
 _owrt-config_cmd_add() {
@@ -103,6 +113,7 @@ _owrt-config_cmd_add() {
 		'--host[Hostname or IP (single id only)]:host:_hosts' \
 		'--user[SSH user]:user:_users' \
 		'--port[SSH port]:port:' \
+		'--network[Network to stamp (default: current LAN)]:network:_owrt-config_networks' \
 		'*'{-t,--tag}'[Tag (repeatable)]:tag:_owrt-config_tags'
 }
 
@@ -118,6 +129,7 @@ _owrt-config_cmd_edit() {
 		'--user[Set SSH user]:user:_users' \
 		'--port[Set SSH port]:port:' \
 		'--id[Rename router id]:new id:' \
+		'--network[Set network (empty string clears)]:network:_owrt-config_networks' \
 		'*'{-t,--tag}'[Add tag (repeatable)]:tag:_owrt-config_tags' \
 		'*--untag[Remove tag (repeatable)]:tag:_owrt-config_tags'
 }
@@ -207,6 +219,7 @@ _owrt-config_cmd_config() {
 		'prefix:Hostname prefix used when auto-composing host'
 		'domain:Hostname domain suffix (e.g. .lan)'
 		'store_path:Path to the routers.json store'
+		'network:Name for the current LAN (keyed by its subnet)'
 	)
 	_arguments -C \
 		'1:subcommand:->sub' \

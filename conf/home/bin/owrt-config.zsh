@@ -27,10 +27,10 @@ readonly -a usage=(
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	""
 	"COMMANDS"
-	"\tlist [--tag TAG] [--columns COLS]  List registered routers"
-	"\tadd ID... [--host H] [--user U] [--port N] [--tag T]...  Register one or more routers"
+	"\tlist [--tag TAG] [--all] [--columns COLS]  List routers (current network only unless --all)"
+	"\tadd ID... [--host H] [--user U] [--port N] [--network NAME] [--tag T]...  Register one or more routers"
 	"\tremove ID...                    Remove one or more routers"
-	"\tedit ID [--host H] [--user U] [--port N] [--id NEW]"
+	"\tedit ID [--host H] [--user U] [--port N] [--id NEW] [--network NAME]"
 	"\t        [--tag T]... [--untag T]...                    Edit a router (or open in \$EDITOR)"
 	"\tssh ID [CMD...]                 Open SSH session, or run a one-shot command"
 	"\tscan [--subnet CIDR] [--add] [--columns COLS]"
@@ -40,6 +40,7 @@ readonly -a usage=(
 	"\ttask add NAME [-d DESC] -c CMD [-c CMD]...   Save a task to the config"
 	"\ttask rm NAME                    Remove a config-defined task"
 	"\tconfig [path|show|set KEY VAL]  View / edit defaults (prefix, domain, user, port)"
+	"\t                                 'set network NAME' names the current LAN"
 	""
 	"COMMAND ALIASES"
 	"\tlist=ls,l   add=a   remove=rm,delete,del   edit=ed,e"
@@ -151,6 +152,7 @@ function _config_default_json {
 				prefix: "",
 				domain: ".lan"
 			},
+			networks: {},
 			tasks: {}
 		}'
 }
@@ -166,6 +168,7 @@ function _config_coerce {
 				prefix: (.defaults.prefix // ""),
 				domain: (.defaults.domain // ".lan")
 			},
+			networks: (.networks // {}),
 			tasks: (.tasks // {})
 		}'
 }
@@ -186,6 +189,7 @@ function _json_read {
 			.tags //= []
 			| .port //= null
 			| .user //= null
+			| .network //= null
 		)
 	'
 }
@@ -270,13 +274,14 @@ function _resolve_endpoint {
 # --- Commands: registry ---
 
 function owrt_list {
-	local f_tag f_columns
+	local f_tag f_columns f_all
 	zparseopts -D -F -K -- \
 		{t,-tag}:=f_tag \
 		-columns:=f_columns \
+		{a,-all}=f_all \
 		|| return 1
 
-	local available="id:Router id|host:SSH host|user:Effective SSH user|port:Effective SSH port|tags:Comma-joined tag list|created:Created timestamp|updated:Updated timestamp"
+	local available="id:Router id|host:SSH host|user:Effective SSH user|port:Effective SSH port|tags:Comma-joined tag list|net:Network this router belongs to|created:Created timestamp|updated:Updated timestamp"
 	local cols rc
 	cols="$(_resolve_columns "$available" "${f_columns[-1]}" "id,host,user,port,tags")"
 	rc=$?
@@ -285,6 +290,29 @@ function owrt_list {
 
 	local tag="${f_tag[-1]}"
 	local data; data="$(_json_read)" || return 1
+	local networks_json; networks_json="$(jaq -c '.networks // {}' "$CONFIG_FILE_PATH" 2>/dev/null)"
+	[[ -n "$networks_json" ]] || networks_json="{}"
+
+	# Scope to the current LAN unless --all. When the subnet can't be determined
+	# (off-network, or no privilege to read it) there's nothing to filter against,
+	# so fall back to showing everything rather than an empty table.
+	local -i scoped=0
+	local cur_key="" cur_net="-" cur_cidr="" netint=0 block=0
+	if (( ! ${#f_all} )); then
+		cur_key="$(_scan_network_key)"
+		if [[ -n "$cur_key" ]]; then
+			scoped=1
+			cur_net="$(_network_name "$cur_key")"
+			cur_cidr="$(_scan_default_cidr)"
+			if [[ -n "$cur_cidr" && "${cur_cidr##*/}" == <0-32> ]]; then
+				local -i ci; ci="$(_ip2int "${cur_cidr%%/*}")" 2>/dev/null
+				block=$(( 2 ** (32 - ${cur_cidr##*/}) ))
+				netint=$(( (ci / block) * block ))
+			fi
+		else
+			print_fn -w "Couldn't determine current network; showing all (use --all to silence, or pass --tag to filter)."
+		fi
+	fi
 
 	{
 		# Header: uppercase column names
@@ -296,8 +324,21 @@ function owrt_list {
 			--arg default_user "$(_config_value '.defaults.user')" \
 			--arg default_port "$(_config_value '.defaults.port')" \
 			--arg cols "$cols" \
-			'.routers
+			--argjson scoped "$scoped" \
+			--arg cur_key "$cur_key" \
+			--arg cur_net "$cur_net" \
+			--argjson netint "$netint" \
+			--argjson block "$block" \
+			--argjson networks "$networks_json" \
+			'def ip2int: split(".") | map(tonumber) | .[0]*16777216 + .[1]*65536 + .[2]*256 + .[3];
+			def in_subnet: ($block > 0)
+			    and (type == "string") and test("^[0-9]+(\\.[0-9]+){3}$")
+			    and ((ip2int / $block | floor) == ($netint / $block | floor));
+			.routers
 			| (if $tag != "" then map(select((.tags // []) | index($tag))) else . end)
+			| (if $scoped == 1 then
+			      map(select((.host | in_subnet) or (.network != null and .network == $cur_key)))
+			   else . end)
 			| if length == 0 then empty
 			  else
 			    ($cols | split(",")) as $picked
@@ -309,6 +350,9 @@ function owrt_list {
 			        user:    ($r.user // $default_user // "-"),
 			        port:    (($r.port // ($default_port | tonumber)) | tostring),
 			        tags:    (($r.tags // []) | join(",") | if . == "" then "-" else . end),
+			        net:     (if ($r.host | in_subnet) then $cur_net
+			                  elif ($r.network != null) then ($networks[$r.network] // $r.network)
+			                  else "-" end),
 			        created: ($r.created_at // "-"),
 			        updated: ($r.updated_at // "-")
 			      } as $row
@@ -321,7 +365,7 @@ function owrt_add {
 	# zparseopts stops at the first operand, so parse in passes: consume leading
 	# options, grab one id, repeat — this lets flags appear in any position.
 	# Tags are drained each pass because -K keeps only the last repeatable match.
-	local f_host f_user f_port f_tag
+	local f_host f_user f_port f_tag f_network
 	local -a id_args=() tags=()
 	while (( $# )); do
 		f_tag=()
@@ -329,13 +373,14 @@ function owrt_add {
 			-host:=f_host \
 			-user:=f_user \
 			-port:=f_port \
+			-network:=f_network \
 			{t,-tag}+:=f_tag \
 			|| return 1
 		tags+=("${(@)f_tag:#(-t|--tag)}")
 		(( $# )) || break
 		id_args+=("$1"); shift
 	done
-	(( ${#id_args} )) || { print -u2 "Usage: $THIS add ID... [--host H] [--user U] [--port N] [--tag T]..."; return 1; }
+	(( ${#id_args} )) || { print -u2 "Usage: $THIS add ID... [--host H] [--user U] [--port N] [--network NAME] [--tag T]..."; return 1; }
 
 	# --host is per-device, so it only makes sense for a single id; other flags
 	# (user/port/tag) apply to every id in the batch.
@@ -351,6 +396,17 @@ function owrt_add {
 	fi
 
 	local tags_json; tags_json="$(jaq -n '$ARGS.positional' --args -- "${tags[@]}")"
+
+	# Hosts added by id are usually hostnames, not IPs, so the subnet test can't
+	# catch them — the network stamp is their only scoping signal. Default it to
+	# the current LAN (overridable with --network NAME) so a freshly added router
+	# shows up in the scoped list right away.
+	local network
+	if (( ${#f_network} )); then
+		network="$(_network_resolve_key "${f_network[-1]}")"
+	else
+		network="$(_scan_network_key)"
+	fi
 
 	local data; data="$(_json_read)" || return 1
 
@@ -374,6 +430,7 @@ function owrt_add {
 			--arg user "${f_user[-1]}" \
 			--argjson port "$port_arg" \
 			--argjson tags "$tags_json" \
+			--arg network "$network" \
 			--arg now "$now" \
 			'.routers += [{
 				id: $id,
@@ -381,6 +438,7 @@ function owrt_add {
 				user: (if $user != "" then $user else null end),
 				port: $port,
 				tags: $tags,
+				network: (if $network != "" then $network else null end),
 				created_at: $now,
 				updated_at: $now
 			}]' <<< "$data")" || return 1
@@ -419,17 +477,18 @@ function owrt_remove {
 function owrt_edit {
 	local id_raw="$1"; shift
 	[[ -n "$id_raw" ]] || {
-		print -u2 "Usage: $THIS edit ID [--host H] [--user U] [--port N] [--id NEW] [--tag T]... [--untag T]..."
+		print -u2 "Usage: $THIS edit ID [--host H] [--user U] [--port N] [--id NEW] [--network NAME] [--tag T]... [--untag T]..."
 		return 1
 	}
 	local id; id="$(_id_normalize "$id_raw")"
 
-	local f_host f_user f_port f_id f_tag f_untag
+	local f_host f_user f_port f_id f_tag f_untag f_network
 	zparseopts -D -F -K -- \
 		-host:=f_host \
 		-user:=f_user \
 		-port:=f_port \
 		-id:=f_id \
+		-network:=f_network \
 		{t,-tag}+:=f_tag \
 		-untag+:=f_untag \
 		|| return 1
@@ -442,7 +501,7 @@ function owrt_edit {
 	}
 
 	# No flags → $EDITOR
-	if (( ! ${#f_host} && ! ${#f_user} && ! ${#f_port} && ! ${#f_id} && ! ${#f_tag} && ! ${#f_untag} )); then
+	if (( ! ${#f_host} && ! ${#f_user} && ! ${#f_port} && ! ${#f_id} && ! ${#f_tag} && ! ${#f_untag} && ! ${#f_network} )); then
 		local tmp editor
 		tmp="$(mktemp --suffix=.json)" || return 1
 		print -r -- "$router" | jaq . > "$tmp"
@@ -483,12 +542,21 @@ function owrt_edit {
 	local -a add_tags=("${(@)f_tag:#(-t|--tag)}")
 	local -a del_tags=("${(@)f_untag:#--untag}")
 
+	# --network NAME pins the router to a network; --network '' clears it.
+	local network="" set_network=0
+	if (( ${#f_network} )); then
+		set_network=1
+		[[ -n "${f_network[-1]}" ]] && network="$(_network_resolve_key "${f_network[-1]}")"
+	fi
+
 	jaq \
 		--arg id "$id" \
 		--arg new_id "$new_id" \
 		--arg host "${f_host[-1]}" \
 		--arg user "${f_user[-1]}" \
 		--argjson port "$port_arg" \
+		--argjson set_network "$set_network" \
+		--arg network "$network" \
 		--argjson add "$(print -r -- "$add_tags" | jaq -R 'split(" ") | map(select(length>0))')" \
 		--argjson del "$(print -r -- "$del_tags" | jaq -R 'split(" ") | map(select(length>0))')" \
 		--arg now "$(now)" \
@@ -498,6 +566,7 @@ function owrt_edit {
 				| (if $host != "" then .host = $host else . end)
 				| (if $user != "" then .user = $user else . end)
 				| (if $port != null then .port = $port else . end)
+				| (if $set_network == 1 then .network = (if $network != "" then $network else null end) else . end)
 				| .tags = (((.tags // []) + $add) - $del | unique)
 				| .updated_at = $now
 			else . end
@@ -516,10 +585,16 @@ function owrt_config {
 			shift
 			local key="$1" value="$2"
 			[[ -n "$key" && -n "$value" ]] || { print -u2 "Usage: $THIS config set KEY VALUE"; return 1; }
+			local net_key=""
 			case "$key" in
 				user|prefix|domain|store_path) ;;
 				port)
 					[[ "$value" =~ '^[0-9]+$' ]] || { print_fn -e "Port must be numeric."; return 1; }
+				;;
+				network)
+					# Name whichever LAN we're on right now, keyed by its fingerprint.
+					net_key="$(_scan_network_key)"
+					[[ -n "$net_key" ]] || { print_fn -e "Couldn't determine current network to name."; return 1; }
 				;;
 				*) print_fn -e "Unknown config key: %s" "$key"; return 1 ;;
 			esac
@@ -531,12 +606,20 @@ function owrt_config {
 				port)
 					jaq --argjson v "$value" '.defaults.port = $v' "$CONFIG_FILE_PATH" > "$tmp"
 				;;
+				network)
+					jaq --arg k "$net_key" --arg v "$value" \
+						'.networks = ((.networks // {}) | .[$k] = $v)' "$CONFIG_FILE_PATH" > "$tmp"
+				;;
 				*)
 					jaq --arg k "$key" --arg v "$value" '.defaults[$k] = $v' "$CONFIG_FILE_PATH" > "$tmp"
 				;;
 			esac
 			[[ -s "$tmp" ]] && mv "$tmp" "$CONFIG_FILE_PATH" || { rm -f "$tmp"; return 1; }
-			print_fn -s "Set %s = %s" "$key" "$value"
+			if [[ "$key" == network ]]; then
+				print_fn -s "Named network %s = %s" "$net_key" "$value"
+			else
+				print_fn -s "Set %s = %s" "$key" "$value"
+			fi
 		;;
 		*)
 			print_fn -e "Unknown config subcommand: %s" "$1"
@@ -929,14 +1012,134 @@ function owrt_run {
 	(( ${#failures} == 0 && ! aborted ))
 }
 
+# --- Network identity ---
+#
+# Routers roam: the same store holds devices from several LANs, so the registry
+# is scoped to "where am I now". A network is fingerprinted by a stable *key* —
+# the gateway's MAC (countless LANs share 192.168.1.0/24, the MAC does not),
+# falling back to the subnet's network address when ARP is mute. Membership is a
+# mix of two signals: a router whose host IP sits inside the current subnet, or
+# one explicitly stamped with the current key (covers hosts stored by name).
+
+function _ip2int {
+	local -a o=("${(@s:.:)1}")
+	(( ${#o} == 4 )) || return 1
+	print -r -- $(( (o[1] << 24) | (o[2] << 16) | (o[3] << 8) | o[4] ))
+}
+
+function _scan_network_key {
+	# Echo a stable fingerprint for the current LAN — its network address, e.g.
+	# 192.168.1.138/24 -> 192.168.1.0/24 — or nothing when off-network.
+	#
+	# A gateway MAC would be collision-proof (many LANs reuse 192.168.1.0/24), but
+	# this device drops the wlan default route for seconds at a time, so neither
+	# the gateway nor its ARP entry is dependable. The interface address always
+	# is. If two of your LANs genuinely share a subnet, disambiguate them with
+	# `add --network NAME` / `config set network NAME`.
+	local cidr ipint bits block netint
+	cidr="$(_scan_default_cidr)" || return 1
+	bits="${cidr##*/}"
+	[[ "$bits" == <0-32> ]] || { print -r -- "$cidr"; return 0 }
+	ipint="$(_ip2int "${cidr%%/*}")" || { print -r -- "$cidr"; return 0 }
+	block=$(( 2 ** (32 - bits) ))
+	netint=$(( (ipint / block) * block ))
+	print -r -- "$(( (netint >> 24) & 255 )).$(( (netint >> 16) & 255 )).$(( (netint >> 8) & 255 )).$(( netint & 255 ))/$bits"
+}
+
+function _network_name {
+	# Human label for a key (from config .networks), or the key itself if unnamed.
+	local key="$1" name
+	[[ -n "$key" ]] || return 1
+	# Keys are MAC/CIDR — only [0-9a-f:./] — so safe to splice into the filter.
+	name="$(_config_value ".networks[\"${key}\"]")"
+	print -r -- "${name:-$key}"
+}
+
+function _network_resolve_key {
+	# Map a user-supplied network name back to its key; pass an unknown value
+	# (assumed to already be a key) through unchanged. So routers are always
+	# stamped with the stable key, however the user referred to the network.
+	local v="$1" key
+	[[ -n "$v" ]] || return 1
+	key="$(jaq -r --arg v "$v" \
+		'.networks // {} | to_entries | map(select(.value == $v)) | (.[0].key // $v)' \
+		"$CONFIG_FILE_PATH" 2>/dev/null)"
+	print -r -- "${key:-$v}"
+}
+
 # --- Network scan ---
+
+typeset -g _NET_PROBE_FILE="${TMPDIR:-/tmp}/owrt-netprobe.$$"
+
+function _net_run {
+	# Run a shell command string with the privilege Android needs to read
+	# netlink. On Termux the unprivileged app can't bind a netlink socket
+	# ("Cannot bind netlink socket: Permission denied"), so queries are funnelled
+	# through an escalation shell (Shizuku's rish, then su). Everywhere else the
+	# plain binary works, so we run it directly.
+	local cmd="$1"
+	if whatami android; then
+		local esc out
+		for esc in rish su; do
+			command-has "$esc" || continue
+			out="$("$esc" -c "$cmd" 2>/dev/null)"
+			[[ -n "$out" ]] && { print -r -- "$out"; return 0 }
+		done
+		return 1
+	fi
+	eval "$cmd" 2>/dev/null
+}
+
+function _net_probe {
+	# One privileged snapshot of routes + addresses, cached in a per-process file
+	# so the half-dozen things we derive from it (gateway, local CIDR, network
+	# key) cost a single escalation. The cache is a file (not a global) so it
+	# survives the command-substitution subshells the callers run in; MAIN removes
+	# it on exit.
+	#
+	# This device's netlink state flickers: the wlan default route and even the
+	# wlan interface address intermittently drop out of `ip` output for a beat
+	# (mobile-data/wlan handover churn). So we retry until a usable LAN address
+	# (non-loopback, non-/32) shows up, rather than trust a single read. No
+	# section markers: route ("default via ...") and address (" inet ") lines are
+	# self-distinguishing, and an `echo` marker between commands proved unreliable
+	# through the escalation shell.
+	[[ -s "$_NET_PROBE_FILE" ]] && { cat -- "$_NET_PROBE_FILE"; return 0 }
+	local out; local -i i=0
+	while (( i < 6 )); do
+		out="$(_net_run '
+			ip -o route show table all default
+			ip -o -f inet addr show')"
+		if print -r -- "$out" | awk '
+			$3 == "inet" && $4 !~ /^127\./ && $4 !~ /\/32$/ {ok = 1}
+			END {exit !ok}'; then
+			break
+		fi
+		(( ++i < 6 )) && sleep 0.3
+	done
+	[[ -n "$out" ]] || return 1
+	print -r -- "$out" > "$_NET_PROBE_FILE"
+	print -r -- "$out"
+}
 
 function _scan_default_cidr {
 	# Derive the local IPv4 CIDR from the interface backing the default route.
-	local iface cidr
-	iface="$(ip -o route show default 2>/dev/null | awk '{print $5; exit}')"
-	[[ -n "$iface" ]] || return 1
-	cidr="$(ip -o -f inet addr show dev "$iface" 2>/dev/null | awk '{print $4; exit}')"
+	# We look across all routing tables (Android keeps per-network policy tables
+	# rather than a single main-table default) and pick the first IPv4 default
+	# that goes *via* a gateway. That excludes mobile-data / point-to-point links
+	# (rmnet, dummy0), which are scope-link /32s with nothing on-LAN to scan.
+	local probe iface cidr
+	probe="$(_net_probe)" || return 1
+	iface="$(print -r -- "$probe" | awk '
+		$0 ~ /^default via [0-9]+\./ {for (i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')"
+	# addr lines (-o): "47: wlan0    inet 192.168.1.138/24 brd ..." → $2 iface, $4 cidr
+	[[ -n "$iface" ]] && cidr="$(print -r -- "$probe" | awk -v ifc="$iface" '
+		$2 == ifc && $3 == "inet" {print $4; exit}')"
+	# Fallback: Android transiently drops the wlan default route, so derive the
+	# LAN straight from interface addresses — the first global IPv4 that's neither
+	# loopback nor a /32 (mobile-data links are point-to-point /32s).
+	[[ -n "$cidr" ]] || cidr="$(print -r -- "$probe" | awk '
+		$3 == "inet" && $4 !~ /^127\./ && $4 !~ /\/32$/ {print $4; exit}')"
 	[[ -n "$cidr" ]] || return 1
 	print -r -- "$cidr"
 }
@@ -964,7 +1167,7 @@ function _scan_live_hosts {
 }
 
 function _scan_gateway {
-	ip -o route show default 2>/dev/null | awk '{print $3; exit}'
+	_net_probe | awk '$0 ~ /^default via [0-9]+\./ {print $3; exit}'
 }
 
 function _scan_ptr {
@@ -1067,6 +1270,11 @@ function owrt_scan {
 		return 1
 	}
 	local gw; gw="$(_scan_gateway)"
+	# Stamp discovered routers with the current network so they stay grouped even
+	# after you've roamed off this LAN. When a custom --subnet is scanned we may
+	# not be on it, so the key can be empty — that's fine, IP membership still
+	# scopes them while you're here.
+	local network; network="$(_scan_network_key)"
 
 	local available="ip:Discovered IP|host:SSH host (the IP)|hostname:Resolved hostname|id:Proposed router id|detect:Matched fingerprints|status:new or existing"
 	local cols rc
@@ -1168,6 +1376,7 @@ function owrt_scan {
 					--argjson port "$port_arg" \
 					--arg user "${f_user[-1]}" \
 					--argjson tags "$tags_json" \
+					--arg network "$network" \
 					--arg now "$(now)" \
 					'.routers += [{
 						id: $id,
@@ -1175,6 +1384,7 @@ function owrt_scan {
 						user: (if $user != "" then $user else null end),
 						port: $port,
 						tags: $tags,
+						network: (if $network != "" then $network else null end),
 						created_at: $now,
 						updated_at: $now
 					}]' <<< "$data")" || { scan_rc=1; break; }
@@ -1242,6 +1452,9 @@ if [[ "$f_help" ]]; then
 fi
 
 _init_paths || exit 1
+
+# Drop the cached network probe (see _net_probe) when the script exits.
+TRAPEXIT() { [[ -n "$_NET_PROBE_FILE" ]] && rm -f -- "$_NET_PROBE_FILE" }
 
 if (( ! $# )); then
 	owrt_list
