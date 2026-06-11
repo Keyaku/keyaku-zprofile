@@ -237,6 +237,85 @@ function setup_de {
 	return 0
 }
 
+# Routes Steam launches through conf/home/bin/steam-xdg-wrap.zsh, which runs the
+# client in a rootless mount namespace so Steam's XDG-ignoring $HOME writes
+# (steamwebhelper hardcodes ~/.pki/nssdb, games scatter ~/.<game> dirs) never hit
+# the real $HOME. Symlinks the wrapper into ~/.local/bin, installs a user
+# steam.desktop override pointing every Exec= at it (so menu / steam:// launches
+# are wrapped too), and retires any live ~/.pki. The wrapper's mode is chosen at
+# launch via $STEAM_XDG_MODE (bind|private, default bind); set it in this setup's
+# env to bake `env STEAM_XDG_MODE=…` into the desktop Exec. See home-dotfile-cleanup.
+function setup_steam_xdg {
+	command-has steam || return 0
+
+	local script="$ZDOTDIR/conf/home/bin/steam-xdg-wrap.zsh"
+	local bin="$HOME/.local/bin/steam-xdg-wrap.zsh"
+	[[ -d "${bin:h}" ]] || mkdir -p "${bin:h}"
+	if [[ ! -L "$bin" || "$(readlink -f "$bin")" != "$script" ]]; then
+		ln -sfn "$script" "$bin"
+		print_fn -s "Steam XDG wrapper linked: $bin -> $script"
+	fi
+
+	command-has bwrap || \
+		print_fn -w "bwrap not installed — Steam will launch unwrapped until it is (pkg: bubblewrap)."
+
+	# Launch command the override points at: the wrapper, optionally prefixed with
+	# `env STEAM_XDG_MODE=<mode> [STEAM_XDG_SHARE=…]` so GUI launches use a
+	# non-default mode. For `private`, pre-share the standard user dirs (resolved
+	# via xdg-user-dir, existing only — Documents/Pictures may be XDG-relocated)
+	# so Steam's file dialogs and games still reach Documents/Downloads/Pictures/
+	# Videos; any inherited $STEAM_XDG_SHARE is merged in.
+	local launch="$bin"
+	if [[ "$STEAM_XDG_MODE" == private ]]; then
+		local -a shares=()
+		if command-has xdg-user-dir; then
+			local key p
+			for key in DOCUMENTS DOWNLOAD PICTURES VIDEOS; do
+				p=$(xdg-user-dir "$key" 2>/dev/null)
+				[[ -n "$p" && -d "$p" && "$p" != "$HOME" ]] && shares+=("$p")
+			done
+		fi
+		[[ -n "$STEAM_XDG_SHARE" ]] && shares+=(${(s.:.)STEAM_XDG_SHARE})
+		launch="env STEAM_XDG_MODE=private"
+		(( ${#shares} )) && launch+=" STEAM_XDG_SHARE=${(uj.:.)shares}"
+		launch+=" $bin"
+	elif [[ -n "$STEAM_XDG_MODE" && "$STEAM_XDG_MODE" != bind ]]; then
+		launch="env STEAM_XDG_MODE=${STEAM_XDG_MODE} $bin"
+	fi
+
+	# User-level steam.desktop override: copy the system entry verbatim and point
+	# every Exec= (main action, sub-actions, steam:// handler) at the launch cmd.
+	# Regenerate when missing, when the system entry is newer, or when the baked
+	# launch command has changed (e.g. mode/share switch).
+	local sys=/usr/share/applications/steam.desktop
+	local override="${XDG_DATA_HOME:-$HOME/.local/share}/applications/steam.desktop"
+	if [[ -r "$sys" ]]; then
+		if [[ ! -e "$override" || "$override" -ot "$sys" ]] || \
+		   ! grep -qF -- "Exec=$launch " "$override"; then
+			sed "s#/usr/bin/steam#$launch#g" "$sys" > "$override"
+			command-has update-desktop-database && \
+				update-desktop-database "${override:h}" 2>/dev/null
+			print_fn -s "Steam desktop override installed: $override"
+		fi
+	else
+		print_fn -w "$sys not found — skipping desktop override (run after Steam is installed)."
+	fi
+
+	# Retire any live ~/.pki so the wrapper's namespace owns the path. A symlink
+	# (current minimal state) already points at the XDG store → just drop it; a
+	# real dir is migrated into the XDG store first. Per the standing rule we only
+	# touch it because the data lives in / moves to $XDG_DATA_HOME/pki.
+	local pki="$HOME/.pki" xdg_pki="${XDG_DATA_HOME:-$HOME/.local/share}/pki"
+	if [[ -L "$pki" ]]; then
+		rm -f "$pki" && print_fn -s "Removed ~/.pki symlink — now namespace-bound at launch."
+	elif [[ -d "$pki" ]]; then
+		xdg-migrate "$pki" "$xdg_pki" && \
+			print_fn -s "Migrated ~/.pki into $xdg_pki — now namespace-bound at launch."
+	fi
+
+	return 0
+}
+
 # Symlinks this repo's borg config into $XDG_CONFIG_HOME/borg so borg-backup.zsh
 # (run as root via sudo) finds borg-config.json + excludes/. Per-host settings
 # go in borg-config.override.json — gitignored via `*.override.*`.
@@ -342,7 +421,7 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh setup_git_hooks)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
-typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_root setup_borg setup_claude)
+typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_steam_xdg setup_root setup_borg setup_claude)
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
