@@ -17,12 +17,15 @@
 #   dotdir-audit report   Pretty-print who has hit a watched path (comm/exe/pid).
 #   dotdir-audit stop     Remove the watches.
 #
-#   For an EXISTING dotdir (still a symlink), the watch lands on its resolved
-#   target inode (.local/...), so you learn who *uses* the data. To learn who
-#   would *recreate* the literal ~/.config if you removed its symlink, remove
-#   the symlink first: with the path absent, `start` watches the parent home
-#   dir instead and logs whatever recreates the entry. Restore the symlink when
-#   done.
+#   This is a RECREATION test: it only watches dotdirs that are ABSENT. Remove a
+#   dotdir's symlink first, then `start` drops an empty, correctly-owned
+#   placeholder there and watches it. A rogue program that ignores XDG_* will
+#   repopulate the literal ~/.<name>, and the first write into the placeholder
+#   logs its comm/exe. When done, rmdir the placeholder and restore the symlink.
+#
+#   Existing/symlinked dotdirs are deliberately skipped: `-w` on a populated
+#   directory compiles to a recursive `-F dir=` rule (auditctl(8) deprecates it
+#   for "poor performance") that audits the whole subtree and floods auditd.
 
 emulate -L zsh
 setopt pipefail extendedglob
@@ -68,22 +71,46 @@ readonly -a usage=(
 
 ### HELPERS
 
-# Emit the set of paths to watch, one per line: each existing dotdir (watch the
-# dir itself), or — when a dotdir is absent (symlink removed for the recreation
-# test) — its parent home dir, so the recreating syscall is still caught.
+# Emit the set of paths to watch, one per line, and create the placeholders for
+# them. For each real login home (uid 0 or >=1000, skipping service dirs like
+# /home/linuxbrew) and each watched basename:
+#   - absent dotdir  -> mkdir an empty, owner-matched placeholder and watch it.
+#     A watch on an empty dir is cheap (fires only on writes into it) yet still
+#     records the culprit's comm/exe when a rogue program repopulates ~/.<name>.
+#   - existing dotdir (or symlink) -> skip; a recursive `-F dir=` watch on a
+#     populated tree floods auditd. Remove the symlink first to test recreation.
 function _watch_paths {
-	local -a homes=(/home/*(N/) /root(N/))
+	local -a homes
+	local line uid hd
+	for line in ${(f)"$(getent passwd 2>/dev/null)"}; do
+		uid=${${(s.:.)line}[3]}
+		hd=${${(s.:.)line}[6]}
+		{ (( uid == 0 )) || (( uid >= 1000 )) } && [[ -d "$hd" && "$hd" != / ]] && homes+="$hd"
+	done
+	homes=(${(u)homes})
+
 	local home name dotdir
 	for home in $homes; do
 		for name in $WATCH_NAMES; do
 			dotdir="$home/.$name"
-			if [[ -e "$dotdir" ]]; then
-				print -r -- "$dotdir"
-			else
-				print -r -- "$home"
+			# Skip a live XDG symlink (e.g. .cache -> .local/cache): watching it
+			# compiles to a recursive dir= rule over the managed target tree and
+			# floods auditd. Remove the symlink to test what recreates the path.
+			if [[ -L "$dotdir" ]]; then
+				print_fn -w "Skipping $dotdir (symlink; remove it to test recreation)."
+				continue
 			fi
+			# Absent: drop an empty, owner-matched placeholder to watch. Already a
+			# real dir (our placeholder from a prior run — possibly repopulated by
+			# the culprit — or a rogue-created dir): watch it as-is, so a restart
+			# keeps catching writers instead of silently dropping the watch.
+			if [[ ! -e "$dotdir" ]]; then
+				mkdir -p "$dotdir" 2>/dev/null && chown --reference="$home" "$dotdir" 2>/dev/null \
+					|| { print_fn -w "Could not create placeholder: $dotdir"; continue }
+			fi
+			print -r -- "$dotdir"
 		done
-	done | sort -u
+	done
 }
 
 ### SUBCOMMANDS
