@@ -6,6 +6,11 @@ if ! whatami Android; then
 		export ANDROID_ROOT="${XDG_DATA_HOME}/android"
 		[[ -d "$ANDROID_ROOT" ]] || mkdir -p "$ANDROID_ROOT"
 		export ANDROID_USER_HOME="${ANDROID_ROOT}/.android"
+		# Sibling vars so the emulator/avdmanager relocate too (not just adb),
+		# so ~/.android is unnecessary for every tool, GUI included.
+		export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
+		export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+		export ANDROID_PREFS_ROOT="$ANDROID_ROOT"
 
 		# Android development. Prefer sdk/ over ndk/
 		if [[ -d "${ANDROID_ROOT}"/sdk ]]; then

@@ -1,0 +1,16 @@
+[Unit]
+Description=HOME dotdir writer-audit (auditd watches)
+Documentation=man:auditctl(8)
+Requires=auditd.service
+After=auditd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Installs the auditd watches at boot and removes them on stop. Read captured
+# events any time with: dotdir-audit.zsh report
+ExecStart=/usr/local/bin/dotdir-audit.zsh start
+ExecStop=/usr/local/bin/dotdir-audit.zsh stop
+
+[Install]
+WantedBy=multi-user.target
