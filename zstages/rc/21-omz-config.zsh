@@ -48,7 +48,6 @@ HIST_STAMPS="dd/mm/yyyy"
 # Select plugins without aliases
 local -a plugins_no_aliases=()
 
-(( ${+commands[flatpak]} )) && plugins_no_aliases+=(flatpak)
 (( ${+commands[python]} || ${+commands[pip]} )) && plugins_no_aliases+=(pip)
 
 local plugin
