@@ -10,6 +10,13 @@ ExecStart=%h/.local/bin/maintenance.zsh
 Nice=10
 IOSchedulingClass=idle
 TimeoutStartSec=30min
+# Send stdout/stderr to the journal under a stable identifier so the run can be
+# followed live or after the fact:
+#   journalctl --user -t maintenance        # this unit's output, all runs
+#   journalctl --user -u maintenance -f     # follow the unit live
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=maintenance
 
 [Install]
 WantedBy=default.target
