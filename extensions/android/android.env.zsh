@@ -11,6 +11,8 @@ if ! whatami Android; then
 		export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
 		export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
 		export ANDROID_PREFS_ROOT="$ANDROID_ROOT"
+		# Legacy, deprecated fallback var
+		export ANDROID_SDK_HOME="$ANDROID_ROOT"
 
 		# Android development. Prefer sdk/ over ndk/
 		if [[ -d "${ANDROID_ROOT}"/sdk ]]; then
