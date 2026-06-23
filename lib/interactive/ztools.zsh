@@ -383,6 +383,32 @@ function zupdate {
 	# Update submodules
 	if (( ${f_steps[(I)(-s|--submodules)]} )); then
 		(( $verbosity )) && printf '%s' "Initializing/updating submodules..."
+
+		# Self-heal devices left behind by the legacy custom/ -> vendor/ submodule
+		# move: a worktree `.git` may point to a gitdir under .git/modules/<new>
+		# while the real gitdir still sits at .git/modules/custom/<old>, leaving a
+		# dangling handle ("could not get a repository handle"). Drop the broken
+		# worktree (re-cloned by the update below) and prune stale config sections
+		# for submodules no longer in .gitmodules. Cheap: only on `--submodules`.
+		local sm_key sm_path sm_name
+		git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" --get-regexp '^submodule\..*\.path$' | \
+			while read -r sm_key sm_path; do
+				[[ -e "${ZDOTDIR}/${sm_path}/.git" ]] || continue
+				git -C "${ZDOTDIR}/${sm_path}" rev-parse --git-dir &>/dev/null && continue
+				print_fn -w "submodule '${sm_path}' has a dangling gitdir — re-cloning"
+				rm -rf "${ZDOTDIR:?}/${sm_path}"
+			done
+		# Prune config sections for submodules absent from .gitmodules (e.g. old
+		# custom/* duplicates, removed plugins) so they don't shadow the update.
+		git -C "${ZDOTDIR}" config --get-regexp '^submodule\..*\.url$' | \
+			while read -r sm_key _; do
+				sm_name="${sm_key#submodule.}"
+				sm_name="${sm_name%.url}"
+				git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" \
+					--get "submodule.${sm_name}.path" &>/dev/null && continue
+				git -C "${ZDOTDIR}" config --remove-section "submodule.${sm_name}" 2>/dev/null
+			done
+
 		git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
 
 		# Propagate `ignore` from .gitmodules into .git/config — git status/p10k
