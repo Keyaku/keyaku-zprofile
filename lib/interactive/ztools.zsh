@@ -416,7 +416,7 @@ function zupdate {
 		# `ignore = all` (keep submodules always-latest without committing the
 		# pointer bumps) has no effect until mirrored here. `submodule sync`
 		# carries url/branch but NOT ignore, hence this loop.
-		local sm_name sm_ignore
+		local sm_ignore
 		git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" --get-regexp '^submodule\..*\.ignore$' | \
 			while read -r sm_name sm_ignore; do
 				sm_name="${sm_name#submodule.}"
