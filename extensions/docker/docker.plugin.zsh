@@ -574,8 +574,8 @@ function docker-upgrade {
 # via `docker exec`. Functions are used deliberately: an alias would expand to
 # `docker ...` for completion, so `<alias> <TAB>` wrongly fires docker's own
 # completion. A function gets no auto-completion, so nothing leaks; the inner
-# command's real completion is then bound lazily (pulled from inside the
-# container on first TAB) when the command supports `completion zsh`.
+# command's real completion is then linked via `docker-container-completion`
+# (cached from inside the container) when it supports `completion zsh`.
 function docker-container-cmd {
 	local -r usage=(
 		"Usage: $(get_funcname) [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
@@ -628,22 +628,70 @@ function docker-container-cmd {
 	local exec_cmd="docker exec -it ${container_user:+--user ${container_user[-1]}} $container_name $container_cmd"
 	functions[$container_alias]="$exec_cmd \"\$@\""
 
-	# Lazy completion: on first <TAB>, pull the inner command's own zsh
-	# completion from inside the container, rebind, and drive it. Cobra-based
-	# CLIs (ollama, etc.) ship `<cmd> completion zsh`; commands without it
-	# simply yield no completion (still better than docker's). Only the first
-	# word of the command is probed (multi-word cmds like `php occ` won't have
-	# a generator and silently no-op).
-	local comp_cmd="${container_cmd%% *}"
-	functions[_$container_alias]="
-		unfunction _$container_alias
-		if source <(docker exec $container_name $comp_cmd completion zsh 2>/dev/null) 2>/dev/null \\
-			&& (( \$+functions[_$comp_cmd] )); then
-			compdef _$comp_cmd $container_alias
-			_$comp_cmd \"\$@\"
+	# Link the inner command's own zsh completion to the wrapper.
+	docker-container-completion "$container_alias" "$container_name" ${=container_cmd}
+}
+
+# Link a container command's own zsh completion to its wrapper function.
+#
+# Usage: docker-container-completion <alias> <container> [<cmd>...]
+#
+# Caches `<cmd> completion zsh` (generated *inside* the container) to
+# $ZSH_CACHE_DIR/completions/container/<alias>.zsh, sources it, and binds the
+# generated completion function to <alias>. The function name is derived from
+# the cached script, so it works regardless of name mismatch (e.g. `occ` from
+# `php occ`). Once cached, every later shell binds with zero docker calls.
+#
+# Until the cache exists, a lazy first-<TAB> stub generates + binds on demand
+# (self-curing). Commands that emit no completion script silently get nothing.
+# Refresh after a tool upgrade by deleting the cache dir.
+function docker-container-completion {
+	local alias_name="$1" container="$2"; shift 2
+	local -a cmd=("$@")
+	(( ${#cmd} )) || cmd=("$alias_name")
+
+	local comp_dir="${ZSH_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zsh}/completions/container"
+	local comp_file="$comp_dir/${alias_name}.zsh"
+
+	# Already cached: derive the fn (which also validates the script), source,
+	# bind. No docker call. The fn is derived *before* sourcing so a non-script
+	# (e.g. a help blurb on stdout) is never executed.
+	if [[ -s "$comp_file" ]]; then
+		local realfn
+		realfn="$(_docker-container-comp-fn "$comp_file")"
+		if [[ -n "$realfn" ]]; then
+			source "$comp_file"
+			(( $+functions[$realfn] )) && compdef "$realfn" "$alias_name"
+		fi
+		return
+	fi
+
+	# Not cached: bridge this shell with a self-curing lazy stub that generates,
+	# caches, derives+validates the real fn from the file, sources, binds, and
+	# drives it. Garbage stdout (no `compdef`/`#compdef` marker) is discarded.
+	[[ -d "$comp_dir" ]] || mkdir -p "$comp_dir"
+	functions[_$alias_name]="
+		unfunction _$alias_name
+		docker exec $container ${cmd[*]} completion zsh >| '$comp_file' 2>/dev/null
+		local _rf=\"\$(_docker-container-comp-fn '$comp_file')\"
+		if [[ -n \"\$_rf\" ]]; then
+			source '$comp_file'
+			(( \$+functions[\$_rf] )) && { compdef \$_rf $alias_name; \$_rf \"\$@\"; }
+		else
+			rm -f '$comp_file'
 		fi
 	"
-	compdef _$container_alias $container_alias
+	compdef _$alias_name $alias_name
+}
+
+# Derive the completion function name (`_foo`) from a generated zsh completion
+# script. Prefers the `compdef _foo foo` directive, falls back to the `_foo()`
+# definition line. POSIX ERE only (Termux zsh lacks PCRE).
+function _docker-container-comp-fn {
+	local f="$1" name
+	name="$(grep -m1 -oE '^compdef +_[[:alnum:]_-]+' "$f" 2>/dev/null | grep -oE '_[[:alnum:]_-]+$')"
+	[[ -z "$name" ]] && name="$(grep -m1 -oE '^(function +)?_[[:alnum:]_-]+ *\(\)' "$f" 2>/dev/null | grep -oE '_[[:alnum:]_-]+')"
+	print -r -- "$name"
 }
 
 # Migrate data from a container's volume/bind mount to another volume or directory
