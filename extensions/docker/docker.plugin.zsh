@@ -625,7 +625,16 @@ function docker-container-cmd {
 
 	# Define the wrapper function. The resolved exec command is baked in;
 	# "$@" is escaped so it stays literal in the function body.
-	local exec_cmd="docker exec -it ${container_user:+--user ${container_user[-1]}} $container_name $container_cmd"
+	#
+	# `-t` (allocate a TTY) is decided *per call* via the literal
+	# `$([[ -t 0 ]] && print -- -t)`, not baked in. A hardcoded `-t` breaks the
+	# inner command's own completion: cobra/clap scripts fetch candidates by
+	# shelling back into the command (`<cmd> __complete …`) during completion,
+	# where stdin is not a terminal — `docker exec -t` then aborts with "cannot
+	# attach stdin to a TTY-enabled container" and zero candidates come back.
+	# `-i` stays unconditional (harmless when piping); `-t` only when interactive.
+	local user_flag="${container_user:+--user ${container_user[-1]}}"
+	local exec_cmd="docker exec -i \$([[ -t 0 ]] && print -- -t) $user_flag $container_name $container_cmd"
 	functions[$container_alias]="$exec_cmd \"\$@\""
 
 	# Link the inner command's own zsh completion to the wrapper.
