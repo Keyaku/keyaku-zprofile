@@ -43,7 +43,9 @@ HIST_STAMPS="dd/mm/yyyy"
 # Select plugins to load
 (( ${+commands[ufw]} )) && plugins+=(ufw)
 [[ -e "$ZSH_CUSTOM"/plugins/zsh-syntax-highlighting ]] && plugins+=(zsh-syntax-highlighting)
-(( ${+commands[gpg-agent]} )) && plugins+=(gpg-agent)
+# gpg-agent is handled by extensions/gpg-agent/ (tty + agent ensure); OMZ's
+# gpg-agent plugin only added unused SSH-support wiring at ~4ms/shell, so it is
+# intentionally not loaded here.
 
 # Select plugins without aliases
 local -a plugins_no_aliases=()
