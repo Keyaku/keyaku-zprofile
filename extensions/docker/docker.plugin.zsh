@@ -924,58 +924,68 @@ function docker-migrate-volume {
 # Plugin setup
 # ============================================================================
 
-# Set important environment variables for the proper functioning of docker
-docker-set-env
+# Everything below probes the live daemon (`docker-set-env` runs `systemctl`/
+# `docker context`, the alias block runs `docker ps -a`) — ~20ms of synchronous
+# subprocesses that only matter to an interactive session. Defer it to the first
+# precmd so it runs once, after the prompt is up (masked by p10k instant prompt),
+# and is skipped entirely by non-interactive shells (`zsh -c …`, scripts) that
+# never enter the prompt loop and have no use for these aliases.
+(( ${+commands[add-zsh-hook]} )) || autoload -Uz add-zsh-hook
 
+function _docker_lazy_setup {
+	add-zsh-hook -d precmd _docker_lazy_setup
+	unfunction _docker_lazy_setup
 
-# ============================================================================
-# Container-specific commands
-# ============================================================================
+	# Set important environment variables for the proper functioning of docker
+	docker-set-env
 
-# Defining simple container aliases
-local -a CURRENT_CONTAINERS=(${(f)"$(docker-list)"})
-local -a ALIASING_CONTAINERS=(
-	caddy cloudflared mollysocket ntfy ollama
-)
+	# ====================================================================
+	# Container-specific commands
+	# ====================================================================
 
-local -a _available_extensions=()
-for container_name in ${ALIASING_CONTAINERS}; do
-	if (( ${CURRENT_CONTAINERS[(Ie)$container_name]} )); then
-		docker-container-cmd "$container_name"
-		_available_extensions+=($ZDOTDIR/extensions/$container_name(NF[1]))
-	fi
-done
-unset ALIASING_CONTAINERS container_name
+	# Defining simple container aliases
+	local -a CURRENT_CONTAINERS=(${(f)"$(docker-list)"})
+	local -a ALIASING_CONTAINERS=(
+		caddy cloudflared mollysocket ntfy ollama
+	)
 
-# Defining more complex aliases
-if (( ${CURRENT_CONTAINERS[(Ie)nextcloud]} )); then
-	docker-container-cmd -a occ --name nextcloud -u www-data "php occ"
-	_available_extensions+=($ZDOTDIR/extensions/nextcloud(NF[1]))
-fi
-if (( ${CURRENT_CONTAINERS[(Ie)fail2ban]} )); then
-	local subcmd
-	for subcmd (client python regex server); do
-		docker-container-cmd -a fail2ban-$subcmd --name fail2ban fail2ban-$subcmd
-	done
-	unset subcmd
-	_available_extensions+=($ZDOTDIR/extensions/fail2ban(NF[1]))
-fi
-
-# Reload extension based on container_name
-(( 0 < ${#_available_extensions} )) && zsource -e ${_available_extensions:t}
-unset _available_extensions
-
-### Portainer helpers
-if (( ${CURRENT_CONTAINERS[(Ie)portainer]} )); then
-	# Launch Portainer while restricting its open port
-	function portainer-up {
-		if (( ! ${+commands[portainer-restrict.sh]} )); then
-			print_fn -e "portainer-restrict.sh: executable required but not found"
-			return 1
+	local -a _available_extensions=()
+	local container_name
+	for container_name in ${ALIASING_CONTAINERS}; do
+		if (( ${CURRENT_CONTAINERS[(Ie)$container_name]} )); then
+			docker-container-cmd "$container_name"
+			_available_extensions+=($ZDOTDIR/extensions/$container_name(NF[1]))
 		fi
-		docker compose -f $(docker-get-compose portainer) up -d "$@" &&\
-			sudo portainer-restrict.sh
-	}
-fi
+	done
 
-unset CURRENT_CONTAINERS
+	# Defining more complex aliases
+	if (( ${CURRENT_CONTAINERS[(Ie)nextcloud]} )); then
+		docker-container-cmd -a occ --name nextcloud -u www-data "php occ"
+		_available_extensions+=($ZDOTDIR/extensions/nextcloud(NF[1]))
+	fi
+	if (( ${CURRENT_CONTAINERS[(Ie)fail2ban]} )); then
+		local subcmd
+		for subcmd (client python regex server); do
+			docker-container-cmd -a fail2ban-$subcmd --name fail2ban fail2ban-$subcmd
+		done
+		_available_extensions+=($ZDOTDIR/extensions/fail2ban(NF[1]))
+	fi
+
+	# Reload extension based on container_name
+	(( 0 < ${#_available_extensions} )) && zsource -e ${_available_extensions:t}
+
+	### Portainer helpers
+	if (( ${CURRENT_CONTAINERS[(Ie)portainer]} )); then
+		# Launch Portainer while restricting its open port
+		function portainer-up {
+			if (( ! ${+commands[portainer-restrict.sh]} )); then
+				print_fn -e "portainer-restrict.sh: executable required but not found"
+				return 1
+			fi
+			docker compose -f $(docker-get-compose portainer) up -d "$@" &&\
+				sudo portainer-restrict.sh
+		}
+	fi
+}
+
+add-zsh-hook precmd _docker_lazy_setup
