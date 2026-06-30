@@ -107,7 +107,16 @@ Code must work on both Arch Linux (primary) and **Termux (Android)**. Termux has
 - Extensions should self-guard so Termux-unavailable tools are silently skipped.
 
 ## Benchmarking / Debug
-Set `ZSH_PROFILE_BENCHMARK=1` to time each sourced file. Set `ZSH_PROFILE_DEBUG=1` to enable `XTRACE`. Both are unset by default.
+Set `ZSH_PROFILE_BENCHMARK=1` to time each sourced file (also disables p10k instant prompt so the numbers reflect full init). Set `ZSH_PROFILE_DEBUG=1` to enable `XTRACE`. Both are unset by default.
+
+`zbench` (in `lib/interactive/ztools.zsh`) is the front-end for both kinds of measurement. `zbench -w` is hyperfine wall-clock across the `l`/`i`/`li` cases (what you feel); `zbench -p` is the `ZSH_PROFILE_BENCHMARK` source-time breakdown, printing stage `[TOTAL]`s and the **heaviest leaf files** (the list to optimize from); no flag runs both. `zbench -z` A/B-compares with vs without `*.zwc`. p10k instant prompt masks real init in wall mode, so wall runs force it off by default for honest numbers — pass `-I` to keep it on and measure felt latency instead. When chasing startup cost, reach for `zbench -p` first.
+
+The dominant remaining startup cost is OMZ (`oh-my-zsh.sh` core + the loader in `25-omz-load.zsh`, ~70ms combined); it is compinit + OMZ-lib bound and only reducible via the OMZ replacement the `FIXME` in `10-setup.zsh` already plans. Everything below it is at/near the noise floor.
+
+## Startup behaviour notes
+- **fastfetch greeting** runs only on login shells (`[[ -o login ]]` guard in `10-setup.zsh`), kept synchronous on purpose — backgrounding it races the banner against the prompt paint. ~10ms, cosmetic, login-only.
+- **pyvenv auto-activation**: `zstages/login/90-user.zsh` sources `$XDG_DATA_HOME/pyvenv/bin/activate` whenever `$XDG_DATA_HOME/pyvenv/pyvenv.cfg` exists, so `python` points at that default venv from every login shell (~2.7ms). Intentional convenience, not a leak — delete the pyvenv dir to opt out.
+- **Per-session guards**: some interactive setup that only needs to run once per session (e.g. the gpg-agent `systemctl` probe in `extensions/gpg-agent/`) is gated behind an exported marker so nested shells skip it; daemon-probing work that only an interactive session needs (e.g. the docker container-alias block) is deferred to a one-shot `precmd` hook so non-interactive shells skip it entirely.
 
 ## What NOT to do
 - Do not add commands that produce output to `.zshenv` (it's sourced even in non-interactive, non-TTY contexts).
