@@ -6,4 +6,5 @@ _arguments -s -S \
 	'(-w --wall)'{-w,--wall}'[wall-clock only (hyperfine)]' \
 	'(-p --profile)'{-p,--profile}'[source-time profile only]' \
 	'(-z --zwc)'{-z,--zwc}'[A/B compare with vs without *.zwc]' \
+	'(-I --instant-prompt)'{-I,--instant-prompt}'[keep p10k instant prompt ON for wall runs]' \
 	'*:case:(l i li)'

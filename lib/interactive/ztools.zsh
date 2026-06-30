@@ -295,14 +295,27 @@ _zbench_profile() {
 	print --
 }
 
+# Echoes the p10k instant-prompt cache file iff instant prompt would engage for
+# this user (theme requests it and the warm cache exists). Empty otherwise — the
+# environment either isn't on powerlevel10k or has instant prompt off/cold.
+_zbench_p10k_instant() {
+	[[ "$POWERLEVEL9K_INSTANT_PROMPT" == off ]] && return 1
+	local -r f="${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+	[[ -r "$f" ]] && print -r -- "$f"
+}
+
 # Wall-clock: end-to-end startup time as actually felt. Uses hyperfine when
-# present (best); else a pure-zsh mean over $runs spawns.
+# present (best); else a pure-zsh mean over $runs spawns. $2 (instant) selects
+# whether p10k instant prompt stays enabled (1, felt latency) or is forced off
+# (0, honest full-init cost, matching the profile mode's view). Forcing off is
+# done via a function-scoped exported override that the spawned shells inherit.
 _zbench_wall() {
 	local LC_ALL=C
-	local -i runs=$1
-	shift
+	local -i runs=$1 instant=$2
+	shift 2
 	local -a cases=("$@")
 	local c
+	(( instant )) || local -x POWERLEVEL9K_INSTANT_PROMPT=off
 	if (( ${+commands[hyperfine]} )); then
 		local -a hf=()
 		for c in $cases; do hf+=(-n "zsh -$c" "zsh -$c -c exit"); done
@@ -337,11 +350,13 @@ function zbench {
 		"\t[-w|--wall]     : Wall-clock only (hyperfine end-to-end)"
 		"\t[-p|--profile]  : Source-time profile only (ZSH_PROFILE_BENCHMARK)"
 		"\t[-z|--zwc]      : A/B compare with vs without *.zwc (toggles & restores)"
+		"\t[-I|--instant-prompt] : Keep p10k instant prompt ON for wall runs"
+		"\t                  (default: force it OFF for honest full-init timing)"
 		""
 		"With neither -w nor -p, runs both."
 	)
 
-	local f_help f_wall f_profile f_zwc
+	local f_help f_wall f_profile f_zwc f_instant
 	local -a n_runs_opt
 	local -i n_runs=10
 	zparseopts -D -F -K -- \
@@ -349,11 +364,28 @@ function zbench {
 		{w,-wall}=f_wall \
 		{p,-profile}=f_profile \
 		{z,-zwc}=f_zwc \
+		{I,-instant-prompt}=f_instant \
 		n:=n_runs_opt \
 		|| return 1
 	[[ -n "$n_runs_opt" ]] && n_runs=${n_runs_opt[2]}
 
 	if [[ -n "$f_help" ]]; then >&2 print -l $usage; return 0; fi
+
+	# p10k instant prompt skews wall-clock: it paints a prompt early and masks the
+	# real init, so an enabled instant prompt makes the shell *feel* fast while the
+	# work still happens. Default to forcing it off for wall runs (honest, and
+	# consistent with profile mode, where ZSH_PROFILE_BENCHMARK disables it anyway);
+	# -I keeps it on to measure felt latency instead. Only meaningful when this env
+	# actually has a warm instant-prompt cache.
+	local -i instant=0
+	[[ -n "$f_instant" ]] && instant=1
+	if _zbench_p10k_instant >/dev/null; then
+		if (( instant )); then
+			print_fn -ni "p10k instant prompt detected — wall runs keep it ON (felt latency)"
+		else
+			print_fn -ni "p10k instant prompt detected — wall runs force it OFF (honest init cost; -I to include)"
+		fi
+	fi
 
 	# Remaining args = cases; validate.
 	local -a cases=("${@:-li}")
@@ -376,13 +408,13 @@ function zbench {
 		print_fn -i "A/B: cleaning *.zwc …"
 		zupdate -C -q >/dev/null
 		print_fn -ni "═══ WITHOUT zwc ═══"
-		(( do_wall ))    && _zbench_wall $n_runs $cases
+		(( do_wall ))    && _zbench_wall $n_runs $instant $cases
 		(( do_profile )) && for c in $cases; do _zbench_profile $c $n_runs; done
 
 		print_fn -i "A/B: recompiling *.zwc …"
 		zupdate -c -q >/dev/null
 		print_fn -ni "═══ WITH zwc ═══"
-		(( do_wall ))    && _zbench_wall $n_runs $cases
+		(( do_wall ))    && _zbench_wall $n_runs $instant $cases
 		(( do_profile )) && for c in $cases; do _zbench_profile $c $n_runs; done
 
 		# Restore original state.
@@ -390,7 +422,7 @@ function zbench {
 		return 0
 	fi
 
-	(( do_wall ))    && { print_fn -ni "Wall-clock"; _zbench_wall $n_runs $cases; }
+	(( do_wall ))    && { print_fn -ni "Wall-clock"; _zbench_wall $n_runs $instant $cases; }
 	(( do_profile )) && {
 		print_fn -ni "Source-time profile"
 		for c in $cases; do _zbench_profile $c $n_runs; done
