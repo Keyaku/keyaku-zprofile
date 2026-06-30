@@ -235,6 +235,169 @@ function zsource {
 	return 0
 }
 
+# ============================================================================
+# Startup benchmarking
+# ============================================================================
+# Median of a list of float samples (args). Echoes 0 on empty input.
+_zbench_median() {
+	local LC_ALL=C
+	local -a vals=("${(@f)$(print -l -- "$@" | sort -g)}")
+	local -i n=${#vals}
+	(( n )) || { print 0; return; }
+	if (( n & 1 )); then
+		print -- ${vals[(n+1)/2]}
+	else
+		print -- $(( (vals[n/2] + vals[n/2+1]) / 2.0 ))
+	fi
+}
+
+# Source-time profile: run `zsh -<case> -c exit` with ZSH_PROFILE_BENCHMARK set,
+# $runs times, and aggregate every "<label> took <t>s" / "[TOTAL] … stage" line by
+# median. Prints stage TOTALs, their sum, and the heaviest leaf files.
+_zbench_profile() {
+	local LC_ALL=C
+	local -r case=$1
+	local -i runs=$2
+	local -A samples
+	local -i r
+	local line label t
+
+	for (( r = 1; r <= runs; r++ )); do
+		while IFS= read -r line; do
+			[[ "$line" == (#b)*"took "([0-9.eE+-]##)s* ]] || continue
+			t=${match[1]}
+			label=${line%% took *}
+			samples[$label]+=" $t"
+		done < <(ZSH_PROFILE_BENCHMARK=1 zsh -${case} -c exit 2>&1)
+	done
+
+	(( ${#samples} )) || { print_fn -w "no profile samples for -$case"; return 1; }
+
+	# Stage TOTALs + their sum
+	local key
+	local -F sum=0 med
+	local -a total_lines=() leaf_lines=()
+	for key in "${(@k)samples}"; do
+		med=$(_zbench_median ${(z)samples[$key]})
+		if [[ "$key" == *'[TOTAL]'* ]]; then
+			total_lines+=("$(printf '%8.2f  %s' $((med * 1000)) "$key")")
+			sum+=$med
+		else
+			leaf_lines+=("$(printf '%8.2f\t%s' $((med * 1000)) "$key")")
+		fi
+	done
+
+	print -- "── -$case  (median of $runs runs) ──"
+	print -l -- ${(On)total_lines}
+	printf '%8.2f  %s\n' $((sum * 1000)) '[SUM of stage TOTALs]'
+	print -- "  heaviest leaves (ms):"
+	print -l -- ${${(On)leaf_lines}[1,12]} | sed 's/^/  /'
+	print --
+}
+
+# Wall-clock: end-to-end startup time as actually felt. Uses hyperfine when
+# present (best); else a pure-zsh mean over $runs spawns.
+_zbench_wall() {
+	local LC_ALL=C
+	local -i runs=$1
+	shift
+	local -a cases=("$@")
+	local c
+	if (( ${+commands[hyperfine]} )); then
+		local -a hf=()
+		for c in $cases; do hf+=(-n "zsh -$c" "zsh -$c -c exit"); done
+		hyperfine -N --warmup 5 --min-runs $(( runs < 20 ? 20 : runs )) $hf
+	else
+		print_fn -ni "hyperfine not found — pure-zsh mean fallback"
+		local -F t0 t1 acc
+		local -i i
+		for c in $cases; do
+			acc=0
+			for (( i = 1; i <= runs; i++ )); do
+				t0=$EPOCHREALTIME; zsh -$c -c exit &>/dev/null; t1=$EPOCHREALTIME
+				acc+=$(( t1 - t0 ))
+			done
+			printf '  -%-3s mean %7.2fms  (%d runs)\n' "$c" $(( acc / runs * 1000 )) $runs
+		done
+	fi
+}
+
+# Benchmark this zsh environment's startup.
+function zbench {
+	emulate -L zsh
+	setopt extendedglob
+	zmodload zsh/datetime
+
+	local -r usage=(
+		"Usage: ${funcstack[1]} [OPTION...] [CASE...]"
+		"Benchmark zsh startup. CASE is one or more of: l i li  (default: li)."
+		""
+		"\t[-h|--help]     : Print this help message"
+		"\t[-n N]          : Runs per profile case (default 10)"
+		"\t[-w|--wall]     : Wall-clock only (hyperfine end-to-end)"
+		"\t[-p|--profile]  : Source-time profile only (ZSH_PROFILE_BENCHMARK)"
+		"\t[-z|--zwc]      : A/B compare with vs without *.zwc (toggles & restores)"
+		""
+		"With neither -w nor -p, runs both."
+	)
+
+	local f_help f_wall f_profile f_zwc
+	local -a n_runs_opt
+	local -i n_runs=10
+	zparseopts -D -F -K -- \
+		{h,-help}=f_help \
+		{w,-wall}=f_wall \
+		{p,-profile}=f_profile \
+		{z,-zwc}=f_zwc \
+		n:=n_runs_opt \
+		|| return 1
+	[[ -n "$n_runs_opt" ]] && n_runs=${n_runs_opt[2]}
+
+	if [[ -n "$f_help" ]]; then >&2 print -l $usage; return 0; fi
+
+	# Remaining args = cases; validate.
+	local -a cases=("${@:-li}")
+	local c
+	for c in $cases; do
+		[[ "$c" == (l|i|li) ]] || { print_fn -e "invalid case '$c' (use l, i, li)"; return 1; }
+	done
+
+	# Default: do both wall and profile.
+	local -i do_wall=0 do_profile=0
+	[[ -n "$f_wall" ]] && do_wall=1
+	[[ -n "$f_profile" ]] && do_profile=1
+	(( do_wall || do_profile )) || { do_wall=1; do_profile=1; }
+
+	# -z runs the whole suite twice (no-zwc, then zwc) and restores original state.
+	if [[ -n "$f_zwc" ]]; then
+		local -i had_zwc=0
+		[[ -n "$ZDOTDIR"/lib/**/*.zwc(#qN) ]] && had_zwc=1
+
+		print_fn -i "A/B: cleaning *.zwc …"
+		zupdate -C -q >/dev/null
+		print_fn -ni "═══ WITHOUT zwc ═══"
+		(( do_wall ))    && _zbench_wall $n_runs $cases
+		(( do_profile )) && for c in $cases; do _zbench_profile $c $n_runs; done
+
+		print_fn -i "A/B: recompiling *.zwc …"
+		zupdate -c -q >/dev/null
+		print_fn -ni "═══ WITH zwc ═══"
+		(( do_wall ))    && _zbench_wall $n_runs $cases
+		(( do_profile )) && for c in $cases; do _zbench_profile $c $n_runs; done
+
+		# Restore original state.
+		(( had_zwc )) || { print_fn -i "A/B: restoring (no zwc) …"; zupdate -C -q >/dev/null; }
+		return 0
+	fi
+
+	(( do_wall ))    && { print_fn -ni "Wall-clock"; _zbench_wall $n_runs $cases; }
+	(( do_profile )) && {
+		print_fn -ni "Source-time profile"
+		for c in $cases; do _zbench_profile $c $n_runs; done
+	}
+	return 0
+}
+
 # zcompile helper
 function _zcompile_file {
 	local f="$1"
@@ -367,11 +530,6 @@ function zupdate {
 				done
 			fi
 		done
-
-		# XXX: No performance gain. How?
-		# for f in $ZDOTDIR/extensions/*/*.plugin.zsh(on); do
-		# 	_zcompile_file "$f" &!
-		# done
 
 		# Wait for all background jobs to finish
 		wait

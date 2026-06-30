@@ -1,0 +1,9 @@
+#compdef zbench
+
+_arguments -s -S \
+	'(-h --help)'{-h,--help}'[show help]' \
+	'-n[runs per profile case]:runs:' \
+	'(-w --wall)'{-w,--wall}'[wall-clock only (hyperfine)]' \
+	'(-p --profile)'{-p,--profile}'[source-time profile only]' \
+	'(-z --zwc)'{-z,--zwc}'[A/B compare with vs without *.zwc]' \
+	'*:case:(l i li)'
