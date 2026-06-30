@@ -636,15 +636,20 @@ function docker-container-cmd {
 #
 # Usage: docker-container-completion <alias> <container> [<cmd>...]
 #
-# Caches `<cmd> completion zsh` (generated *inside* the container) to
-# $ZSH_CACHE_DIR/completions/container/<alias>.zsh, sources it, and binds the
-# generated completion function to <alias>. The function name is derived from
-# the cached script, so it works regardless of name mismatch (e.g. `occ` from
-# `php occ`). Once cached, every later shell binds with zero docker calls.
+# Caches the command's own zsh completion script (generated *inside* the
+# container) to $ZSH_CACHE_DIR/completions/container/<alias>.zsh, sources it, and
+# binds the generated completion function to <alias>. The function name is
+# derived from the cached script, so it works regardless of name mismatch (e.g.
+# `occ` from `php occ`). Once cached, every later shell binds with zero docker
+# calls.
 #
-# Until the cache exists, a lazy first-<TAB> stub generates + binds on demand
-# (self-curing). Commands that emit no completion script silently get nothing.
-# Refresh after a tool upgrade by deleting the cache dir.
+# When not yet cached, generation runs in the background (mirroring the
+# `_docker` bootstrap above): the completion appears in the *next* shell, not
+# the current one. Both `completion` and `completions` subcommands are probed
+# (cobra uses the former, clap-based CLIs the latter); output is kept only if
+# it's a real completion script (carries a `compdef`/`#compdef` marker), else
+# discarded. Commands that ship neither silently get nothing. Refresh after a
+# tool upgrade by deleting the cache dir.
 function docker-container-completion {
 	local alias_name="$1" container="$2"; shift 2
 	local -a cmd=("$@")
@@ -662,26 +667,24 @@ function docker-container-completion {
 		if [[ -n "$realfn" ]]; then
 			source "$comp_file"
 			(( $+functions[$realfn] )) && compdef "$realfn" "$alias_name"
+			return
 		fi
-		return
+		# Stale/invalid cache (e.g. tool dropped completion support): drop it
+		# and fall through to regenerate.
+		rm -f "$comp_file"
 	fi
 
-	# Not cached: bridge this shell with a self-curing lazy stub that generates,
-	# caches, derives+validates the real fn from the file, sources, binds, and
-	# drives it. Garbage stdout (no `compdef`/`#compdef` marker) is discarded.
+	# Not cached: generate in the background so it's ready next shell. Probe
+	# both subcommand spellings; keep the first that yields a valid script.
 	[[ -d "$comp_dir" ]] || mkdir -p "$comp_dir"
-	functions[_$alias_name]="
-		unfunction _$alias_name
-		docker exec $container ${cmd[*]} completion zsh >| '$comp_file' 2>/dev/null
-		local _rf=\"\$(_docker-container-comp-fn '$comp_file')\"
-		if [[ -n \"\$_rf\" ]]; then
-			source '$comp_file'
-			(( \$+functions[\$_rf] )) && { compdef \$_rf $alias_name; \$_rf \"\$@\"; }
-		else
-			rm -f '$comp_file'
-		fi
-	"
-	compdef _$alias_name $alias_name
+	{
+		local sub
+		for sub (completion completions); do
+			docker exec "$container" "${cmd[@]}" $sub zsh >| "$comp_file" 2>/dev/null
+			[[ -n "$(_docker-container-comp-fn "$comp_file")" ]] && break
+			rm -f "$comp_file"
+		done
+	} &|
 }
 
 # Derive the completion function name (`_foo`) from a generated zsh completion
