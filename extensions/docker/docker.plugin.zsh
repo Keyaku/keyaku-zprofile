@@ -641,66 +641,120 @@ function docker-container-cmd {
 	docker-container-completion "$container_alias" "$container_name" ${=container_cmd}
 }
 
-# Link a container command's own zsh completion to its wrapper function.
+# Link a container command's own completion to its wrapper function.
 #
 # Usage: docker-container-completion <alias> <container> [<cmd>...]
 #
-# Caches the command's own zsh completion script (generated *inside* the
-# container) to $ZSH_CACHE_DIR/completions/container/<alias>.zsh, sources it, and
-# binds the generated completion function to <alias>. The function name is
-# derived from the cached script, so it works regardless of name mismatch (e.g.
-# `occ` from `php occ`). Once cached, every later shell binds with zero docker
-# calls.
+# Caches the command's completion to $ZSH_CACHE_DIR/completions/container/ and
+# binds it to <alias>. Three sources are tried, in order of fidelity:
 #
-# When not yet cached, generation runs in the background (mirroring the
-# `_docker` bootstrap above): the completion appears in the *next* shell, not
-# the current one. Both `completion` and `completions` subcommands are probed
-# (cobra uses the former, clap-based CLIs the latter); output is kept only if
-# it's a real completion script (carries a `compdef`/`#compdef` marker), else
-# discarded. Commands that ship neither silently get nothing. Refresh after a
-# tool upgrade by deleting the cache dir.
+#   1. <alias>.zsh — native zsh completion the command emits itself
+#      (`<cmd> completion zsh` for cobra, `completions zsh` for clap). Sourced;
+#      its `_fn` is bound to <alias>.
+#   2. <alias>.zsh — a system-installed zsh completion (`_<bin>`) shipped inside
+#      the container under /usr/share/zsh/{site-functions,vendor-completions} or
+#      /usr/local/share/zsh/site-functions. Same handling as (1).
+#   3. <alias>.bash — a system-installed bash completion (`<bin>`) under
+#      /usr/share/bash-completion/completions, /etc/bash_completion.d or
+#      /usr/local/share/bash-completion/completions. Bridged into zsh via
+#      bashcompinit (see `_docker-container-comp-bash`).
+#
+# <bin> is the last word of <cmd> (e.g. `occ` from `php occ`); the bound name is
+# derived from the file, so it survives name mismatches. Once cached, every later
+# shell binds with zero docker calls.
+#
+# When not yet cached, generation runs in the background: the completion appears
+# in the *next* shell, not the current one. A candidate is kept only if it looks
+# like a real completion (a zsh `compdef`/`_fn`, or a bash `complete -F`), else
+# discarded. Commands that ship none silently get nothing. Refresh after a tool
+# upgrade by deleting the cache dir.
 function docker-container-completion {
 	local alias_name="$1" container="$2"; shift 2
 	local -a cmd=("$@")
 	(( ${#cmd} )) || cmd=("$alias_name")
+	local -r bin="${cmd[-1]}"
 
 	local comp_dir="${ZSH_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zsh}/completions/container"
-	local comp_file="$comp_dir/${alias_name}.zsh"
+	local zfile="$comp_dir/${alias_name}.zsh"
+	local bfile="$comp_dir/${alias_name}.bash"
 
-	# Already cached: derive the fn (which also validates the script), source,
-	# bind. No docker call. The fn is derived *before* sourcing so a non-script
-	# (e.g. a help blurb on stdout) is never executed.
-	if [[ -s "$comp_file" ]]; then
+	# --- cached zsh completion (sources 1 & 2) ---
+	# Derive the fn (which also validates the script) *before* sourcing, so a
+	# non-script (e.g. a help blurb captured on stdout) is never executed.
+	if [[ -s "$zfile" ]]; then
 		local realfn
-		realfn="$(_docker-container-comp-fn "$comp_file")"
+		realfn="$(_docker-container-comp-fn "$zfile")"
 		if [[ -n "$realfn" ]]; then
-			# The cached script calls `compdef` itself (cobra/clap emit a
+			# A zsh completion may call `compdef` itself (cobra/clap emit a
 			# trailing `compdef _foo foo`), which errors pre-compinit. Defer both
-			# the source *and* our alias bind to the compinit phase so the
-			# script's own compdef runs once the system is ready. realfn was
-			# already derived from the file above, so no source is needed to
-			# validate. zdefer runs now if compinit already ran, else queues for
-			# the 28-defer-flush stage; push order keeps source before bind.
-			zdefer compinit source "$comp_file"
+			# the source *and* our alias bind to the compinit phase so that line
+			# runs once the system is ready. zdefer runs now if compinit already
+			# ran, else queues for the 28-defer-flush stage; push order keeps
+			# source before bind.
+			zdefer compinit source "$zfile"
 			zdefer compinit compdef "$realfn" "$alias_name"
 			return
 		fi
 		# Stale/invalid cache (e.g. tool dropped completion support): drop it
 		# and fall through to regenerate.
-		rm -f "$comp_file"
+		rm -f "$zfile"
+	# --- cached bash completion (source 3) ---
+	elif [[ -s "$bfile" ]]; then
+		# bashcompinit isn't loaded until 30-completion.zsh (after the flush
+		# stage), so the bridge helper loads it on demand at flush time.
+		zdefer compinit _docker-container-comp-bash "$bfile" "$alias_name"
+		return
 	fi
 
-	# Not cached: generate in the background so it's ready next shell. Probe
-	# both subcommand spellings; keep the first that yields a valid script.
+	# Not cached: generate in the background so it's ready next shell. Walk the
+	# three sources; keep the first that yields a valid candidate. A flag (not
+	# `return`) ends the walk, since this body runs in a detached subshell.
 	[[ -d "$comp_dir" ]] || mkdir -p "$comp_dir"
 	{
-		local sub
+		local got= sub d
+
+		# 1. Native zsh completion subcommand (cobra `completion`, clap `completions`).
 		for sub (completion completions); do
-			docker exec "$container" "${cmd[@]}" $sub zsh >| "$comp_file" 2>/dev/null
-			[[ -n "$(_docker-container-comp-fn "$comp_file")" ]] && break
-			rm -f "$comp_file"
+			docker exec "$container" "${cmd[@]}" $sub zsh >| "$zfile" 2>/dev/null
+			[[ -n "$(_docker-container-comp-fn "$zfile")" ]] && { got=1; break; }
+			rm -f "$zfile"
 		done
+
+		# 2. System-installed zsh completion shipped inside the container.
+		if [[ -z "$got" ]]; then
+			for d (/usr/share/zsh/site-functions /usr/share/zsh/vendor-completions /usr/local/share/zsh/site-functions); do
+				docker exec "$container" cat "$d/_$bin" >| "$zfile" 2>/dev/null
+				[[ -n "$(_docker-container-comp-fn "$zfile")" ]] && { got=1; break; }
+				rm -f "$zfile"
+			done
+		fi
+
+		# 3. System-installed bash completion (bridged via bashcompinit next shell).
+		if [[ -z "$got" ]]; then
+			for d (/usr/share/bash-completion/completions /etc/bash_completion.d /usr/local/share/bash-completion/completions); do
+				docker exec "$container" cat "$d/$bin" >| "$bfile" 2>/dev/null
+				grep -qE 'complete[[:space:]].*-F[[:space:]]' "$bfile" && { got=1; break; }
+				rm -f "$bfile"
+			done
+		fi
 	} &|
+}
+
+# Bridge a container-extracted *bash* completion into zsh, bound to <alias>.
+# Runs at compinit-flush time. Loads bashcompinit on demand (30-completion.zsh
+# runs after the flush stage), sources the bash completion, then registers its
+# `complete -F <fn>` function for <alias>. The original `complete` line inside
+# the file fires too (harmless; covers the case where <alias> == <bin>).
+function _docker-container-comp-bash {
+	local bfile="$1" alias_name="$2" bashfn
+	autoload -Uz bashcompinit && bashcompinit
+
+	# Derive the registered function from the file's own `complete -F <fn> ...`.
+	bashfn="$(grep -m1 -oE 'complete[[:space:]].*-F[[:space:]]+[[:alnum:]_-]+' "$bfile" 2>/dev/null | grep -oE '[[:alnum:]_-]+$')"
+	[[ -z "$bashfn" ]] && return
+
+	source "$bfile"
+	(( $+functions[$bashfn] )) && complete -F "$bashfn" "$alias_name"
 }
 
 # Derive the completion function name (`_foo`) from a generated zsh completion
