@@ -568,13 +568,20 @@ function docker-upgrade {
 	done
 }
 
-# Function which defines container aliases
-function docker-alias {
+# Function which defines container command wrappers.
+#
+# Defines a *function* (not an alias) that runs a command inside a container
+# via `docker exec`. Functions are used deliberately: an alias would expand to
+# `docker ...` for completion, so `<alias> <TAB>` wrongly fires docker's own
+# completion. A function gets no auto-completion, so nothing leaks; the inner
+# command's real completion is then bound lazily (pulled from inside the
+# container on first TAB) when the command supports `completion zsh`.
+function docker-container-cmd {
 	local -r usage=(
 		"Usage: $(get_funcname) [-n|--name=]<container_name> [-a|--alias=<alias_name>] [-c|--cmd=]<command>"
 		"\t[-h|--help] : Prints this message"
 		"\t[-n|--name] : Name of the target container"
-		"\t[-a|--alias] : Name of the resulting alias"
+		"\t[-a|--alias] : Name of the resulting command/wrapper"
 		"\t[-c|--cmd] : Command to send to the container"
 	)
 
@@ -616,8 +623,27 @@ function docker-alias {
 	[[ "${(t)container_alias}" == *array* ]] && container_alias="${(q+)container_alias[-1]}" || container_alias="${container_alias:-$container_name}"
 	[[ "${(t)container_cmd}" == *array* ]] && container_cmd="${(q+)container_cmd[-1]}" || container_cmd="${container_cmd:-$container_name}"
 
-	# Define alias
-	alias $container_alias="docker exec -it ${container_user:+--user ${container_user[-1]}} $container_name $container_cmd"
+	# Define the wrapper function. The resolved exec command is baked in;
+	# "$@" is escaped so it stays literal in the function body.
+	local exec_cmd="docker exec -it ${container_user:+--user ${container_user[-1]}} $container_name $container_cmd"
+	functions[$container_alias]="$exec_cmd \"\$@\""
+
+	# Lazy completion: on first <TAB>, pull the inner command's own zsh
+	# completion from inside the container, rebind, and drive it. Cobra-based
+	# CLIs (ollama, etc.) ship `<cmd> completion zsh`; commands without it
+	# simply yield no completion (still better than docker's). Only the first
+	# word of the command is probed (multi-word cmds like `php occ` won't have
+	# a generator and silently no-op).
+	local comp_cmd="${container_cmd%% *}"
+	functions[_$container_alias]="
+		unfunction _$container_alias
+		if source <(docker exec $container_name $comp_cmd completion zsh 2>/dev/null) 2>/dev/null \\
+			&& (( \$+functions[_$comp_cmd] )); then
+			compdef _$comp_cmd $container_alias
+			_$comp_cmd \"\$@\"
+		fi
+	"
+	compdef _$container_alias $container_alias
 }
 
 # Migrate data from a container's volume/bind mount to another volume or directory
@@ -794,7 +820,7 @@ local -a ALIASING_CONTAINERS=(
 local -a _available_extensions=()
 for container_name in ${ALIASING_CONTAINERS}; do
 	if (( ${CURRENT_CONTAINERS[(Ie)$container_name]} )); then
-		docker-alias "$container_name"
+		docker-container-cmd "$container_name"
 		_available_extensions+=($ZDOTDIR/extensions/$container_name(NF[1]))
 	fi
 done
@@ -802,13 +828,13 @@ unset ALIASING_CONTAINERS container_name
 
 # Defining more complex aliases
 if (( ${CURRENT_CONTAINERS[(Ie)nextcloud]} )); then
-	docker-alias -a occ --name nextcloud -u www-data "php occ"
+	docker-container-cmd -a occ --name nextcloud -u www-data "php occ"
 	_available_extensions+=($ZDOTDIR/extensions/nextcloud(NF[1]))
 fi
 if (( ${CURRENT_CONTAINERS[(Ie)fail2ban]} )); then
 	local subcmd
 	for subcmd (client python regex server); do
-		docker-alias -a fail2ban-$subcmd --name fail2ban fail2ban-$subcmd
+		docker-container-cmd -a fail2ban-$subcmd --name fail2ban fail2ban-$subcmd
 	done
 	unset subcmd
 	_available_extensions+=($ZDOTDIR/extensions/fail2ban(NF[1]))
