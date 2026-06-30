@@ -10,6 +10,8 @@ hasvar
 get-prompt
 spinner_stop
 spinner_print
+zdefer
+zdefer_flush
 
 # Free-value checkers (any string is valid input — nothing useful to suggest):
 is_int
