@@ -6,13 +6,21 @@
 # Filter out wildcard host sections.
 local -a _ssh_confs=("${SSH_HOME}/config"{,.d/*.conf}(N))
 if (( ${#_ssh_confs} )); then
-	local _ssh_hosts=($(
-		grep -E '^Host[^*]*' ${_ssh_confs} |\
-		awk '{for (i=2; i<=NF; i++) print $i}' |\
-		sort -u |\
-		grep -v '\*'
-	))
-	zstyle ':completion:*:hosts' hosts $_ssh_hosts
+	# Pure-zsh parse of `Host` lines — avoids a grep|awk|sort|grep fork chain on
+	# every interactive shell. Collect every non-wildcard host pattern.
+	local -aU _ssh_hosts=()
+	local _conf _line w
+	local -a _words
+	for _conf in $_ssh_confs; do
+		while IFS= read -r _line; do
+			_words=(${(z)_line})
+			[[ "${(L)_words[1]}" == host ]] || continue
+			for w in ${_words[2,-1]}; do
+				[[ "$w" == *'*'* ]] || _ssh_hosts+="$w"
+			done
+		done < $_conf
+	done
+	(( ${#_ssh_hosts} )) && zstyle ':completion:*:hosts' hosts $_ssh_hosts
 fi
 
 ############################################################
