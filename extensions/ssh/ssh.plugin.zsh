@@ -7,7 +7,7 @@
 local -a _ssh_confs=("${SSH_HOME}/config"{,.d/*.conf}(N))
 if (( ${#_ssh_confs} )); then
 	local _ssh_hosts=($(
-		\grep -E '^Host[^*]*' ${_ssh_confs} |\
+		grep -E '^Host[^*]*' ${_ssh_confs} |\
 		awk '{for (i=2; i<=NF; i++) print $i}' |\
 		sort -u |\
 		grep -v '\*'
@@ -21,7 +21,7 @@ fi
 function ssh_rmhkey {
 	local ssh_host="$1"
 	[[ -z "$ssh_host" ]] && return
-	ssh-keygen -R $(\grep -A10 "$ssh_host" "$SSH_HOME"/config{,.d/*.conf}(N) | sed -nE '/HostName/{s/.*HostName\s+(.+?)/\1/pi;q}')
+	ssh-keygen -R $(grep -A10 "$ssh_host" "$SSH_HOME"/config{,.d/*.conf}(N) | sed -nE '/HostName/{s/.*HostName\s+(.+?)/\1/pi;q}')
 }
 compctl -k hosts ssh_rmhkey
 
@@ -32,7 +32,7 @@ function ssh_load_key() {
 	[[ -z "$key" ]] && return
 	local keyfile="${SSH_HOME}/$key"
 	local keysig=$(ssh-keygen -l -f "$keyfile")
-	if ( ! ssh-add -l | \grep -q "$keysig" ); then
+	if ( ! ssh-add -l | grep -q "$keysig" ); then
 		ssh-add "$keyfile"
 	fi
 }
@@ -44,7 +44,7 @@ function ssh_unload_key {
 	[[ -z "$key" ]] && return
 	local keyfile="${SSH_HOME}/$key"
 	local keysig=$(ssh-keygen -l -f "$keyfile")
-	if ( ssh-add -l | \grep -q "$keysig" ); then
+	if ( ssh-add -l | grep -q "$keysig" ); then
 		ssh-add -d "$keyfile"
 	fi
 }
