@@ -665,11 +665,15 @@ function docker-container-completion {
 		local realfn
 		realfn="$(_docker-container-comp-fn "$comp_file")"
 		if [[ -n "$realfn" ]]; then
-			# Sourcing works pre-compinit; only the bind must wait for `compdef`.
-			# zdefer runs it now if compinit already ran, else queues it for the
-			# 28-defer-flush stage.
-			source "$comp_file"
-			(( $+functions[$realfn] )) && zdefer compinit compdef "$realfn" "$alias_name"
+			# The cached script calls `compdef` itself (cobra/clap emit a
+			# trailing `compdef _foo foo`), which errors pre-compinit. Defer both
+			# the source *and* our alias bind to the compinit phase so the
+			# script's own compdef runs once the system is ready. realfn was
+			# already derived from the file above, so no source is needed to
+			# validate. zdefer runs now if compinit already ran, else queues for
+			# the 28-defer-flush stage; push order keeps source before bind.
+			zdefer compinit source "$comp_file"
+			zdefer compinit compdef "$realfn" "$alias_name"
 			return
 		fi
 		# Stale/invalid cache (e.g. tool dropped completion support): drop it
