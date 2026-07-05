@@ -134,7 +134,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			{c,-current}=o_current \
 			{l,-list}=o_list \
 			{h,-help}=o_help \
-		|| { >&2 print -l $usage; return 2 }
+		|| { >&2 print -l $usage; return 2; }
 		if (( ${#o_help} )); then >&2 print -l $usage; return 0; fi
 
 		# Repo per manager. Asset name convention: bootstrap-<arch>.zip
@@ -156,7 +156,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			print -l ${(ko)managers}
 			return 0
 		elif (( ${#o_current} )); then
-			[[ -n "$current" ]] && { print "$current"; return 0 }
+			[[ -n "$current" ]] && { print "$current"; return 0; }
 			print_fn -w "No known package manager detected"
 			return 1
 		fi
@@ -178,7 +178,7 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			return 2
 		fi
 		shift
-		check_argc $# 0 1 || { >&2 print -l $usage; return 2 }
+		check_argc $# 0 1 || { >&2 print -l $usage; return 2; }
 
 		# Hard guard: must be inside Termux.
 		if ! whatami Android || [[ "${TERMUX__PREFIX:P}" != "/data/data/com.termux/files/usr" ]]; then
@@ -412,9 +412,9 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 			{v,-verbose}=o_verbose \
 			{q,-quiet}=o_quiet \
 			{h,-help}=o_help \
-		|| { >&2 print -l $usage; return 2 }
+		|| { >&2 print -l $usage; return 2; }
 		if (( ${#o_help} )); then >&2 print -l $usage; return 0; fi
-		check_argc $# 0 1 || { >&2 print -l $usage; return 2 }
+		check_argc $# 0 1 || { >&2 print -l $usage; return 2; }
 
 		local -ri verbose=${#o_verbose} quiet=${#o_quiet}
 		if (( verbose && quiet )); then
