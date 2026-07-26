@@ -52,6 +52,15 @@ readonly XDG_DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 readonly XDG_STATE="${XDG_STATE_HOME:-$HOME/.local/state}"
 readonly XDG_CACHE="${XDG_CACHE_HOME:-$HOME/.local/cache}"
 
+# Environment forwarded into the namespace. bwrap inherits the environment (no
+# --clearenv), so a plain export reaches Steam and every game it spawns; set it
+# before the unwrapped fallbacks so those paths get it too. Each var keeps an
+# inherited value if one was set (desktop file, shell, per-game override).
+#
+#   PROTON_ENABLE_WAYLAND — native Wayland backend, Proton 9+/Experimental only
+#                           (ignored by older Proton and on X11 sessions).
+export PROTON_ENABLE_WAYLAND="${PROTON_ENABLE_WAYLAND:-1}"
+
 # Shared script libs (bootstrap pulls in lib/core + lib/interactive: print_fn …).
 # Tolerate a missing repo (sparse root ZDOTDIR, broken symlink) by degrading to
 # plain stderr — a launcher must never abort just because messaging is absent.
