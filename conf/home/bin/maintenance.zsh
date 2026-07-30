@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
-# User maintenance script: invoked by maintenance.service on login and around
-# sleep/wake. Idempotent and throttled so duplicate triggers are harmless.
+# User maintenance script. Idempotent and throttled so duplicate triggers are
+# harmless.
 #
 # To add a task: append the function name to the `tasks` array below. Each
 # task is just a zsh function (or external command) already on PATH or sourced
