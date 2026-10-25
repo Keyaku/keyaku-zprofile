@@ -5,6 +5,9 @@
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 0="${${(M)0:#/*}:-$PWD/$0}"
 
+# Container engine used by the helpers below that work with both (podman wins when installed)
+typeset -g DOCKER_ENGINE=${${commands[podman]:+podman}:-docker}
+
 ### Docker-specific functions; either incompatible with Podman, or cause more trouble than they should
 if (( ! $+commands[podman] )); then
 	# If the completion file doesn't exist yet, we need to autoload it and
@@ -465,7 +468,7 @@ fi
 # List all existing Docker items following a given format. Uses format '.Names' if no argument given.
 function docker-list {
 	local fmt="${@:-.Names}"
-	docker ps -a --format "{{$fmt}}"
+	command ${DOCKER_ENGINE} ps -a --format "{{$fmt}}"
 }
 
 # Check if the given Docker projects exist
@@ -634,7 +637,7 @@ function docker-container-cmd {
 	# attach stdin to a TTY-enabled container" and zero candidates come back.
 	# `-i` stays unconditional (harmless when piping); `-t` only when interactive.
 	local user_flag="${container_user:+--user ${container_user[-1]}}"
-	local exec_cmd="docker exec -i \$([[ -t 0 ]] && print -- -t) $user_flag $container_name $container_cmd"
+	local exec_cmd="${DOCKER_ENGINE} exec -i \$([[ -t 0 ]] && print -- -t) $user_flag $container_name $container_cmd"
 	functions[$container_alias]="$exec_cmd \"\$@\""
 
 	# Link the inner command's own zsh completion to the wrapper.
