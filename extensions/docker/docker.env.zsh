@@ -1,3 +1,10 @@
+# Container stack root, whichever engine is installed
+if [[ -z $DOCKER_HOME ]]; then
+	for d in /usr/local/docker $XDG_DATA_HOME/docker; do
+		[[ -d $d ]] && { export DOCKER_HOME=$d; break }
+	done
+fi
+
 (( $+commands[docker] && ! $+commands[podman] )) || return
 
 # Standardized $0 handling
