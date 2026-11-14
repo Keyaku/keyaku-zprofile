@@ -1013,8 +1013,8 @@ function owrt_run {
 			_run_one "$id" "$joined" "$tmpdir/$id" "$dry"
 			ec="$(< "$tmpdir/$id.exit")"
 			# A reboot task drops the SSH link (255): wait for the router before moving on.
-			if (( reboots && ! dry && ec == 255 )); then
-				print_fn -i "%s: connection dropped (rebooting); waiting for it to return..." "$id"
+			if (( reboots && ! dry )) && { (( ec == 255 )) || { (( ec == 0 )) && grep -q "rebooting" "$tmpdir/$id" 2>/dev/null; }; }; then
+				print_fn -i "%s: rebooting; waiting for it to return..." "$id"
 				if _wait_router_back "$id"; then
 					print_fn -i "%s is back online." "$id"
 					ec=0
