@@ -24,6 +24,7 @@ command-has -av jaq ssh || exit 1
 readonly -a usage=(
 	"Usage: ${THIS} [OPTION...] COMMAND [ARGUMENT...]"
 	"\t[-h|--help] : Print this help message"
+	"\t                Append -h|--help to any command for its own help"
 	"\t[-v] / [-q] : Increase / Decrease verbosity"
 	""
 	"COMMANDS"
@@ -37,6 +38,7 @@ readonly -a usage=(
 	"\t     [--user U] [--port N] [--tag T]...               Discover OpenWRT devices on the LAN"
 	"\trun [SELECTORS] [-c CMD]... [--task NAME]...           Batch-run commands across routers"
 	"\ttask list [--columns COLS]       List available named tasks"
+	"\ttask NAME [RUN OPTIONS]           Run a named task across routers (same as run --task NAME)"
 	"\ttask add NAME [-d DESC] -c CMD [-c CMD]...   Save a task to the config"
 	"\ttask rm NAME                    Remove a config-defined task"
 	"\tconfig [path|show|set KEY VAL]  View / edit defaults (prefix, domain, user, port)"
@@ -66,6 +68,25 @@ readonly -a usage=(
 	"\t    --user U / --port N         SSH user/port to store on added devices"
 	"\t-t, --tag TAG                   Tag applied to added devices (repeatable)"
 )
+
+# Per-command help, shown by `COMMAND [SUBCOMMAND] -h|--help` (handled once in MAIN).
+typeset -gA CMD_HELP=(
+	list     "Usage: ${THIS} list [--tag TAG] [--all] [--columns COLS]\n\t-t, --tag TAG      Only routers with TAG\n\t-a, --all          Include routers from every network\n\t    --columns COLS Comma list of columns ('help' lists them)"
+	add      "Usage: ${THIS} add ID... [--host H] [--user U] [--port N] [--network NAME] [--tag T]...\n\tRegister one or more routers. --host only with a single ID."
+	remove   "Usage: ${THIS} remove ID...\n\tRemove one or more routers."
+	edit     "Usage: ${THIS} edit ID [--host H] [--user U] [--port N] [--id NEW] [--network NAME] [--tag T]... [--untag T]...\n\tEdit a router; with no options opens it in \$EDITOR."
+	ssh      "Usage: ${THIS} ssh ID [CMD...]\n\tOpen an SSH session, or run a one-shot command."
+	scan     "Usage: ${THIS} scan [--subnet CIDR] [--add] [--columns COLS] [--user U] [--port N] [--tag T]...\n\tDiscover OpenWRT devices on the LAN (requires nmap)."
+	run      "Usage: ${THIS} run [SELECTORS] [-c CMD]... [--task NAME]... [OPTIONS]\n\tSelectors: -r/--router ID, -R/--exclude-router ID, -t/--tag TAG, --all\n\tOptions: -c/--command CMD, --task NAME, -p/--parallel, -i/--interactive, -e/--exit-on-error, -n/--dry-run\n\tRouters run one at a time by default; failures don't stop the batch and a summary table is printed.\n\tTasks that reboot the router (sysupgrade) are always sequential and wait for each router to return."
+	task     "Usage: ${THIS} task [list|add|rm] ...   or   ${THIS} task NAME [RUN OPTIONS]\n\tlist             List tasks\n\tadd NAME ...     Save a task\n\trm NAME          Remove a config task\n\tNAME [OPTIONS]   Run the named task (shortcut for 'run --task NAME'; see 'run -h')"
+	task:list "Usage: ${THIS} task list [--names] [--columns COLS]\n\t    --names        Machine-readable name:description lines\n\t    --columns COLS Comma list of columns ('help' lists them)"
+	task:add  "Usage: ${THIS} task add NAME [-d|--description DESC] -c CMD [-c CMD]...\n\tSave a named task to the config."
+	task:rm   "Usage: ${THIS} task rm NAME\n\tRemove a config-defined task (built-ins can't be removed)."
+	config   "Usage: ${THIS} config [show|path|set KEY VALUE]\n\tKeys: user, port, prefix, domain, store_path, network"
+)
+
+# Tasks that reboot the router: always sequential, wait for the router to come back.
+typeset -gA TASK_REBOOTS=(sysupgrade 1)
 
 # --- Storage paths ---
 readonly CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/$THIS_NAME"
@@ -749,7 +770,15 @@ function owrt_task {
 				|| { rm -f "$tmp"; return 1; }
 			print_fn -s "Removed task: %s" "$name"
 		;;
-		*) print_fn -e "Unknown task subcommand: %s" "$sub"; return 1 ;;
+		*)
+			# `task NAME [OPTS]` runs the named task across routers.
+			if [[ -n "${TASK_DESCRIPTIONS[$sub]-}" ]] || jaq -e --arg n "$sub" '(.tasks // {}) | has($n)' "$CONFIG_FILE_PATH" >/dev/null 2>&1; then
+				owrt_run --task "$sub" "$@"
+				return
+			fi
+			print_fn -e "Unknown task subcommand or task: %s" "$sub"
+			return 1
+		;;
 	esac
 }
 
@@ -850,6 +879,8 @@ function _run_one {
 	ssh \
 		-o BatchMode=no \
 		-o ConnectTimeout=10 \
+		-o ServerAliveInterval=15 \
+		-o ServerAliveCountMax=4 \
 		-o StrictHostKeyChecking=accept-new \
 		-p "$port" \
 		"$user_host" \
@@ -858,6 +889,24 @@ function _run_one {
 		>"$logfile" 2>&1
 	ec=$?
 	print -- "$ec" > "${logfile}.exit"
+}
+
+# Wait until a router answers SSH again after a reboot. Args: id [timeout_s]
+function _wait_router_back {
+	local id="$1" timeout="${2:-900}" router endpoint port user_host
+	router="$(_find_router "$id")" || return 1
+	endpoint="$(print -r -- "$router" | _resolve_endpoint)"
+	user_host="${endpoint% *}"
+	port="${endpoint##* }"
+	local -i waited=0
+	# Let it actually go down first, so we don't match the pre-reboot instance.
+	sleep 20; waited+=20
+	while (( waited < timeout )); do
+		ssh -o BatchMode=no -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new \
+			-p "$port" "$user_host" true </dev/null >/dev/null 2>&1 && return 0
+		sleep 10; waited+=10
+	done
+	return 1
 }
 
 function owrt_run {
@@ -904,6 +953,13 @@ function owrt_run {
 	router_ids=("${(@f)$(_select_routers includes excludes tags ${#f_all})}") || return 1
 	router_ids=("${(@)router_ids:#}")
 	(( ${#router_ids} )) || { print_fn -e "No routers matched."; return 1; }
+
+	local -i reboots=0
+	for task in "${tasks[@]}"; do [[ -n "${TASK_REBOOTS[$task]-}" ]] && reboots=1; done
+	if (( reboots && ${#f_parallel} )); then
+		print_fn -w "Reboot tasks run one router at a time; ignoring --parallel."
+		f_parallel=()
+	fi
 
 	# Compose final command string
 	local joined="${(j: && :)cmds}"
@@ -956,6 +1012,17 @@ function owrt_run {
 			print_fn -i "→ %s" "$id"
 			_run_one "$id" "$joined" "$tmpdir/$id" "$dry"
 			ec="$(< "$tmpdir/$id.exit")"
+			# A reboot task drops the SSH link (255): wait for the router before moving on.
+			if (( reboots && ! dry && ec == 255 )); then
+				print_fn -i "%s: connection dropped (rebooting); waiting for it to return..." "$id"
+				if _wait_router_back "$id"; then
+					print_fn -i "%s is back online." "$id"
+					ec=0
+				else
+					print "$id did not come back within the timeout" >> "$tmpdir/$id"
+					ec=254
+				fi
+			fi
 			exit_codes[$id]=$ec
 			# Stream the captured output now
 			[[ -s "$tmpdir/$id" ]] && < "$tmpdir/$id"
@@ -1455,6 +1522,43 @@ _init_paths || exit 1
 
 # Drop the cached network probe (see _net_probe) when the script exits.
 TRAPEXIT() { [[ -n "$_NET_PROBE_FILE" ]] && rm -f -- "$_NET_PROBE_FILE" }
+
+# Contextual -h/--help: handled here once for every command (and task subcommand).
+# `ssh` only honours it as the first argument, so `ssh ID cmd -h` reaches the remote.
+if (( $# > 1 )); then
+	_cmd="$1"
+	case $_cmd in
+		list|ls|l) _cmd=list ;;
+		add|a) _cmd=add ;;
+		remove|rm|delete|del) _cmd=remove ;;
+		edit|ed|e) _cmd=edit ;;
+		ssh|connect|sh) _cmd=ssh ;;
+		scan|sc) _cmd=scan ;;
+		run|r) _cmd=run ;;
+		task|tasks|t) _cmd=task ;;
+		config|cfg|conf) _cmd=config ;;
+		*) _cmd="" ;;
+	esac
+	if [[ -n "$_cmd" ]]; then
+		_want_help=0
+		if [[ $_cmd == ssh ]]; then
+			[[ "$2" == (-h|--help) ]] && _want_help=1
+		elif (( ${@[(I)(-h|--help)]} )); then
+			_want_help=1
+		fi
+		if (( _want_help )); then
+			if [[ $_cmd == task ]]; then
+				case "$2" in
+					list|ls) _cmd=task:list ;;
+					add) _cmd=task:add ;;
+					rm|remove|delete) _cmd=task:rm ;;
+				esac
+			fi
+			print -P -- "${CMD_HELP[$_cmd]//\\n/\n}"
+			exit 0
+		fi
+	fi
+fi
 
 if (( ! $# )); then
 	owrt_list
