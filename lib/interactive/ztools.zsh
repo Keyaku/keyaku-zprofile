@@ -619,8 +619,9 @@ function zupdate {
 
 	# Warn on completion drift between lib/ functions and completions/_<name>.
 	# Silent on success; non-zero exit is informational, not fatal.
-	if [[ -x "${ZDOTDIR}/conf/check-completions.zsh" ]]; then
-		"${ZDOTDIR}/conf/check-completions.zsh" -q || \
+	# Invoked via `zsh` rather than its shebang: Termux has no /usr/bin/env.
+	if [[ -r "${ZDOTDIR}/conf/check-completions.zsh" ]]; then
+		zsh "${ZDOTDIR}/conf/check-completions.zsh" -q || \
 			print_fn -w "completion drift detected — see above; run conf/check-completions.zsh for details"
 	fi
 }
