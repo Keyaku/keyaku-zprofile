@@ -15,10 +15,9 @@ if [[ -v MANPATH && ":$MANPATH:" != *":$_npm_pfx/share:"* ]]; then
 	MANPATH="$MANPATH:$_npm_pfx/share"
 fi
 
-# One-shot: merge the preset .npmrc into the user config. The fixed-string
-# grep on a 3-line file is ~1ms and short-circuits once synced.
-if [[ -f "$NPM_CONFIG_USERCONFIG" ]] && \
-	! \grep -Fq 'prefix = ${XDG_DATA_HOME}/npm' "$NPM_CONFIG_USERCONFIG"; then
+# One-shot: merge the preset .npmrc into the user config. A pure-zsh substring
+# test on the small file avoids a grep fork, and short-circuits once synced.
+if [[ -f "$NPM_CONFIG_USERCONFIG" && "$(<$NPM_CONFIG_USERCONFIG)" != *'prefix = ${XDG_DATA_HOME}/npm'* ]]; then
 	diff -BNPZbrw \
 		--changed-group-format='%>' \
 		--unchanged-group-format='' \
