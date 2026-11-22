@@ -18,8 +18,8 @@ _zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh'
 # Themes
 # ============================================================================
 
-### Print fetch (login shells only)
-if (( EUID != 0 )) && [[ -o login ]]; then
+### Print fetch (login shells on a terminal only)
+if (( EUID != 0 )) && [[ -o login && -t 1 ]]; then
 	local fetch="fastfetch"
 	local fetch_warned="$ZSH_CACHE_HOME/.fetch_warned"
 	if (( ${+commands[$fetch]} )); then

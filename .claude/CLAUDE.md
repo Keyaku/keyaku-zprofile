@@ -114,7 +114,7 @@ Set `ZSH_PROFILE_BENCHMARK=1` to time each sourced file (also disables p10k inst
 The dominant remaining startup cost is OMZ (`oh-my-zsh.sh` core + the loader in `25-omz-load.zsh`, ~70ms combined); it is compinit + OMZ-lib bound and only reducible via the OMZ replacement the `FIXME` in `10-setup.zsh` already plans. Everything below it is at/near the noise floor.
 
 ## Startup behaviour notes
-- **fastfetch greeting** runs only on login shells (`[[ -o login ]]` guard in `10-setup.zsh`), kept synchronous on purpose — backgrounding it races the banner against the prompt paint. ~10ms, cosmetic, login-only.
+- **fastfetch greeting** runs only on login shells whose stdout is a terminal (`[[ -o login && -t 1 ]]` guard in `10-setup.zsh`; so `zbench -w`, whose hyperfine discards output, no longer counts it), kept synchronous on purpose — backgrounding it races the banner against the prompt paint. ~10ms, cosmetic, login-only.
 - **pyvenv auto-activation**: `zstages/login/90-user.zsh` sources `$XDG_DATA_HOME/pyvenv/bin/activate` whenever `$XDG_DATA_HOME/pyvenv/pyvenv.cfg` exists, so `python` points at that default venv from every login shell (~2.7ms). Intentional convenience, not a leak — delete the pyvenv dir to opt out.
 - **Per-session guards**: some interactive setup that only needs to run once per session (e.g. the gpg-agent `systemctl` probe in `extensions/gpg-agent/`) is gated behind an exported marker so nested shells skip it; daemon-probing work that only an interactive session needs (e.g. the docker container-alias block) is deferred to a one-shot `precmd` hook so non-interactive shells skip it entirely.
 

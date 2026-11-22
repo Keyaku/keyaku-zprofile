@@ -135,6 +135,14 @@ function _print_callstack {
 function print_fn {
 	(( ${+fg} )) || { autoload -Uz colors && colors; }
 
+	# Plain text when stderr isn't a terminal (logs, pipes, cron) or NO_COLOR is
+	# set. Shadowing the color tables locally also covers _print_callstack, which
+	# runs within this scope.
+	if [[ ! -t 2 ]] || (( ${+NO_COLOR} )); then
+		local -A fg_bold=() fg_no_bold=()
+		local reset_color=''
+	fi
+
 	# If caller is one of the skippable functions, skip it
 	local -r can_skip="^(print_[[:alnum:]_]+|check_argc)$"
 
