@@ -27,6 +27,8 @@ fi
 (( ${+ZSH_CACHE_HOME} )) || ZSH_CACHE_HOME="${XDG_CACHE_HOME}/zsh"
 
 # Source ZSH files just to be sure. Sourcing .zshrc will autoload all custom functions
+# (OMZ's terminal-title hook would otherwise print on every command of this script)
+DISABLE_AUTO_TITLE=true
 local zfile zfiles=(.zshenv .zprofile .zshrc .zlogin)
 for zfile in ${zfiles}; do
 	source "$ZDOTDIR/$zfile" || {
@@ -34,6 +36,9 @@ for zfile in ${zfiles}; do
 		return 1
 	}
 done
+# Drop the prompt hooks .zshrc installed (OMZ's terminal title, gpg-agent's tty
+# update): they'd fire on every command of this script.
+preexec_functions=() precmd_functions=()
 
 SUDO=$(whatami Android || echo sudo)
 ROOT=$(whatami Android && echo /data/data/com.termux/files/usr)
@@ -625,18 +630,22 @@ typeset -ra SELF_PROMPTING=(setup_submodules setup_pass setup_pulse setup_syncth
 
 function main {
 	local -r usage=(
-		"Usage: ${SCRIPT_NAME} [OPTION...]"
+		"Usage: ${SCRIPT_NAME} [OPTION...] [STEP...]"
 		"\t[-h|--help]"
-		"\t[-y|--yes] : Run every step without asking (steps with their own prompts still ask)"
+		"\t[-l|--list] : List the steps available on this system"
+		"\t[-y|--yes]  : Run every step without asking (steps with their own prompts still ask)"
+		"\tSTEP...     : Run only these steps, in this order, without asking first"
+		"\t             (steps with their own prompts still ask); the record in"
+		"\t             conf/.first_init is left as it is"
 	)
-	local f_help f_yes
-	zparseopts -D -F -K -- {h,-help}=f_help {y,-yes}=f_yes || return 1
+	local f_help f_list f_yes
+	zparseopts -D -F -K -- {h,-help}=f_help {l,-list}=f_list {y,-yes}=f_yes || return 1
 	if (( ${#f_help} )); then
 		>&2 print -l $usage
 		return 0
 	fi
 
-	# Gather all functions to run
+	# Gather the steps available on this system
 	local -A fn_results
 	local -a fn_to_run=($BASE_FUNCTIONS)
 	if whatami Android; then
@@ -648,6 +657,27 @@ function main {
 		whatami Arch && fn_to_run+=($ARCH_FUNCTIONS)
 	fi
 
+	if (( ${#f_list} )); then
+		local fn
+		for fn in ${fn_to_run}; do
+			print -r -- "${(r:20:)fn}${FN_DESCRIPTIONS[$fn]:-(asks for itself)}"
+		done
+		return 0
+	fi
+
+	# Named steps: run only those, without main's own prompt
+	local -i f_named=0
+	if (( $# )); then
+		local -a unknown=(${@:|fn_to_run})
+		if (( ${#unknown} )); then
+			print_fn -e "Unknown or unavailable step(s) on this system: ${unknown}"
+			>&2 print "Run '${SCRIPT_NAME} --list' to see the available steps."
+			return 1
+		fi
+		fn_to_run=("$@")
+		f_named=1
+	fi
+
 	local -i fn_completed=0 fn_total=${#fn_to_run}
 
 	# Run all functions
@@ -657,7 +687,7 @@ function main {
 		fn_results[$fn_current]=0
 		# Ask first unless told not to; a declined step counts as done so the
 		# "not initialized" warning in zstages/rc/00-init.zsh stays quiet.
-		if (( ! ${#f_yes} )) && (( ! ${SELF_PROMPTING[(Ie)$fn_current]} )) \
+		if (( ! ${#f_yes} && ! f_named )) && (( ! ${SELF_PROMPTING[(Ie)$fn_current]} )) \
 			&& ! ask -B -d y "${FN_DESCRIPTIONS[$fn_current]:-$fn_current}? ($fn_current)"; then
 			fn_skipped+=($fn_current)
 			fn_results[$fn_current]=1
@@ -670,6 +700,16 @@ function main {
 	done
 	fn_completed=${(vM)#fn_results:#1}
 	local -a fn_failed=(${(k)fn_results[(R)0]})
+
+	# Named steps are a partial run; only a full run updates the record
+	if (( f_named )); then
+		if (( ${#fn_failed} )); then
+			print_fn -e "Failed: ${fn_failed}"
+			return 1
+		fi
+		echo "${SCRIPT_NAME}: Done: ${fn_to_run}"
+		return 0
+	fi
 
 	echo "$fn_completed/$fn_total" > "$SCRIPT_DIR/.first_init"
 
@@ -693,4 +733,4 @@ function main {
 # Main
 ####################
 
-main $@
+main "$@"

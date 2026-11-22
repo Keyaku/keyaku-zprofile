@@ -113,6 +113,8 @@ Then:
 1. Answer the script's prompts: it asks before each step (pass `-y` to run them all). The first step installs the base packages with your system's package manager (pacman, apt, dnf, zypper, apk, xbps, Homebrew or Termux's pkg) through `pkg-install`. Make sure it sets up everything correctly. It'll keep track of every substep in the file `conf/.first_init`.
 2. Log out and log back in.
 
+To run single steps later, name them: `zsh conf/first_init.zsh setup_root` runs only that step without asking first, and leaves `conf/.first_init` as it is. `--list` shows the steps available on your system.
+
 
 ### Customization
 
