@@ -6,6 +6,6 @@ _arguments -s -S \
 	'*-q[decrease verbosity]' \
 	'(-a --all)'{-a,--all}'[update all steps (overrides -r/-s/-c)]' \
 	'(-r --repo)'{-r,--repo}'[update repo]' \
-	'(-s --submodules)'{-s,--submodules}'[update submodules]' \
+	'(-s --submodules)'{-s,--submodules}'[clone or update the vendored repos]' \
 	'(-c --compile -C --clean)'{-c,--compile}'[compile .zsh under lib/ and plugins/]' \
 	'(-c --compile -C --clean)'{-C,--clean}'[clean .zwc files]'

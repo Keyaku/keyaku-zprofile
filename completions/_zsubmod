@@ -1,8 +1,8 @@
 #compdef zsubmod
 
-local -a names
-[[ -r "$ZDOTDIR/.gitmodules" ]] && \
-	names=(${${(M)${(f)"$(<"$ZDOTDIR/.gitmodules")"}:#(|*[[:blank:]])path*=*}##*[=/[:blank:]]})
+local -a names reply
+local name vpath url branch
+_zvendor_entries && for name vpath url branch in $reply; do names+=($name); done
 
 _arguments -s -S \
 	'(- *)'{-h,--help}'[show help]' \

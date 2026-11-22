@@ -6,7 +6,7 @@
 #   zsh -c "$(curl -fsSL …/conf/install.zsh)" install -y
 #
 # Clones the repo into ~/.local/config/zsh (the path first_init.zsh expects) and
-# runs first_init.zsh, which fetches the submodules, installs packages and sets
+# runs first_init.zsh, which fetches the vendored repos, installs packages and sets
 # zsh up. Re-running it on an existing clone skips the clone. The repo's
 # print_fn isn't available before the clone, so this script prints plainly.
 

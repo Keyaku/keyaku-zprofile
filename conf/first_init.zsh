@@ -96,7 +96,7 @@ function setup_ssh {
 }
 
 # Offers to use distro-installed copies of zsh-syntax-highlighting and
-# powerlevel10k instead of their vendored submodules, recording each choice in
+# powerlevel10k instead of their vendored clones, recording each choice in
 # $ZDOTDIR/user/settings.zsh.
 function setup_submodules {
 	local name sm_path
@@ -108,12 +108,12 @@ function setup_submodules {
 		_zsubmodule_enabled $name || continue
 		_zsubmodule_system_path $name || continue
 
-		ask -B -d y "$name is installed system-wide ($REPLY). Use it instead of the vendored submodule?" || continue
+		ask -B -d y "$name is installed system-wide ($REPLY). Use it instead of the vendored copy?" || continue
 
 		mkdir -p "$ZDOTDIR/user" && print -r -- "zsubmod --off $name" >> "$ZDOTDIR/user/settings.zsh"
 		zsubmod --off $name
-		print_fn -s "Disabled the $name submodule in $ZDOTDIR/user/settings.zsh"
-		print_fn -i "To free its disk space: git -C \"\$ZDOTDIR\" submodule deinit $sm_path"
+		print_fn -s "Disabled the vendored $name in $ZDOTDIR/user/settings.zsh"
+		print_fn -i "To free its disk space: rm -rf \"\$ZDOTDIR/$sm_path\""
 	done
 	return 0
 }

@@ -57,12 +57,12 @@ It's structured as follows:
 4. Your own functions, plugins and themes under `custom/functions/`, `custom/plugins/` and `custom/themes/` (empty by default).
 5. Shared helpers for standalone scripts under `lib/script/`, sourced by the scripts themselves rather than at startup.
 6. Setup and support files under `conf/`: the setup scripts (`install.zsh`, `first_init.zsh`), standalone scripts (`home/bin/` for ones you put on `PATH`, `tools/` for one-shot provisioners), system and home config files (`etc/`, `home/`), Syncthing rules, git hooks and the `user/` template.
-7. Git submodules under `vendor/` (see [Dependencies](#dependencies)).
+7. Vendored repos under `vendor/`, listed in `conf/vendor.tsv` (see [Dependencies](#dependencies)).
 8. Your own settings and stage overrides under `user/` (gitignored; template in `conf/user.example/`).
 
 ### Dependencies
 
-_Oh-My-ZSH_, _powerlevel10k_ and _zsh-syntax-highlighting_ are git submodules, enabled and loaded by default. Each can be turned off with `zsubmod --off <name>` in `user/settings.zsh` (see [Customization](#customization)); a disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
+_Oh-My-ZSH_, _powerlevel10k_ and _zsh-syntax-highlighting_ are vendored repos, enabled and loaded by default. They're listed in `conf/vendor.tsv` and live under `vendor/` as plain shallow clones, gitignored rather than git submodules, so updating them never shows up as a change in this repo (or as `!N` in the prompt). The first shell clones any that are missing, and `zupdate --submodules` updates them to the latest commit of their branch, skipping one whose tracked files you changed. Each can be turned off with `zsubmod --off <name>` in `user/settings.zsh` (see [Customization](#customization)); a disabled one is neither fetched nor loaded.
 
 Turning off any of them is fully supported. Without _Oh-My-ZSH_ you get plain zsh: the environment still sets up `fpath`, runs `compinit` and loads plugins from `custom/plugins/`, but nothing replaces OMZ's own settings, plugins or themes.
 
@@ -74,17 +74,17 @@ Everything around it works without it: `24-fpath.zsh` finds plugins and builds `
 #### Powerlevel10k
 
 This theme is set at the usual `zshrc` stage, before OMZ is loaded, with a code block in `zstages/rc/10-setup.zsh` that loads the cached instant prompt file if it's enabled.
-The submodule's theme file is symlinked into `custom/themes/`, where OMZ finds it; without OMZ, `zstages/rc/90-p10k.zsh` sources it.
-When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead (e.g. Arch's `zsh-theme-powerlevel10k`, Homebrew, NixOS). OMZ can't find that one, so `zstages/rc/90-p10k.zsh` sources it right before `.p10k.zsh`. The setup script offers to switch to it when it finds one. To skip powerlevel10k altogether, disable the submodule and set `ZSH_THEME` to another theme in `user/settings.zsh`.
+The vendored theme file is symlinked into `custom/themes/`, where OMZ finds it; without OMZ, `zstages/rc/90-p10k.zsh` sources it.
+When the vendored copy is disabled or not cloned, a copy installed by the system's package manager is used instead (e.g. Arch's `zsh-theme-powerlevel10k`, Homebrew, NixOS). OMZ can't find that one, so `zstages/rc/90-p10k.zsh` sources it right before `.p10k.zsh`. The setup script offers to switch to it when it finds one. To skip powerlevel10k altogether, disable the submodule and set `ZSH_THEME` to another theme in `user/settings.zsh`.
 
 #### zsh-syntax-highlighting
 
 This plugin is sourced last in the `zshrc` stage, by `zstages/rc/95-syntax-highlighting.zsh`, since it wraps every ZLE widget defined before it. It doesn't go through OMZ.
-When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead, if there is one. The setup script offers to switch to that copy when it finds one.
+When the vendored copy is disabled or not cloned, a copy installed by the system's package manager is used instead, if there is one. The setup script offers to switch to that copy when it finds one.
 
 #### fastfetch
 
-Although not added as a git submodule, the environment currently expects `fastfetch` to be installed, which is run at the `zshrc` stage in `zstages/rc/10-setup.zsh`, printing a one-time only warning in case it is not installed.
+Although not vendored, the environment currently expects `fastfetch` to be installed, which is run at the `zshrc` stage in `zstages/rc/10-setup.zsh`, printing a one-time only warning in case it is not installed.
 In the future, this block should be adapted to any fetch program of your choice.
 
 ## Practicality
@@ -134,7 +134,7 @@ Personal settings and overrides go in `$ZDOTDIR/user/`, which is gitignored, so 
 Two functions, meant for `user/settings.zsh`, set what loads with the same syntax:
 
 - `zext` for extensions: `zext --off docker vscode`, or `zext --off '*' --on git ssh` to load only a few (a name always wins over `'*'`).
-- `zsubmod` for submodules: `zsubmod --off powerlevel10k`.
+- `zsubmod` for the vendored repos (still named after the submodules they used to be): `zsubmod --off powerlevel10k`.
 
 Run either with no arguments to list everything and whether it's on. Both just set zstyles (`':zprofile:extensions:<name>' enabled` and `':zprofile:submodules:<name>' enabled`), so setting those directly works too.
 

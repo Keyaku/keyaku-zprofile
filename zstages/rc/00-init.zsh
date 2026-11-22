@@ -7,38 +7,23 @@ if (( $UID >= 1000 )) && { [[ ! -f "$ZDOTDIR/conf/.first_init" ]] || (( 1 != $(<
 fi
 
 # ============================================================================
-# Initialize submodules if ohmyzsh is not present or empty
+# Fetch vendored repos that are enabled but not cloned yet
 # ============================================================================
-
-if (( ! ${#ZPROFILE_MODULES} )); then
-	if [[ ! -s "$ZSH_CACHE_HOME/zprofile_modules" || "$ZPROFILE_REPO/.gitmodules" -nt "$ZSH_CACHE_HOME/zprofile_modules" ]]; then
-		# Fetch info from .gitmodules
-		while IFS=$'=\t ' read -r key val; do
-			if [[ "$key" == "path" ]]; then
-				ZPROFILE_MODULES+=("${val}")
-			fi
-		done < "$ZPROFILE_REPO/.gitmodules"
-
-		# Cache info for following sessions
-		print -l "${ZPROFILE_MODULES}" > "$ZSH_CACHE_HOME/zprofile_modules"
-	else
-		ZPROFILE_MODULES=($(<"$ZSH_CACHE_HOME/zprofile_modules"))
-	fi
+# conf/vendor.tsv lists them (see _zvendor_entries); a missing one has no .git.
+local -a reply missing_vendor=()
+local vname vpath vurl vbranch
+if _zvendor_entries; then
+	for vname vpath vurl vbranch in $reply; do
+		_zsubmodule_enabled "$vname" && [[ ! -e "$ZPROFILE_REPO/$vpath/.git" ]] && missing_vendor+=($vpath)
+	done
 fi
-# Only submodules the user hasn't disabled (see _zsubmodule_enabled)
-local -a empty_modules=("$ZDOTDIR"/${^ZPROFILE_MODULES}(N^F))
-local empty_module
-for empty_module in ${empty_modules}; do
-	_zsubmodule_enabled "$empty_module" || empty_modules=(${empty_modules:#$empty_module})
-done
-unset empty_module
-if (( ${#empty_modules} )); then
+unset vname vpath vurl vbranch
+if (( ${#missing_vendor} )); then
 	if [[ "$ZPROFILE_REPO" == "${ZDOTDIR:A}" ]]; then
-		# Initialize submodules
 		zupdate --submodules
 	else
-		# A shared ZDOTDIR (root's) must not fetch into the owner's repo
-		print_fn -w "Submodules missing in $ZPROFILE_REPO; run 'zupdate --submodules' there as its owner."
+		# A shared ZDOTDIR (root's) must not clone into the owner's repo
+		print_fn -w "Vendored repos missing in $ZPROFILE_REPO (${missing_vendor}); run 'zupdate --submodules' there as its owner."
 	fi
 fi
 

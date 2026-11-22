@@ -1,6 +1,6 @@
 # The repo this environment runs from. Usually $ZDOTDIR itself, but root's sparse
 # ZDOTDIR (see setup_root) only links lib/ and friends, so resolve this file's
-# real path instead; repo-level files like .gitmodules live there.
+# real path instead; repo-level files like conf/vendor.tsv live there.
 typeset -g ZPROFILE_REPO=${${(%):-%x}:A:h:h:h}
 
 # Sleeps while displaying a message
@@ -118,8 +118,22 @@ if has_systemd; then
 	alias udev-reload='sudo udevadm control --reload-rules && sudo udevadm trigger && sudo systemctl restart systemd-udevd.service'
 fi
 
-# Whether the vendored submodule NAME is enabled. NAME is the last component of
-# its .gitmodules path (ohmyzsh, powerlevel10k, zsh-syntax-highlighting).
+# Reads the vendored repos from conf/vendor.tsv into reply, four fields per repo:
+# name, path (relative to the repo), url, branch ("-" for the remote's default).
+# They're plain gitignored clones, not git submodules, so updating them never
+# shows up as a change in this repo. Pure zsh, no fork.
+function _zvendor_entries {
+	reply=()
+	local manifest="$ZPROFILE_REPO/conf/vendor.tsv" line
+	[[ -r "$manifest" ]] || return 1
+	for line in "${(@f)$(<$manifest)}"; do
+		[[ -z "${line//[[:space:]]}" || "$line" == \#* ]] && continue
+		reply+=("${(@ps:\t:)line}")
+	done
+}
+
+# Whether the vendored repo NAME is enabled. NAME is the last component of its
+# path in conf/vendor.tsv (ohmyzsh, powerlevel10k, zsh-syntax-highlighting).
 # Enabled unless the user set `zstyle ':zprofile:submodules:NAME' enabled no`
 # (e.g. in $ZDOTDIR/user/settings.zsh). A disabled submodule is neither
 # fetched by `zupdate --submodules` nor loaded.
@@ -181,12 +195,13 @@ function zext {
 	_ztoggle ':zprofile:extensions' extension known "$@"
 }
 
-# Enables or disables vendored git submodules (ohmyzsh, powerlevel10k,
-# zsh-syntax-highlighting). See _ztoggle and _zsubmodule_enabled.
+# Enables or disables vendored repos (ohmyzsh, powerlevel10k,
+# zsh-syntax-highlighting), still called submodules here for compatibility.
+# See _ztoggle and _zsubmodule_enabled.
 function zsubmod {
-	local -a known
-	[[ -r "$ZPROFILE_REPO/.gitmodules" ]] && \
-		known=(${${(M)${(f)"$(<"$ZPROFILE_REPO/.gitmodules")"}:#(|*[[:blank:]])path*=*}##*[=/[:blank:]]})
+	local -a known reply
+	local name vpath url branch
+	_zvendor_entries && for name vpath url branch in $reply; do known+=($name); done
 	_ztoggle ':zprofile:submodules' submodule known "$@"
 }
 

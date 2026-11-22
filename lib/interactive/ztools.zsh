@@ -447,6 +447,74 @@ function _zcompile_file {
 }
 
 # Check for zprofile git repo changes
+# Clones each enabled vendored repo (see _zvendor_entries) that's missing and
+# fast-updates the rest: a shallow fetch of the tracked branch, then a reset to
+# it, skipped when tracked files have local changes. They're plain gitignored
+# clones, so updates never show as changes in this repo. Checkouts left by the
+# old git-submodule layout are turned into standalone clones in place, and the
+# superproject's leftover submodule config is dropped. Used by zupdate.
+function _zvendor_sync {
+	local -a reply
+	_zvendor_entries || { print_fn -e "No vendored repo list at $ZPROFILE_REPO/conf/vendor.tsv"; return 1 }
+	local -a entries=($reply)
+	local name vpath url branch vdir gitdir
+	local -a branch_args
+	local -i failed=0
+
+	for name vpath url branch in $entries; do
+		_zsubmodule_enabled "$name" || continue
+		vdir="$ZDOTDIR/$vpath"
+		branch_args=()
+		[[ "$branch" != - ]] && branch_args=(-b "$branch")
+
+		# Old submodule checkout: .git is a file pointing into .git/modules/
+		if [[ -f "$vdir/.git" ]]; then
+			gitdir=$(git -C "$vdir" rev-parse --absolute-git-dir 2>/dev/null)
+			if [[ -n "$gitdir" && "$gitdir" == "$ZDOTDIR/.git/modules/"* ]]; then
+				# core.worktree is relative to the old gitdir and wrong once moved;
+				# edit the file directly, since git would chdir into it first
+				rm "$vdir/.git" && mv "$gitdir" "$vdir/.git" \
+					&& git config -f "$vdir/.git/config" --unset core.worktree \
+					&& print_fn -i "Turned $vpath from a git submodule into a plain clone"
+			else
+				print_fn -w "$vpath has a dangling submodule gitdir; re-cloning"
+				rm -rf "${vdir:?}"
+			fi
+		fi
+
+		if [[ ! -e "$vdir/.git" ]]; then
+			# An empty placeholder dir is fine for git clone; anything else isn't
+			[[ -d "$vdir" ]] && rmdir "$vdir" 2>/dev/null
+			if [[ -e "$vdir" ]]; then
+				print_fn -e "$vpath exists but isn't a git clone; move it away to fetch it"
+				(( failed++ ))
+				continue
+			fi
+			git clone -q --depth 1 --single-branch $branch_args "$url" "$vdir" || (( failed++ ))
+			continue
+		fi
+
+		if [[ -n "$(git -C "$vdir" status --porcelain --untracked-files=no)" ]]; then
+			print_fn -w "$vpath has local changes; not updating it"
+			continue
+		fi
+		git -C "$vdir" fetch -q --depth 1 origin "${${branch:#-}:-HEAD}" \
+			&& git -C "$vdir" reset -q --hard FETCH_HEAD \
+			|| (( failed++ ))
+	done
+
+	# Drop what's left of the submodule wiring, once no .gitmodules exists
+	if [[ ! -e "$ZDOTDIR/.gitmodules" && -d "$ZDOTDIR/.git" ]]; then
+		local key
+		for key in ${(f)"$(git -C "$ZDOTDIR" config --name-only --get-regexp '^submodule\.' 2>/dev/null)"}; do
+			git -C "$ZDOTDIR" config --remove-section "${key%.*}" 2>/dev/null
+		done
+		[[ -d "$ZDOTDIR/.git/modules" ]] && find "$ZDOTDIR/.git/modules" -depth -type d -empty -delete 2>/dev/null
+	fi
+
+	(( failed == 0 ))
+}
+
 function zupdate {
 	if [[ -d "${ZDOTDIR}/.git" ]]; then
 		(( ${+commands[git]} )) || return 1
@@ -461,7 +529,7 @@ function zupdate {
 		"\t[-v] / [-q] : Increase / Decrease verbosity"
 		"\t[-a|--all]  : Update all steps. Overrides options -r, -s, -c"
 		"\t[-r|--repo] : Update repo"
-		"\t[-s|--submodules] : Update submodules"
+		"\t[-s|--submodules] : Clone or update the vendored repos (conf/vendor.tsv)"
 		"\t[-c|--compile] : Compile .zsh in lib/ and plugins/"
 		"\t[-C|--clean] : Clean .zwc files from lib/ and plugins/"
 	)
@@ -578,58 +646,10 @@ function zupdate {
 		zsource -L
 	fi
 
-	# Update submodules
+	# Clone or update the vendored repos (conf/vendor.tsv)
 	if (( ${f_steps[(I)(-s|--submodules)]} )); then
-		(( $verbosity )) && printf '%s' "Initializing/updating submodules..."
-
-		# Self-heal devices left behind by the legacy custom/ -> vendor/ submodule
-		# move: a worktree `.git` may point to a gitdir under .git/modules/<new>
-		# while the real gitdir still sits at .git/modules/custom/<old>, leaving a
-		# dangling handle ("could not get a repository handle"). Drop the broken
-		# worktree (re-cloned by the update below) and prune stale config sections
-		# for submodules no longer in .gitmodules. Cheap: only on `--submodules`.
-		local sm_key sm_path sm_name
-		git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" --get-regexp '^submodule\..*\.path$' | \
-			while read -r sm_key sm_path; do
-				[[ -e "${ZDOTDIR}/${sm_path}/.git" ]] || continue
-				git -C "${ZDOTDIR}/${sm_path}" rev-parse --git-dir &>/dev/null && continue
-				print_fn -w "submodule '${sm_path}' has a dangling gitdir — re-cloning"
-				rm -rf "${ZDOTDIR:?}/${sm_path}"
-			done
-		# Prune config sections for submodules absent from .gitmodules (e.g. old
-		# custom/* duplicates, removed plugins) so they don't shadow the update.
-		git -C "${ZDOTDIR}" config --get-regexp '^submodule\..*\.url$' | \
-			while read -r sm_key _; do
-				sm_name="${sm_key#submodule.}"
-				sm_name="${sm_name%.url}"
-				git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" \
-					--get "submodule.${sm_name}.path" &>/dev/null && continue
-				git -C "${ZDOTDIR}" config --remove-section "submodule.${sm_name}" 2>/dev/null
-			done
-
-		# Only fetch submodules the user hasn't disabled (see _zsubmodule_enabled)
-		local -a sm_enabled=()
-		git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" --get-regexp '^submodule\..*\.path$' | \
-			while read -r sm_key sm_path; do
-				_zsubmodule_enabled "$sm_path" && sm_enabled+=("$sm_path")
-			done
-		(( ${#sm_enabled} )) && \
-			git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc) -- ${sm_enabled}
-
-		# Propagate `ignore` from .gitmodules into .git/config — git status/p10k
-		# read `submodule.<name>.ignore` from config only, not .gitmodules, so
-		# `ignore = all` (keep submodules always-latest without committing the
-		# pointer bumps) has no effect until mirrored here. `submodule sync`
-		# carries url/branch but NOT ignore, hence this loop.
-		local sm_ignore
-		git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" --get-regexp '^submodule\..*\.ignore$' | \
-			while read -r sm_name sm_ignore; do
-				sm_name="${sm_name#submodule.}"
-				sm_name="${sm_name%.ignore}"
-				git -C "${ZDOTDIR}" config "submodule.${sm_name}.ignore" "$sm_ignore"
-			done
-
-		(( $verbosity )) && printf ' %s\n' "Done."
+		(( $verbosity )) && print "Updating vendored repos..."
+		_zvendor_sync || return 1
 	fi
 
 	# Warn on completion drift between lib/ functions and completions/_<name>.

@@ -12,8 +12,8 @@
 # Or load only a chosen few (a name always wins over '*'):
 # zext --off '*' --on git ssh ssh-agent gpg pass
 
-# Vendored submodules: ohmyzsh, powerlevel10k, zsh-syntax-highlighting.
-# A disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
+# Vendored repos (conf/vendor.tsv): ohmyzsh, powerlevel10k, zsh-syntax-highlighting.
+# A disabled one is neither fetched by `zupdate --submodules` nor loaded.
 # - powerlevel10k or zsh-syntax-highlighting off: a distro-installed copy is used
 #   if present; otherwise the prompt falls back to robbyrussell (or the theme
 #   set below) and there's no highlighting.
