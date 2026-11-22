@@ -164,6 +164,20 @@ function setup_pass {
 	print_fn -s "Password store initialized with key $fprs[$REPLY]"
 }
 
+# Points PulseAudio clients at the XDG cookie path (PULSE_COOKIE from the
+# pulseaudio extension) through the per-user client.conf, for clients that start
+# without the session environment. Per-user because the path is this user's.
+function setup_pulse {
+	(( ${+commands[pulseaudio]} || ${+commands[pactl]} )) || return 0
+	local -r conf="$XDG_CONFIG_HOME/pulse/client.conf"
+	local -r cookie="$XDG_CONFIG_HOME/pulse/cookie"
+	[[ -f "$conf" ]] && [[ "$(<"$conf")" == *cookie-file* ]] && return 0
+
+	ask -B -d y "Set PulseAudio's cookie-file to $cookie in $conf?" || return 0
+	mkdir -p "${conf:h}" && print -r -- "cookie-file = $cookie" >> "$conf" || return 1
+	print_fn -s "PulseAudio clients now read their cookie from $cookie"
+}
+
 # Sets up systemd system-wide to follow XDG Base Directory Specification
 function setup_systemd {
 	# Synchronize /etc/systemd. -p preserves the source file modes so the
@@ -485,7 +499,7 @@ typeset -ra BASE_FUNCTIONS=(install_pkgs setup_submodules setup_zsh setup_ssh se
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
-typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_steam_xdg setup_root setup_borg setup_claude)
+typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_pulse setup_steam_xdg setup_root setup_borg setup_claude)
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
@@ -505,7 +519,7 @@ typeset -rA FN_DESCRIPTIONS=(
 	[setup_pacman]="Install the pacman hook that rehashes zsh commands"
 )
 # Steps that already ask before doing anything, so main doesn't ask again
-typeset -ra SELF_PROMPTING=(setup_submodules setup_pass setup_claude setup_git_hooks)
+typeset -ra SELF_PROMPTING=(setup_submodules setup_pass setup_pulse setup_claude setup_git_hooks)
 
 ### Main function
 
