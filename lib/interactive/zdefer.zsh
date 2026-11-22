@@ -2,9 +2,9 @@
 # zdefer — phase-keyed deferred-task registry
 # ============================================================================
 #
-# Extensions and plugins are sourced (zstages/rc/10-setup.zsh) *before* OMZ runs
-# `compinit` (zstages/rc/25-omz-load.zsh), so any `compdef` call made at source
-# time silently no-ops — `compdef` does not exist yet. `zdefer` lets a caller
+# Extensions and plugins are sourced (zstages/rc/10-setup.zsh) *before*
+# `compinit` runs (zstages/rc/25-omz-load.zsh or 26-compinit.zsh), so any
+# `compdef` call made at source time silently no-ops — `compdef` does not exist yet. `zdefer` lets a caller
 # queue such work against a named "phase" and have it run reliably once that
 # phase is ready, with a run-now fast path when the phase is already satisfied.
 #

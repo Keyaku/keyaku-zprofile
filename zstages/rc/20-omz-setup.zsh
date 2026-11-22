@@ -2,9 +2,12 @@
 # Oh-My-ZSH pre-load configuration file
 ##############################################################################
 
-# Check for Oh-My-ZSH; stop processing if disabled or not found
-_zsubmodule_enabled ohmyzsh || return
-[[ -f "$ZDOTDIR/vendor/ohmyzsh/oh-my-zsh.sh" ]] || return
+# Check for Oh-My-ZSH; stop processing if disabled or not found. $ZSH is what
+# later stages test for OMZ, so drop one inherited from a parent shell.
+if ! _zsubmodule_enabled ohmyzsh || [[ ! -f "$ZDOTDIR/vendor/ohmyzsh/oh-my-zsh.sh" ]]; then
+	unset ZSH
+	return
+fi
 
 # Suppress insecure completion directory warnings when running as root
 (( EUID == 0 )) && ZSH_DISABLE_COMPFIX=true

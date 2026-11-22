@@ -1,11 +1,3 @@
-# FIXME: This should be either OMZ or a series of scripts/code with the following requirements:
-# * Sets up zsh prompt
-# * Loads a theme
-# * Loads plugins
-# * Fires up compinit, compdef, etc.
-
-# For now, this file is a placeholder until omz can be easily replaced by the user.
-
 # ============================================================================
 # Load extensions
 # ============================================================================
@@ -30,9 +22,10 @@ if (( EUID != 0 )) && [[ -o login && -t 1 ]]; then
 	fi
 fi
 
-# Pick powerlevel10k: the vendored submodule (loaded by OMZ as ZSH_THEME) unless
-# it's disabled or missing, then a distro-installed copy, which OMZ can't find
-# under its theme dirs, so ZPROFILE_P10K_THEME has 90-p10k.zsh source it instead.
+# Pick powerlevel10k: the vendored submodule (ZSH_THEME, loaded by OMZ, or by
+# 90-p10k.zsh when OMZ is off) unless it's disabled or missing, then a
+# distro-installed copy, which OMZ can't find under its theme dirs, so
+# ZPROFILE_P10K_THEME has 90-p10k.zsh source it instead.
 # Root only takes the distro copy once it has a .p10k.zsh, so it never lands in
 # the configuration wizard, and a ZSH_THEME the user set (e.g. in
 # user/settings.zsh) wins over it. With neither, 21-omz-config.zsh picks

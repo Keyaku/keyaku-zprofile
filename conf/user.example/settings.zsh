@@ -19,5 +19,6 @@
 #   set below) and there's no highlighting.
 # - To skip powerlevel10k even with a distro copy installed, pick another theme:
 # ZSH_THEME=robbyrussell
-# - ohmyzsh off: no OMZ, which today also means no compinit and no plugins.
+# - ohmyzsh off: plain zsh plus compinit; only plugins under custom/plugins
+#   load, and the only ZSH_THEME honoured is powerlevel10k (else zsh's prompt).
 # zsubmod --off powerlevel10k
