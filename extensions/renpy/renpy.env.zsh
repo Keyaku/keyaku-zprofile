@@ -7,4 +7,4 @@
 [[ -d "$HOME"/.renpy || -d "$XDG_DATA_HOME"/renpy ]] || return
 export RENPY_PATH_TO_SAVES="$XDG_DATA_HOME"/renpy
 
-[[ -d "$HOME"/.renpy ]] && xdg-migrate "$HOME"/.renpy "$RENPY_PATH_TO_SAVES"
+[[ -d "$HOME"/.renpy ]] && xdg-migrate -e RENPY_PATH_TO_SAVES "$HOME"/.renpy "$RENPY_PATH_TO_SAVES"

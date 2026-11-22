@@ -7,5 +7,5 @@ export REPO_CONFIG_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 # Migrate a legacy ~/.repoconfig (keyring rebuilds itself if absent anyway).
 if [[ -d "$HOME/.repoconfig" && ! -d "$REPO_CONFIG_DIR/.repoconfig" ]]; then
-	xdg-migrate "$HOME/.repoconfig" "$REPO_CONFIG_DIR/.repoconfig"
+	xdg-migrate -e REPO_CONFIG_DIR "$HOME/.repoconfig" "$REPO_CONFIG_DIR/.repoconfig"
 fi

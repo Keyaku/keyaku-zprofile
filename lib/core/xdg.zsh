@@ -9,17 +9,21 @@ function xdg-migrate {
 		"\t-h, --help : Displays this message"
 		"\t-d, --dry-run : Do not execute anything; just print"
 		"\t-s, --symlink : Also create a symbolic link from SRC_PATH to DST_PATH after migrating"
-		# "\t-e, --env ENV_VAR : Pick environment variable. May help finding respective directories"
+		"\t-a, --auto : Automatic call (from an extension): only migrate in interactive shells, returning 2 otherwise"
+		"\t-e, --env VAR : Like --auto, and when nothing was migrated and DST_PATH doesn't exist yet, unset VAR so the tool keeps its default location"
+		"A directory SRC is moved to (or merged into) DST; a file SRC is moved into DST when DST is a directory, else renamed to DST."
+		"Every migration of SRC is counted; from the ${XDG_MIGRATE_WARN_AT:-3}rd on, a warning says something keeps recreating it."
 	)
 
 	## Setup func opts
-	local f_help f_dryrun f_sym
+	local f_help f_dryrun f_sym f_auto f_env
 	zparseopts -D -F -K -- \
 		{h,-help}=f_help \
 		{d,-dry-run}=f_dryrun \
 		{s,-symlink}=f_sym \
+		{a,-auto}=f_auto \
+		{e,-env}:=f_env \
 		|| return 1
-
 
 	if [[ -n "$f_help" ]]; then
 		>&2 print -l $usage
@@ -28,31 +32,39 @@ function xdg-migrate {
 
 	## Check positional arguments
 	check_argc $# 2 2 || return 1
-	[[ -e "$1" ]] || { print_fn -e "'$1': path not found or valid"; return 1; }
 	local src="$1" dst="$2"
+	local env_var="${f_env[-1]}"
+
+	# Automatic calls run from every kind of shell, including the .zshenv stage
+	# of scp/rsync/cron ones: only move data where a person can see it happen.
+	if [[ -n "$f_auto$env_var" ]] && [[ ! -o interactive ]]; then
+		[[ -n "$env_var" && ! -e "$dst" ]] && unset "$env_var"
+		return 2
+	fi
+
+	[[ -e "$src" ]] || { print_fn -e "'$src': path not found or valid"; return 1; }
 
 	## Parse arguments
 	if [[ "$f_dryrun" ]]; then
 		f_dryrun="echo"
-		echo "Dry-run mode enabled"
+		print_fn -i "Dry-run mode enabled"
 	fi
-
-	# TODO: check envvar against XDG table
 
 	local -i retval=0
 	## If src is a directory
 	if [[ -d "$src" ]]; then
-		echo "Migrating $src to $dst..."
+		print_fn -i "Migrating $src to $dst"
 		if [[ -d "$dst" ]]; then
 			$f_dryrun rsync -Prazq "$src"/ "$dst" && $f_dryrun rm -r "$src"
 		else
+			[[ -d "${dst:h}" ]] || $f_dryrun mkdir -p "${dst:h}"
 			$f_dryrun mv "$src" "$dst"
 		fi
 		retval=$?
-	## If src is a file
+	## If src is a file: into DST when it's a directory, else renamed to DST
 	elif [[ -f "$src" ]]; then
-		echo "Moving $src to $dst..."
-		[[ -d "$dst" ]] || $f_dryrun mkdir -p "$dst"
+		print_fn -i "Moving $src to $dst"
+		[[ -d "$dst" || -d "${dst:h}" ]] || $f_dryrun mkdir -p "${dst:h}"
 		$f_dryrun mv "$src" "$dst"
 		retval=$?
 	else
@@ -66,7 +78,32 @@ function xdg-migrate {
 		retval=$?
 	fi
 
-	return $retval
+	if (( retval )); then
+		[[ -n "$env_var" && ! -e "$dst" ]] && unset "$env_var"
+		return $retval
+	fi
+	[[ -z "$f_dryrun" ]] && _xdg_migrate_count "$src"
+	return 0
+}
+
+# Counts each migration of SRC under $ZSH_CACHE_HOME/xdg-migrate and warns once
+# it recurs: a path that keeps coming back is being recreated by something (an
+# app ignoring its XDG variable, a session started before the variable was set)
+# and needs a fix at the source rather than another move.
+function _xdg_migrate_count {
+	local -r src="${1:A}"
+	local -r count_dir="${ZSH_CACHE_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/zsh}/xdg-migrate"
+	local -r count_file="$count_dir/${src//\//:}"
+	local -i count=0
+	local first
+	[[ -d "$count_dir" ]] || mkdir -p "$count_dir"
+	[[ -r "$count_file" ]] && read -r count first < "$count_file"
+	(( count++ ))
+	[[ -n "$first" ]] || first=$(date +%F)
+	print -r -- "$count $first" >| "$count_file"
+	if (( count >= ${XDG_MIGRATE_WARN_AT:-3} )); then
+		print_fn -w "$src has been migrated $count times since $first: something keeps recreating it. Find what writes there and fix it at the source (reset with: rm '$count_file')"
+	fi
 }
 
 ### Update desktop entries

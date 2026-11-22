@@ -13,7 +13,8 @@ fi
 
 (( ${+DOTNET_ROOT} )) || return
 
-[[ -d "$HOME"/.dotnet ]] && xdg-migrate "$HOME"/.dotnet "$DOTNET_ROOT"
+[[ -d "$HOME"/.dotnet ]] && xdg-migrate -e DOTNET_ROOT "$HOME"/.dotnet "$DOTNET_ROOT"
+(( ${+DOTNET_ROOT} )) || return 0
 
 export DOTNET_INSTALL_DIR="${DOTNET_ROOT}"
 [[ -d "$DOTNET_INSTALL_DIR/.dotnet/tools" ]] && addpath "$DOTNET_INSTALL_DIR/.dotnet/tools"

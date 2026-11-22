@@ -1,7 +1,12 @@
 (( ${+commands[ssh]} )) || return
 
 export SSH_HOME=${XDG_CONFIG_HOME}/ssh
-[[ -d $HOME/.ssh ]] && xdg-migrate $HOME/.ssh "${SSH_HOME}"
+# Outside interactive shells nothing moves; if the data isn't under SSH_HOME
+# yet, xdg-migrate unsets it and this file stops here (ssh keeps using ~/.ssh).
+if [[ -d $HOME/.ssh ]]; then
+	xdg-migrate -e SSH_HOME $HOME/.ssh "${SSH_HOME}"
+	(( ${+SSH_HOME} )) || return 0
+fi
 
 # Create necessary directories. `control_paths` holds ControlMaster sockets:
 # ssh won't create it and silently falls back to a full handshake if missing.

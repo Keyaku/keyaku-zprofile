@@ -58,6 +58,8 @@ Sourced à la carte by standalone scripts under [conf/home/bin/](conf/home/bin/)
 ### Extensions
 Each extension in `extensions/` starts with guard lines that `return` early if the relevant tool is not installed — this is intentional and must be preserved. Guards use `command-has` or direct `(( $+commands[...] ))` checks.
 
+No silent side effects outside a tool's own XDG dir (plain `mkdir` of that dir is fine): moving data, linking, editing other apps' files or enabling units must print one `print_fn -i` line when it actually happens, saying what changed and how to undo it. System files (`/etc`) are never edited from an extension; that belongs in a `first_init.zsh` step that asks. Relocating a stray `~/.foo` uses `xdg-migrate -e VAR ~/.foo "$VAR"` (or `-a` when there's no variable): it moves only in interactive shells, unsets `VAR` while the data isn't in place yet so the tool keeps its default, and warns from the 3rd time the same path is migrated (counts in `$ZSH_CACHE_HOME/xdg-migrate/`), since that means something keeps recreating it.
+
 ### Regex
 Use **POSIX ERE** patterns, not PCRE. Termux (Android) `zsh` builds without PCRE support, so patterns like `\d`, `\s`, `\w` will fail with "trailing backslash" or similar errors. Use `[[:digit:]]`, `[[:space:]]`, `[[:alnum:]]` etc. instead. ZSH glob-style patterns (`<->` for integers, `(#b)` groups) are fine in their appropriate contexts.
 
