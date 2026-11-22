@@ -28,7 +28,7 @@ if (( ${(v)#vsc_flatpaks} )); then
 				addpath "$JAVA_HOME/bin"
 				# Force reload java plugin, envvars, etc.
 				# TODO: This is a hack; probably use a hook or an array instead.
-				_zsh_source_dir ${ZDOTDIR}/extensions/java "extensions/java"
+				_zsh_source_dir ${ZDOTDIR}/extensions/java "extensions/java" "*.zsh" ":zprofile:extensions"
 			fi
 		fi
 	done

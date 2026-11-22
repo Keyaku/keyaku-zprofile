@@ -52,6 +52,9 @@ Sourced à la carte by standalone scripts under [conf/home/bin/](conf/home/bin/)
 
 **Footgun**: never name a local `path` — it's tied to `$PATH` in zsh and `local path=…` silently destroys PATH inside the function. Prefer `store_path`, `config_path`, `target_dir`, etc. Same caution for `file` (shadows the `file(1)` command).
 
+### User settings
+`$ZDOTDIR/settings.local.zsh` (gitignored; template `conf/settings.example.zsh`) is sourced by `.zshenv` right after `lib/core`, before every stage. It holds the user's choices via `zext --off/--on NAME...`, a thin wrapper over `_ztoggle` in `lib/core/system.zsh` that sets the zstyle `':zprofile:extensions:<name>' enabled` (default on). `_zsh_source_dir`'s optional 4th argument is the zstyle context it checks per extension directory.
+
 ### Extensions
 Each extension in `extensions/` starts with guard lines that `return` early if the relevant tool is not installed — this is intentional and must be preserved. Guards use `command-has` or direct `(( $+commands[...] ))` checks.
 

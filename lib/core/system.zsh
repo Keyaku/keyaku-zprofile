@@ -112,3 +112,57 @@ if has_systemd; then
 	### Udev control
 	alias udev-reload='sudo udevadm control --reload-rules && sudo udevadm trigger && sudo systemctl restart systemd-udevd.service'
 fi
+
+# Shared implementation of zext. Sets `zstyle "CTX:NAME" enabled
+# yes|no` for every NAME after --on/--off; with no arguments, lists each known
+# NAME and whether it's enabled. Parsed by hand because zparseopts can't take a
+# list of values per flag.
+function _ztoggle {
+	local -r ctx=$1 kind=$2 known_var=$3
+	shift 3
+	local -a known=(${(P)known_var})
+	local -r usage=(
+		"Usage: ${funcstack[2]} [(--on|--off) NAME...]..."
+		"\t[-h|--help]     : Print this help message"
+		"\t[--on NAME...]  : Enable each ${kind} named"
+		"\t[--off NAME...] : Disable each ${kind} named ('*' matches all; a name always wins over '*')"
+		"With no arguments, lists each ${kind} and whether it's enabled."
+		"Changes apply to shells started afterwards; call it from \$ZDOTDIR/settings.local.zsh to keep them."
+	)
+
+	if (( ! $# )); then
+		local name
+		for name in ${known}; do
+			zstyle -T "${ctx}:${name}" enabled && printf '%-28s on\n' "$name" || printf '%-28s off\n' "$name"
+		done
+		return 0
+	fi
+
+	local arg flag state
+	local -i pending=0
+	for arg; do
+		case $arg in
+		-h|--help ) >&2 print -l $usage; return 0 ;;
+		--on|--off )
+			(( pending )) && { print_fn -e "Option $flag needs at least one name"; return 1 }
+			flag=$arg; state=${${arg:#--on}:+no}; state=${state:-yes}; pending=1
+		;;
+		-* ) print_fn -e "Unknown option: $arg"; >&2 print -l $usage; return 1 ;;
+		* )
+			[[ -z "$flag" ]] && { print_fn -e "'$arg' must follow --on or --off"; return 1 }
+			[[ "$arg" == '*' ]] || (( ${known[(Ie)$arg]} )) || print_fn -w "No such ${kind}: $arg"
+			zstyle "${ctx}:${arg}" enabled $state
+			pending=0
+		;;
+		esac
+	done
+	(( pending )) && { print_fn -e "Option $flag needs at least one name"; return 1 }
+	return 0
+}
+
+# Enables or disables extensions (directories under $ZDOTDIR/extensions).
+# See _ztoggle for the arguments; e.g. `zext --off docker vscode --on pass`.
+function zext {
+	local -a known=("$ZDOTDIR"/extensions/*(N/:t))
+	_ztoggle ':zprofile:extensions' extension known "$@"
+}

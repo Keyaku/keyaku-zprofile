@@ -47,7 +47,7 @@ It's structured as follows:
 	4. `.zlogin` - Used for executing user's commands at ending of initial progress, will be read when starting as a **_login shell_**. Typically used to autostart command line utilities. Should not be used to autostart graphical sessions, as at this point the session might contain configuration meant only for an interactive shell.
 		1. Loads every `.zsh` file in `zstages/login/`; the filenames reflect the priority for each file.
 2. My own set of plugins, named `extensions` to differentiate from custom plugins, under `extensions/`. The main points for this over putting them in `custom/plugins/` are:
-	* All `extensions/` are loaded unconditionally, while `custom/plugins/` depend on which plugins you insert into `plugins`.
+	* All `extensions/` are loaded by default, while `custom/plugins/` depend on which plugins you insert into `plugins`. Any of them can be turned off with `zext` (see [Customization](#customization)).
 	* Every extension contains first lines which serve as guards in case they're not needed to be loaded; for instance, you don't have docker installed, so the `docker` extension will return without doing anything.
 	* The above ensure extensions are loaded only if the appropriate conditions are met, minimizing session login times while keeping the environment well equipped.
 	* Completion files (`_*`) are not loaded or considered, avoiding `fpath` pollution.
@@ -115,6 +115,12 @@ zsh conf/first_setup.zsh
 ### Customization
 
 Right now, customization is feasible but not yet easy.
+
+#### Personal settings
+
+Copy `conf/settings.example.zsh` to `$ZDOTDIR/settings.local.zsh` (gitignored). `.zshenv` sources it right after `lib/core/`, before any stage, so it applies to every kind of shell.
+
+`zext` sets which extensions load: `zext --off docker vscode`, or `zext --off '*' --on git ssh` to load only a few (a name always wins over `'*'`). Run it with no arguments to list every extension and whether it's on. It just sets the zstyle `':zprofile:extensions:<name>' enabled`, so setting that directly works too.
 
 #### Plugins, themes, etc.
 

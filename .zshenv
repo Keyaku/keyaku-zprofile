@@ -43,17 +43,23 @@ _zsh_source_file() {
 	[[ -n "$ZSH_PROFILE_BENCHMARK" ]] && print -u2 "[$stage] ${zsh_file:t} took $(( EPOCHREALTIME - t_start ))s"
 }
 
-# Helper function for sourcing directories
+# Helper function for sourcing directories.
+# With a 4th argument (a zstyle context prefix, e.g. ':zprofile:extensions'),
+# each file is skipped when `zstyle -T "<prefix>:<parent dir name>" enabled` is
+# false, so `zstyle ':zprofile:extensions:docker' enabled no` turns one
+# extension off and `zstyle ':zprofile:extensions:*' enabled no` all of them.
 _zsh_source_dir() {
 	local target_dir=$1
 	local stage=${2:-unknown}
 	local pattern=${3:-"*.zsh"}
+	local ctx=$4
 
 	[[ -d "$target_dir" ]] || return 1
 
 	# Use glob qualifiers: N (null_glob), . (regular LIST_files), o (order by name)
 	local zsh_file
 	for zsh_file in "${target_dir}"/${~pattern}(N.on); do
+		[[ -n "$ctx" ]] && ! zstyle -T "${ctx}:${zsh_file:h:t}" enabled && continue
 		_zsh_source_file "$zsh_file" "$stage"
 	done
 }
@@ -64,6 +70,16 @@ _zsh_source_dir() {
 # These are fundamental utilities needed everywhere.
 
 _zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
+
+# ============================================================================
+# User settings
+# ============================================================================
+# Gitignored file for the user's own choices, e.g. which extensions to load
+# (`zext`). Sourced after lib/core, so that function exists, and before every
+# stage, so all of them see the result.
+# See conf/settings.example.zsh.
+
+[[ -r "${ZDOTDIR}/settings.local.zsh" ]] && _zsh_source_file "${ZDOTDIR}/settings.local.zsh" "settings"
 
 # ============================================================================
 # Stage 2: Load zshenv stage files

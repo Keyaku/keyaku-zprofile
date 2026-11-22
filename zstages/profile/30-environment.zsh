@@ -12,4 +12,4 @@
 haspath "$HOME/.local/bin" || addpath 1 "$HOME/.local/bin"
 
 # Source profile files from extensions
-_zsh_source_dir ${ZDOTDIR}/extensions "extensions/*.profile.zsh" '*/*.profile.zsh'
+_zsh_source_dir ${ZDOTDIR}/extensions "extensions/*.profile.zsh" '*/*.profile.zsh' ':zprofile:extensions'

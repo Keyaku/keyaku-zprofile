@@ -8,4 +8,4 @@
 ##############################################################################
 
 # Source environment files from extensions
-_zsh_source_dir ${ZDOTDIR}/extensions "extensions/*.env.zsh" '*/*.env.zsh'
+_zsh_source_dir ${ZDOTDIR}/extensions "extensions/*.env.zsh" '*/*.env.zsh' ':zprofile:extensions'

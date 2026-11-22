@@ -1,0 +1,9 @@
+#compdef zext
+
+local -a names=("$ZDOTDIR"/extensions/*(N/:t))
+
+_arguments -s -S \
+	'(- *)'{-h,--help}'[show help]' \
+	'*--on[enable the extensions that follow]' \
+	'*--off[disable the extensions that follow]' \
+	'*:extension:compadd -a names'

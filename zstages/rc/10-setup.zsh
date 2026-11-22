@@ -12,7 +12,7 @@
 # Similar to plugins, but should be loaded before any plugin and/or
 # plugin loader (like OMZ).
 
-_zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh'
+_zsh_source_dir "${ZDOTDIR}/extensions" "extensions" '*/*.(plugin|ext).zsh' ':zprofile:extensions'
 
 # ============================================================================
 # Themes
