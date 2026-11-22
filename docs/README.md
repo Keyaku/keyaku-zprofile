@@ -91,7 +91,7 @@ In the future, this block should be adapted to any fetch program of your choice.
 
 ### Installation
 
-Most of the environment is at an acceptable stage for anyone to pick up and use. It works best with Arch Linux, but it should work with any Linux distro, macOS or Termux; some systems require a bit more tweaking due to differences in file layout. The environment lives in `$HOME/.local/config/zsh`, with `$XDG_CONFIG_HOME` set to `$HOME/.local/config`.
+Most of the environment is at an acceptable stage for anyone to pick up and use. It works best with Arch Linux, but it should work with any Linux distro, macOS or Termux; some systems require a bit more tweaking due to differences in file layout. The environment lives in `$HOME/.local/config/zsh`, with `$XDG_CONFIG_HOME` set to `$HOME/.local/config`. zsh gets that from `/etc/zsh/zshenv` (`setup_zsh`); `setup_xdg` also sets `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` for everything else, through `/etc/security/pam_env.conf` for logins and a sudoers `env_file` for commands run as root, since tools like ssh fail when a variable their config uses is missing.
 
 With `zsh` and `git` installed, run:
 ```shell

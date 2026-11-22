@@ -258,7 +258,7 @@ function setup_syncthing {
 		ask -B -d y "Sync $label ($dir) with Syncthing as folder '$id'?" || continue
 		dir=${dir:A}
 		[[ -d "$dir" ]] || mkdir -p "$dir" || return 1
-		install_ignores "$id" "$dir" || { print_fn -e "Couldn't write the ignore files in $dir"; return 1 }
+		install_ignores "$id" "$dir" || { print_fn -e "Couldn't write the ignore files in $dir"; return 1; }
 
 		if (( ${existing[(Ie)$id]} )); then
 			current=$("${st[@]}" cli config folders "$id" path get)
@@ -333,6 +333,42 @@ function setup_xdg {
 			ln -s "$HOME/.local/$dotdir" "$HOME/.$dotdir"
 		fi
 	done
+
+	# Make XDG_CONFIG_HOME and XDG_CACHE_HOME exist outside zsh too, since
+	# /etc/zsh/zshenv only reaches processes started from zsh: logins get them
+	# from pam_env (per user, through @{HOME}), and commands run as root through
+	# sudo (which resets the environment) from an env_file. Without them, ssh
+	# refuses ssh_config paths built from ${XDG_CONFIG_HOME}. The systemd user
+	# manager gets them from conf/etc/systemd/user.conf.d/xdg.conf.
+	[[ -n "$SUDO" ]] || return 0
+	local name dir
+
+	local -r pam_env=/etc/security/pam_env.conf
+	if [[ -f "$pam_env" ]]; then
+		for name dir in XDG_CONFIG_HOME config XDG_CACHE_HOME cache; do
+			\grep -Eq "^${name}[[:space:]]" "$pam_env" && continue
+			print -r -- "${name} DEFAULT=@{HOME}/.local/${dir}" | $SUDO tee -a "$pam_env" >/dev/null \
+				&& print_fn -i "Added ${name} to ${pam_env} (remove that line to undo)"
+		done
+	fi
+
+	(( ${+commands[visudo]} )) && [[ -d /etc/sudoers.d ]] || return 0
+	local -r root_home=$(getent passwd root | cut -d: -f6)
+	local -r env_file=/etc/sudo-root.env sudoers_file=/etc/sudoers.d/50-xdg-env
+	local tmp_env=$(mktemp) tmp_sudoers=$(mktemp)
+	print -l -- "XDG_CONFIG_HOME=${root_home}/.local/config" "XDG_CACHE_HOME=${root_home}/.local/cache" > "$tmp_env"
+	print -r -- "Defaults>root env_file=${env_file}" > "$tmp_sudoers"
+	if ! $SUDO cmp -s "$tmp_env" "$env_file" || ! $SUDO cmp -s "$tmp_sudoers" "$sudoers_file"; then
+		# Never install a sudoers file visudo rejects: a broken one locks sudo out
+		if visudo -cqf "$tmp_sudoers"; then
+			$SUDO install -m 0644 -o root -g root "$tmp_env" "$env_file" \
+				&& $SUDO install -m 0440 -o root -g root "$tmp_sudoers" "$sudoers_file" \
+				&& print_fn -i "Set the XDG variables for sudo as root in ${env_file} via ${sudoers_file} (delete both to undo)"
+		else
+			print_fn -e "visudo rejected the generated ${sudoers_file:t}; skipped the sudo part"
+		fi
+	fi
+	rm -f "$tmp_env" "$tmp_sudoers"
 }
 
 # Sets up some pacman configuration and hooks
@@ -614,7 +650,7 @@ typeset -rA FN_DESCRIPTIONS=(
 	[setup_zsh]="Make zsh read this ZDOTDIR system-wide (/etc/zsh/zshenv)"
 	[setup_ssh]="Sync the XDG-aware SSH client/server drop-ins into /etc/ssh"
 	[setup_termux]="Set up Termux (mirrors, storage, .termux config)"
-	[setup_xdg]="Disable xdg-user-dirs-update and move ~/.config, ~/.cache under ~/.local"
+	[setup_xdg]="Disable xdg-user-dirs-update, move ~/.config, ~/.cache under ~/.local, and set the XDG variables for logins and sudo (pam_env, sudoers.d)"
 	[setup_de]="Install desktop extras (KDE: kdeconnect)"
 	[setup_steam_xdg]="Wrap Steam so it stops creating ~/.pki"
 	[setup_root]="Share this zsh environment with root (sparse ZDOTDIR)"
