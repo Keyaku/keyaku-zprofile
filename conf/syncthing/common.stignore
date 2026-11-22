@@ -1,0 +1,26 @@
+// Rules shared by every folder (appended after the folder's own rules; the
+// first matching pattern wins). (?d) lets Syncthing delete these files when
+// it needs to remove their directory.
+
+// Syncthing conflict copies
+*.sync-conflict*
+
+// Backups, temporary and editor files
+(?d)*.bak
+(?d)*.bak-*
+(?d)*.old
+(?d)*~
+(?d)*.tmp
+(?d).*.swp
+(?d).#*
+
+// Logs and shell histories
+(?d)*.log
+(?d)*_history
+(?d).*_history
+
+// Desktop metadata
+(?d).DS_Store
+(?d).directory
+(?d)Thumbs.db
+(?d)desktop.ini

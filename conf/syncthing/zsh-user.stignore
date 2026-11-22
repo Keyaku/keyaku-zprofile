@@ -1,0 +1,5 @@
+// $ZDOTDIR/user, the personal overlay (see conf/user.example/)
+
+// Compiled files, rebuilt per machine
+*.zwc
+*.zwc.old

@@ -126,6 +126,9 @@ The dominant remaining startup cost is OMZ (`oh-my-zsh.sh` core + the loader in 
 - **pyvenv auto-activation** lives in the user's own `user/login/90-user.zsh` (moved out of the tracked files with #14), not in the repo.
 - **Per-session guards**: some interactive setup that only needs to run once per session (e.g. the gpg-agent `systemctl` probe in `extensions/gpg-agent/`) is gated behind an exported marker so nested shells skip it; daemon-probing work that only an interactive session needs (e.g. the docker container-alias block) is deferred to a one-shot `precmd` hook so non-interactive shells skip it entirely.
 
+## Syncthing
+`setup_syncthing` (in `first_init.zsh`) registers `ssh-config` ($SSH_HOME), `gnupg-home` ($GNUPGHOME) and `zsh-user` ($ZDOTDIR/user) under those fixed IDs, via a native `syncthing` or the SyncThingy Flatpak's CLI. Ignore rules live in `conf/syncthing/<id>.stignore` + `common.stignore`; the step generates the synced `.stglobalignore` from them and a per-machine `.stignore` that only `#include`s it plus machine-local rules. Change shared rules in `conf/syncthing/`, never in a live `.stglobalignore`. Moving a synced file into an ignored path deletes it on every peer: ignore it locally first, rescan, then move.
+
 ## Task tracking
 Planned work lives in GitHub issues (`Keyaku/keyaku-zprofile`, grouped by milestone). `docs/TODO.md` is an untracked personal list: keep it aligned with the issues (reference `#N` on items that have one), though it may hold small extra tasks that don't warrant an issue.
 

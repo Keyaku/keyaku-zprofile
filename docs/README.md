@@ -157,6 +157,20 @@ SSH is set up to follow the XDG Base Directory Specification, and its agent runs
 - Shells that don't descend from the session manager (TTY logins, `flatpak-spawn --host` shells) don't inherit it, so the extension exports `SSH_AUTH_SOCK` itself when the variable is unset and the socket exists.
 - Keys are loaded passively: put `AddKeysToAgent yes` under `Host *` in `${SSH_HOME}/config.d/user.conf`, and the first successful use of a key adds it to the agent for the rest of the session.
 
+### Syncing between machines
+
+The setup script's `setup_syncthing` step registers the folders this setup defines with [Syncthing](https://syncthing.net/), each under a fixed folder ID so every machine that runs it gets the same folder:
+
+| Folder ID | Path | Syncs | Never syncs |
+|---|---|---|---|
+| `ssh-config` | `$SSH_HOME` | `config`, `config.d/`, `authorized_keys`, public keys | `keys/`, `id_*` private keys, `known_hosts*`, sockets |
+| `gnupg-home` | `$GNUPGHOME` | public keyring, trust database, config | `private-keys-v1.d/`, `openpgp-revocs.d/`, sockets and locks |
+| `zsh-user` | `$ZDOTDIR/user` | your [overlay](#your-own-overlay-user) | compiled `*.zwc` |
+
+All three also skip backups, temporary and editor files, logs, shell histories, conflict copies and desktop metadata. Keep SSH private keys in `$SSH_HOME/keys/`; the step warns about any it finds elsewhere.
+
+Syncthing never syncs `.stignore` itself, so the step writes the shared rules (from `conf/syncthing/`) into a `.stglobalignore` that does sync, and a `.stignore` that includes it, followed by any rules only that machine needs. Rules from an existing `.stignore` that the shared ones don't cover are kept as machine-local. It works with a native `syncthing` or the SyncThingy Flatpak, and it doesn't pair devices or share folders with them; do that in the Syncthing GUI. Other configuration (terminal emulators, desktop settings) is out of scope for a zsh setup.
+
 ### Tasks
 
 Planned work is tracked on the [Issues](https://github.com/Keyaku/keyaku-zprofile/issues) page, grouped by milestone.

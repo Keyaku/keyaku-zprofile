@@ -1,0 +1,11 @@
+// $SSH_HOME. Private keys go in keys/, which never syncs; keys with the
+// default names (id_*) are also skipped anywhere, but their .pub files sync.
+keys/
+!id_*.pub
+id_*
+
+// Host-specific or runtime state
+known_hosts*
+agent/
+ssh-agent
+control_paths/

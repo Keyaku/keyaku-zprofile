@@ -1,0 +1,15 @@
+// $GNUPGHOME. Public keyring, trust database and config sync; secret keys
+// and revocation certificates don't (back those up separately).
+private-keys-v1.d/
+openpgp-revocs.d/
+
+// Runtime sockets, locks and agent/smartcard state
+S.gpg-agent*
+S.scdaemon
+log-socket
+*.lk
+reader_*.status
+
+// Regenerable
+random_seed
+crls.d/
