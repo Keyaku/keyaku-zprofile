@@ -1,3 +1,8 @@
+# The repo this environment runs from. Usually $ZDOTDIR itself, but root's sparse
+# ZDOTDIR (see setup_root) only links lib/ and friends, so resolve this file's
+# real path instead; repo-level files like .gitmodules live there.
+typeset -g ZPROFILE_REPO=${${(%):-%x}:A:h:h:h}
+
 # Sleeps while displaying a message
 function sleep_for {
 	local -r usage=(
@@ -180,8 +185,8 @@ function zext {
 # zsh-syntax-highlighting). See _ztoggle and _zsubmodule_enabled.
 function zsubmod {
 	local -a known
-	[[ -r "$ZDOTDIR/.gitmodules" ]] && \
-		known=(${${(M)${(f)"$(<"$ZDOTDIR/.gitmodules")"}:#(|*[[:blank:]])path*=*}##*[=/[:blank:]]})
+	[[ -r "$ZPROFILE_REPO/.gitmodules" ]] && \
+		known=(${${(M)${(f)"$(<"$ZPROFILE_REPO/.gitmodules")"}:#(|*[[:blank:]])path*=*}##*[=/[:blank:]]})
 	_ztoggle ':zprofile:submodules' submodule known "$@"
 }
 
