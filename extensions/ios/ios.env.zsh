@@ -1,3 +1,5 @@
+# iOS device tooling (see extensions/android for the Android counterpart)
+
 (( ${+commands[pymobiledevice3]} )) || return
 
 # pymobiledevice3 hardcodes ~/.pymobiledevice3 (pairing records, downloaded
