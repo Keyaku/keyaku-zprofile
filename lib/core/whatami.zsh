@@ -2,7 +2,8 @@
 typeset -agxU WHATAMI_LIST=()
 
 # Cache file location. Remove this file
-WHATAMI_CACHE_FILE="${ZSH_CACHE_HOME:-${XDG_CACHE_HOME:-$HOME/.local/cache}/zsh}/whatami_cache"
+# _v2: also lists ID_LIKE entries; the new name makes older caches regenerate
+WHATAMI_CACHE_FILE="${ZSH_CACHE_HOME:-${XDG_CACHE_HOME:-$HOME/.local/cache}/zsh}/whatami_cache_v2"
 
 function whatami {
 	if (( ${@[(I)-*]} )); then
@@ -45,13 +46,18 @@ function whatami {
 		# Distribution detection - only if Linux
 		if (( ${WHATAMI_LIST[(I)Linux]} )); then
 			if [[ -f /etc/os-release ]]; then
-				# Faster than lsb_release
-				local distro
-				local line
+				# Faster than lsb_release. ID plus every ID_LIKE entry, so a
+				# derivative (e.g. EndeavourOS, ID_LIKE=arch) also answers to its base.
+				local key val distro
+				local -a distro_like
 				while IFS='=' read -r key val; do
-					[[ "$key" == "ID" ]] && { distro="${(C)val//\"/}"; break; }
+					case $key in
+					ID ) distro="${(C)val//\"/}" ;;
+					ID_LIKE ) distro_like=(${(C)${=val//\"/}}) ;;
+					esac
 				done < /etc/os-release
 				[[ "$distro" ]] && WHATAMI_LIST+=(${distro})
+				WHATAMI_LIST+=(${distro_like:#$distro})
 			elif (( ${+commands[lsb_release]} )); then
 				# Fallback to lsb_release
 				WHATAMI_LIST+=("$(lsb_release -si)")
