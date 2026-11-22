@@ -113,7 +113,16 @@ if has_systemd; then
 	alias udev-reload='sudo udevadm control --reload-rules && sudo udevadm trigger && sudo systemctl restart systemd-udevd.service'
 fi
 
-# Shared implementation of zext. Sets `zstyle "CTX:NAME" enabled
+# Whether the vendored submodule NAME is enabled. NAME is the last component of
+# its .gitmodules path (ohmyzsh, powerlevel10k, zsh-syntax-highlighting).
+# Enabled unless the user set `zstyle ':zprofile:submodules:NAME' enabled no`
+# (e.g. in $ZDOTDIR/settings.local.zsh). A disabled submodule is neither
+# fetched by `zupdate --submodules` nor loaded.
+function _zsubmodule_enabled {
+	zstyle -T ":zprofile:submodules:${1:t}" enabled
+}
+
+# Shared implementation of zext and zsubmod. Sets `zstyle "CTX:NAME" enabled
 # yes|no` for every NAME after --on/--off; with no arguments, lists each known
 # NAME and whether it's enabled. Parsed by hand because zparseopts can't take a
 # list of values per flag.
@@ -165,4 +174,26 @@ function _ztoggle {
 function zext {
 	local -a known=("$ZDOTDIR"/extensions/*(N/:t))
 	_ztoggle ':zprofile:extensions' extension known "$@"
+}
+
+# Enables or disables vendored git submodules (ohmyzsh, powerlevel10k,
+# zsh-syntax-highlighting). See _ztoggle and _zsubmodule_enabled.
+function zsubmod {
+	local -a known
+	[[ -r "$ZDOTDIR/.gitmodules" ]] && \
+		known=(${${(M)${(f)"$(<"$ZDOTDIR/.gitmodules")"}:#(|*[[:blank:]])path*=*}##*[=/[:blank:]]})
+	_ztoggle ':zprofile:submodules' submodule known "$@"
+}
+
+# Prints the path of a zsh-syntax-highlighting installed by the system's
+# package manager, if any (fails otherwise).
+function _zsh_highlight_system_path {
+	local -a candidates=(
+		/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Arch
+		/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Debian, Ubuntu, Fedora
+		/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Homebrew, BSD
+	)
+	[[ -n "$PREFIX" ]] && candidates+=("$PREFIX"/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh)  # Termux
+	local -a found=(${^candidates}(N.))
+	(( ${#found} )) && print -r -- "${found[1]}"
 }

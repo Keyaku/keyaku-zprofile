@@ -42,7 +42,8 @@ HIST_STAMPS="dd/mm/yyyy"
 
 # Select plugins to load
 (( ${+commands[ufw]} )) && plugins+=(ufw)
-[[ -e "$ZSH_CUSTOM"/plugins/zsh-syntax-highlighting ]] && plugins+=(zsh-syntax-highlighting)
+# zsh-syntax-highlighting is not an OMZ plugin here: 95-syntax-highlighting.zsh
+# sources it last, from the submodule or a distro copy.
 # gpg-agent is handled by extensions/gpg-agent/ (tty + agent ensure); OMZ's
 # gpg-agent plugin only added unused SSH-support wiring at ~4ms/shell, so it is
 # intentionally not loaded here.

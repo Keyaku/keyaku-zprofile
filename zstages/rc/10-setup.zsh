@@ -30,8 +30,8 @@ if (( EUID != 0 )) && [[ -o login && -t 1 ]]; then
 	fi
 fi
 
-# Check for p10k; if non-existent, use robbyrussel
-if [[ -e "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
+# Check for p10k; if disabled or non-existent, use robbyrussell
+if _zsubmodule_enabled powerlevel10k && [[ -e "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then
 	ZSH_THEME="powerlevel10k"
 
 	# Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.

@@ -12,3 +12,9 @@
 # Or load only a chosen few (a name always wins over '*'):
 # zext --off '*' --on git ssh ssh-agent gpg pass
 
+# Vendored submodules: ohmyzsh, powerlevel10k, zsh-syntax-highlighting.
+# A disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
+# - powerlevel10k off: the prompt falls back to robbyrussell.
+# - zsh-syntax-highlighting off: a distro-installed copy is used if present.
+# - ohmyzsh off: no OMZ, which today also means no compinit and no plugins.
+# zsubmod --off powerlevel10k

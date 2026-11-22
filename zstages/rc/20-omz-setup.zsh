@@ -2,7 +2,8 @@
 # Oh-My-ZSH pre-load configuration file
 ##############################################################################
 
-# Check for Oh-My-ZSH; stop processing if not found
+# Check for Oh-My-ZSH; stop processing if disabled or not found
+_zsubmodule_enabled ohmyzsh || return
 [[ -f "$ZDOTDIR/vendor/ohmyzsh/oh-my-zsh.sh" ]] || return
 
 # Suppress insecure completion directory warnings when running as root

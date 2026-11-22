@@ -25,7 +25,13 @@ if (( ! ${#ZPROFILE_MODULES} )); then
 		ZPROFILE_MODULES=($(<"$ZSH_CACHE_HOME/zprofile_modules"))
 	fi
 fi
+# Only submodules the user hasn't disabled (see _zsubmodule_enabled)
 local -a empty_modules=("$ZDOTDIR"/${^ZPROFILE_MODULES}(N^F))
+local empty_module
+for empty_module in ${empty_modules}; do
+	_zsubmodule_enabled "$empty_module" || empty_modules=(${empty_modules:#$empty_module})
+done
+unset empty_module
 if (( ${#empty_modules} )); then
 	# Initialize submodules
 	zupdate --submodules

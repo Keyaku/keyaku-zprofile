@@ -60,10 +60,9 @@ It's structured as follows:
 
 ### Dependencies
 
-Currently, all set git submodules are required for the environment to work correctly. This will be addressed in the future so they become optional.
-What this means: _Oh-My-ZSH_, _powerlevel10k_ and _zsh-syntax-highlighting_ are all assumed enabled and loaded by default (provided the setup script is executed without errors).
+_Oh-My-ZSH_, _powerlevel10k_ and _zsh-syntax-highlighting_ are git submodules, enabled and loaded by default. Each can be turned off with `zsubmod --off <name>` in `settings.local.zsh` (see [Customization](#customization)); a disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
 
-If you don't like or want these, it's possible to change it after the fact, but this project still isn't quite ready for such scenarios. It's only a matter of time before I make this more adaptable to users' needs.
+Turning off _powerlevel10k_ or _zsh-syntax-highlighting_ is fully supported. Turning off _Oh-My-ZSH_ works, but nothing replaces it yet, so you also lose `compinit` and plugin loading.
 
 #### Oh-My-ZSH
 
@@ -77,8 +76,8 @@ Its folder is symlinked into `custom/themes/`.
 
 #### zsh-syntax-highlighting
 
-This plugin is loaded like any other plugin at the `zshrc` stage, added to `plugins` array in `zstages/rc/20-omz-setup.zsh`.
-Its folder is symlinked into `custom/plugins/`.
+This plugin is sourced last in the `zshrc` stage, by `zstages/rc/95-syntax-highlighting.zsh`, since it wraps every ZLE widget defined before it. It doesn't go through OMZ.
+When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead, if there is one. The setup script offers to switch to that copy when it finds one.
 
 #### fastfetch
 
@@ -120,7 +119,12 @@ Right now, customization is feasible but not yet easy.
 
 Copy `conf/settings.example.zsh` to `$ZDOTDIR/settings.local.zsh` (gitignored). `.zshenv` sources it right after `lib/core/`, before any stage, so it applies to every kind of shell.
 
-`zext` sets which extensions load: `zext --off docker vscode`, or `zext --off '*' --on git ssh` to load only a few (a name always wins over `'*'`). Run it with no arguments to list every extension and whether it's on. It just sets the zstyle `':zprofile:extensions:<name>' enabled`, so setting that directly works too.
+Two functions set what loads, with the same syntax:
+
+- `zext` for extensions: `zext --off docker vscode`, or `zext --off '*' --on git ssh` to load only a few (a name always wins over `'*'`).
+- `zsubmod` for submodules: `zsubmod --off powerlevel10k`.
+
+Run either with no arguments to list everything and whether it's on. Both just set zstyles (`':zprofile:extensions:<name>' enabled` and `':zprofile:submodules:<name>' enabled`), so setting those directly works too.
 
 #### Plugins, themes, etc.
 

@@ -1,0 +1,11 @@
+#compdef zsubmod
+
+local -a names
+[[ -r "$ZDOTDIR/.gitmodules" ]] && \
+	names=(${${(M)${(f)"$(<"$ZDOTDIR/.gitmodules")"}:#(|*[[:blank:]])path*=*}##*[=/[:blank:]]})
+
+_arguments -s -S \
+	'(- *)'{-h,--help}'[show help]' \
+	'*--on[enable the submodules that follow]' \
+	'*--off[disable the submodules that follow]' \
+	'*:submodule:compadd -a names'

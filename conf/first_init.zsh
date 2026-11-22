@@ -100,6 +100,21 @@ function setup_ssh {
 	fi
 }
 
+# Offers to use a distro-installed zsh-syntax-highlighting instead of the
+# vendored submodule, recording the choice in $ZDOTDIR/settings.local.zsh.
+function setup_submodules {
+	_zsubmodule_enabled zsh-syntax-highlighting || return 0
+	local sys_path
+	sys_path=$(_zsh_highlight_system_path) || return 0
+
+	ask -B -d y "zsh-syntax-highlighting is installed system-wide ($sys_path). Use it instead of the vendored submodule?" || return 0
+
+	print -r -- "zsubmod --off zsh-syntax-highlighting" >> "$ZDOTDIR/settings.local.zsh"
+	zsubmod --off zsh-syntax-highlighting
+	print_fn -s "Disabled the zsh-syntax-highlighting submodule in $ZDOTDIR/settings.local.zsh"
+	print_fn -i "To free its disk space: git -C \"\$ZDOTDIR\" submodule deinit vendor/plugins/zsh-syntax-highlighting"
+}
+
 # Initializes the password store with one of the user's existing GPG secret keys.
 # Skipped when pass/gpg are absent, the store is already initialized, or no
 # secret key exists (key creation is left to the user: `gpg --full-generate-key`).
@@ -466,7 +481,7 @@ function setup_git_hooks {
 ### Function filters
 
 # Base functions for all platforms
-typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh setup_pass setup_git_hooks)
+typeset -ra BASE_FUNCTIONS=(install_pkgs setup_submodules setup_zsh setup_ssh setup_pass setup_git_hooks)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
@@ -490,7 +505,7 @@ typeset -rA FN_DESCRIPTIONS=(
 	[setup_pacman]="Install the pacman hook that rehashes zsh commands"
 )
 # Steps that already ask before doing anything, so main doesn't ask again
-typeset -ra SELF_PROMPTING=(setup_pass setup_claude setup_git_hooks)
+typeset -ra SELF_PROMPTING=(setup_submodules setup_pass setup_claude setup_git_hooks)
 
 ### Main function
 

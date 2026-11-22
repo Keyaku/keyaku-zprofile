@@ -599,7 +599,14 @@ function zupdate {
 				git -C "${ZDOTDIR}" config --remove-section "submodule.${sm_name}" 2>/dev/null
 			done
 
-		git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc)
+		# Only fetch submodules the user hasn't disabled (see _zsubmodule_enabled)
+		local -a sm_enabled=()
+		git -C "${ZDOTDIR}" config -f "${ZDOTDIR}/.gitmodules" --get-regexp '^submodule\..*\.path$' | \
+			while read -r sm_key sm_path; do
+				_zsubmodule_enabled "$sm_path" && sm_enabled+=("$sm_path")
+			done
+		(( ${#sm_enabled} )) && \
+			git -C "${ZDOTDIR}" submodule -q update --init --recursive --remote --jobs=$(nproc) -- ${sm_enabled}
 
 		# Propagate `ignore` from .gitmodules into .git/config — git status/p10k
 		# read `submodule.<name>.ignore` from config only, not .gitmodules, so

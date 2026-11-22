@@ -74,9 +74,9 @@ _zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
 # ============================================================================
 # User settings
 # ============================================================================
-# Gitignored file for the user's own choices, e.g. which extensions to load
-# (`zext`). Sourced after lib/core, so that function exists, and before every
-# stage, so all of them see the result.
+# Gitignored file for the user's own choices, e.g. which extensions or
+# submodules to load (`zext`, `zsubmod`). Sourced after lib/core, so those
+# functions exist, and before every stage, so all of them see the result.
 # See conf/settings.example.zsh.
 
 [[ -r "${ZDOTDIR}/settings.local.zsh" ]] && _zsh_source_file "${ZDOTDIR}/settings.local.zsh" "settings"
