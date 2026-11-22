@@ -12,7 +12,7 @@ typeset -gi _zshcache_time=0
 }
 (( ${+functions[add-zsh-hook]} )) || autoload -Uz add-zsh-hook
 
-if (( ! ${precmd_functions[(I)_rehash_precmd]} )); then
+if (( ! ${precmd_functions[(I)_rehash_precmd]:-0} )); then
 	_rehash_precmd() {
 		local -a mtime
 		zstat -A mtime +mtime -- "$_zsh_pacman_hook" 2>/dev/null || return 0
