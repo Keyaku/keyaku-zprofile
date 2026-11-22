@@ -1,7 +1,5 @@
 ##############################################################################
-# User login configuration
-#
-# TODO: Create a way to override this file (for user-specific configuration)
+# powerlevel10k theme and configuration
 ##############################################################################
 
 # powerlevel10k. To customize prompt, run `p10k configure` or edit $ZDOTDIR/.p10k.zsh.

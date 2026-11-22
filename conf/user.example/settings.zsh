@@ -1,9 +1,9 @@
 ##############################################################################
 # Personal settings for this ZDOTDIR
 #
-# Copy to $ZDOTDIR/settings.local.zsh (gitignored). It's sourced by .zshenv
-# right after lib/core, before any stage, so it affects every kind of shell.
-# Keep it to settings: no output, no slow commands.
+# Copy to $ZDOTDIR/user/settings.zsh. It's sourced by .zshenv right after
+# lib/core, before any stage, so it affects every kind of shell. Keep it to
+# settings: no output, no slow commands.
 ##############################################################################
 
 # Extensions (directories under $ZDOTDIR/extensions). All load by default.

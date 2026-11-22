@@ -32,10 +32,10 @@ fi
 
 # Pick powerlevel10k: the vendored submodule (loaded by OMZ as ZSH_THEME) unless
 # it's disabled or missing, then a distro-installed copy, which OMZ can't find
-# under its theme dirs, so ZPROFILE_P10K_THEME has 90-user.zsh source it instead.
+# under its theme dirs, so ZPROFILE_P10K_THEME has 90-p10k.zsh source it instead.
 # Root only takes the distro copy once it has a .p10k.zsh, so it never lands in
 # the configuration wizard, and a ZSH_THEME the user set (e.g. in
-# settings.local.zsh) wins over it. With neither, 21-omz-config.zsh picks
+# user/settings.zsh) wins over it. With neither, 21-omz-config.zsh picks
 # robbyrussell.
 typeset -g ZPROFILE_P10K_THEME=
 if _zsubmodule_enabled powerlevel10k && [[ -e "${ZSH_CUSTOM}/themes/powerlevel10k.zsh-theme" ]]; then

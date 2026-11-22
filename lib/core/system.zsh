@@ -116,7 +116,7 @@ fi
 # Whether the vendored submodule NAME is enabled. NAME is the last component of
 # its .gitmodules path (ohmyzsh, powerlevel10k, zsh-syntax-highlighting).
 # Enabled unless the user set `zstyle ':zprofile:submodules:NAME' enabled no`
-# (e.g. in $ZDOTDIR/settings.local.zsh). A disabled submodule is neither
+# (e.g. in $ZDOTDIR/user/settings.zsh). A disabled submodule is neither
 # fetched by `zupdate --submodules` nor loaded.
 function _zsubmodule_enabled {
 	zstyle -T ":zprofile:submodules:${1:t}" enabled
@@ -136,7 +136,7 @@ function _ztoggle {
 		"\t[--on NAME...]  : Enable each ${kind} named"
 		"\t[--off NAME...] : Disable each ${kind} named ('*' matches all; a name always wins over '*')"
 		"With no arguments, lists each ${kind} and whether it's enabled."
-		"Changes apply to shells started afterwards; call it from \$ZDOTDIR/settings.local.zsh to keep them."
+		"Changes apply to shells started afterwards; call it from \$ZDOTDIR/user/settings.zsh to keep them."
 	)
 
 	if (( ! $# )); then

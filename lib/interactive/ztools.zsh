@@ -523,6 +523,14 @@ function zupdate {
 		elif [[ $LOCAL == $BASE ]]; then
 			(( $verbosity )) && print_fn -ni "Updating..."
 			git -C "${ZDOTDIR}" pull ${f_verbosity:+-${f_verbosity}} || return 1
+
+			# Tracked stage files the user's overlay replaces don't run, so their
+			# upstream changes would be missed silently: point them out.
+			local changed
+			for changed in ${(f)"$(git -C "${ZDOTDIR}" diff --name-only "$LOCAL" @ -- zstages)"}; do
+				[[ -f "${ZDOTDIR}/user/${changed#zstages/}" ]] || continue
+				print_fn -w "${changed} changed upstream, and your user/${changed#zstages/} replaces it. Review: git -C \"\$ZDOTDIR\" diff ${LOCAL:0:7}.. -- ${changed}"
+			done
 		elif [[ $REMOTE == $BASE ]]; then
 			(( $verbosity )) && print_fn -ne "There are unpushed changes"
 			return 2

@@ -38,14 +38,6 @@ done
 SUDO=$(whatami Android || echo sudo)
 ROOT=$(whatami Android && echo /data/data/com.termux/files/usr)
 
-typeset -rA templates=(
-	[plugins.zsh]="plugins"
-	[themes.zsh]=""
-	# TODO: Uncomment these when ready
-	# [pre-omz.zshrc]=""
-	# [post-omz.zshrc]=""
-)
-
 typeset -i NEEDS_RESTART=0
 
 ####################
@@ -102,7 +94,7 @@ function setup_ssh {
 
 # Offers to use distro-installed copies of zsh-syntax-highlighting and
 # powerlevel10k instead of their vendored submodules, recording each choice in
-# $ZDOTDIR/settings.local.zsh.
+# $ZDOTDIR/user/settings.zsh.
 function setup_submodules {
 	local name sm_path
 	local -A sm_paths=(
@@ -115,9 +107,9 @@ function setup_submodules {
 
 		ask -B -d y "$name is installed system-wide ($REPLY). Use it instead of the vendored submodule?" || continue
 
-		print -r -- "zsubmod --off $name" >> "$ZDOTDIR/settings.local.zsh"
+		mkdir -p "$ZDOTDIR/user" && print -r -- "zsubmod --off $name" >> "$ZDOTDIR/user/settings.zsh"
 		zsubmod --off $name
-		print_fn -s "Disabled the $name submodule in $ZDOTDIR/settings.local.zsh"
+		print_fn -s "Disabled the $name submodule in $ZDOTDIR/user/settings.zsh"
 		print_fn -i "To free its disk space: git -C \"\$ZDOTDIR\" submodule deinit $sm_path"
 	done
 	return 0
@@ -588,14 +580,8 @@ function main {
 		if (( $NEEDS_RESTART )); then
 			echo "${SCRIPT_NAME}: Restart your system for changes to take effect."
 		fi
-		# if ask -B -d n "Would you like to create the base files for your custom configuration of .zshrc (pre-omz, themes, plugins, post-omz)?"; then
-		# 	local zsh_template zsh_path
-		# 	echo "Creating base files..."
-		# 	for zsh_template zsh_path in ${templates}; do
-		# 		cp "$ZDOTDIR/templates/$zsh_template.zsh-template" "$ZSH_CUSTOM/$zsh_path/$zsh_template"
-		# 		printf '- %s\n' "$zsh_path/$zsh_template"
-		# 	done
-		# fi
+		[[ -d "$ZDOTDIR/user" ]] || \
+			echo "${SCRIPT_NAME}: For your own settings and overrides, see $ZDOTDIR/conf/user.example/README.md"
 	else
 		print_fn -w "$fn_completed/$fn_total functions completed."
 		echo "${SCRIPT_NAME}: The following functions failed: ${fn_failed}"

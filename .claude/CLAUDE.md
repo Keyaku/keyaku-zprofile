@@ -20,6 +20,8 @@ zstages/login/    # Loaded by .zlogin
 extensions/       # Own plugins (unconditionally sourced but self-guard via command checks)
 completions/      # Zsh `_<funcname>` completions for lib/ functions (prepended to $fpath)
 custom/           # User plugins/themes/functions (tracked but empty by default)
+user/             # The user's own overlay (gitignored; template conf/user.example/):
+                  # settings.zsh + user/<stage>/ merged into zstages/<stage>/
 vendor/ohmyzsh/   # Git submodule
 conf/             # Setup scripts and config files
 conf/home/bin/    # Standalone zsh scripts symlinked into $HOME/.local/bin/
@@ -53,7 +55,7 @@ Sourced à la carte by standalone scripts under [conf/home/bin/](conf/home/bin/)
 **Footgun**: never name a local `path` — it's tied to `$PATH` in zsh and `local path=…` silently destroys PATH inside the function. Prefer `store_path`, `config_path`, `target_dir`, etc. Same caution for `file` (shadows the `file(1)` command).
 
 ### User settings
-`$ZDOTDIR/settings.local.zsh` (gitignored; template `conf/settings.example.zsh`) is sourced by `.zshenv` right after `lib/core`, before every stage. It holds the user's choices via `zext --off/--on NAME...` (extensions) and `zsubmod --off/--on NAME...` (submodules), both thin wrappers over `_ztoggle` in `lib/core/system.zsh` that set the zstyles `':zprofile:extensions:<name>' enabled` / `':zprofile:submodules:<name>' enabled` (default on). `_zsh_source_dir`'s optional 4th argument is the zstyle context it checks per extension directory; `_zsubmodule_enabled NAME` is the submodule check, honoured by `00-init.zsh`, `zupdate --submodules`, `20-omz-setup.zsh` (OMZ), `10-setup.zsh` (p10k) and `95-syntax-highlighting.zsh`. `_zsubmodule_system_path NAME` sets `REPLY` to a distro-installed copy (zsh-syntax-highlighting, powerlevel10k). A distro powerlevel10k sits outside OMZ's theme dirs, so `10-setup.zsh` records it in `ZPROFILE_P10K_THEME` (leaving `ZSH_THEME` empty) and `90-user.zsh` sources it before `.p10k.zsh`; a user-set `ZSH_THEME` wins over it.
+Personal config lives in the gitignored overlay `$ZDOTDIR/user/` (template `conf/user.example/`), never in tracked files. `_zsh_source_dir` merges `user/<stage>/` into `zstages/<stage>/` by filename (sorted together; a same-named user file replaces the tracked one), and `zupdate` warns when a replaced tracked file changes upstream. Tracked stage files therefore hold defaults only; don't add `*-user.zsh` files to `zstages/`. `user/settings.zsh` is sourced by `.zshenv` right after `lib/core`, before every stage. It holds the user's choices via `zext --off/--on NAME...` (extensions) and `zsubmod --off/--on NAME...` (submodules), both thin wrappers over `_ztoggle` in `lib/core/system.zsh` that set the zstyles `':zprofile:extensions:<name>' enabled` / `':zprofile:submodules:<name>' enabled` (default on). `_zsh_source_dir`'s optional 4th argument is the zstyle context it checks per extension directory; `_zsubmodule_enabled NAME` is the submodule check, honoured by `00-init.zsh`, `zupdate --submodules`, `20-omz-setup.zsh` (OMZ), `10-setup.zsh` (p10k) and `95-syntax-highlighting.zsh`. `_zsubmodule_system_path NAME` sets `REPLY` to a distro-installed copy (zsh-syntax-highlighting, powerlevel10k). A distro powerlevel10k sits outside OMZ's theme dirs, so `10-setup.zsh` records it in `ZPROFILE_P10K_THEME` (leaving `ZSH_THEME` empty) and `90-user.zsh` sources it before `.p10k.zsh`; a user-set `ZSH_THEME` wins over it.
 
 ### Extensions
 Each extension in `extensions/` starts with guard lines that `return` early if the relevant tool is not installed — this is intentional and must be preserved. Guards use `command-has` or direct `(( $+commands[...] ))` checks.
@@ -89,6 +91,7 @@ ${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh/
   vendor/     → symlink to $ZDOTDIR/vendor      (live)
   conf/       → symlink to $ZDOTDIR/conf        (live)
   custom/                                        (own, empty)
+  user/                                          (own, optional overlay)
   .zshenv / .zprofile / .zshrc / .zlogin / .zlogout   (copied — sync if changed)
 ```
 
@@ -120,7 +123,7 @@ The dominant remaining startup cost is OMZ (`oh-my-zsh.sh` core + the loader in 
 
 ## Startup behaviour notes
 - **fastfetch greeting** runs only on login shells whose stdout is a terminal (`[[ -o login && -t 1 ]]` guard in `10-setup.zsh`; so `zbench -w`, whose hyperfine discards output, no longer counts it), kept synchronous on purpose — backgrounding it races the banner against the prompt paint. ~10ms, cosmetic, login-only.
-- **pyvenv auto-activation**: `zstages/login/90-user.zsh` sources `$XDG_DATA_HOME/pyvenv/bin/activate` whenever `$XDG_DATA_HOME/pyvenv/pyvenv.cfg` exists, so `python` points at that default venv from every login shell (~2.7ms). Intentional convenience, not a leak — delete the pyvenv dir to opt out.
+- **pyvenv auto-activation** lives in the user's own `user/login/90-user.zsh` (moved out of the tracked files with #14), not in the repo.
 - **Per-session guards**: some interactive setup that only needs to run once per session (e.g. the gpg-agent `systemctl` probe in `extensions/gpg-agent/`) is gated behind an exported marker so nested shells skip it; daemon-probing work that only an interactive session needs (e.g. the docker container-alias block) is deferred to a one-shot `precmd` hook so non-interactive shells skip it entirely.
 
 ## Task tracking

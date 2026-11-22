@@ -57,10 +57,11 @@ It's structured as follows:
 4. Custom functions under `custom/functions/`.
 5. Custom plugins under `custom/plugins/`.
 6. Custom themes under `custom/themes/`.
+7. Your own settings and stage overrides under `user/` (gitignored; template in `conf/user.example/`).
 
 ### Dependencies
 
-_Oh-My-ZSH_, _powerlevel10k_ and _zsh-syntax-highlighting_ are git submodules, enabled and loaded by default. Each can be turned off with `zsubmod --off <name>` in `settings.local.zsh` (see [Customization](#customization)); a disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
+_Oh-My-ZSH_, _powerlevel10k_ and _zsh-syntax-highlighting_ are git submodules, enabled and loaded by default. Each can be turned off with `zsubmod --off <name>` in `user/settings.zsh` (see [Customization](#customization)); a disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
 
 Turning off _powerlevel10k_ or _zsh-syntax-highlighting_ is fully supported. Turning off _Oh-My-ZSH_ works, but nothing replaces it yet, so you also lose `compinit` and plugin loading.
 
@@ -73,7 +74,7 @@ Its plugin loader was replaced by my own code, which is optimized as much as pos
 
 This theme is set at the usual `zshrc` stage, before OMZ is loaded, with a code block in `zstages/rc/10-setup.zsh` that loads the cached instant prompt file if it's enabled.
 The submodule's theme file is symlinked into `custom/themes/`, where OMZ finds it.
-When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead (e.g. Arch's `zsh-theme-powerlevel10k`, Homebrew, NixOS). OMZ can't find that one, so `zstages/rc/90-user.zsh` sources it right before `.p10k.zsh`. The setup script offers to switch to it when it finds one. To skip powerlevel10k altogether, disable the submodule and set `ZSH_THEME` to another theme in `settings.local.zsh`.
+When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead (e.g. Arch's `zsh-theme-powerlevel10k`, Homebrew, NixOS). OMZ can't find that one, so `zstages/rc/90-user.zsh` sources it right before `.p10k.zsh`. The setup script offers to switch to it when it finds one. To skip powerlevel10k altogether, disable the submodule and set `ZSH_THEME` to another theme in `user/settings.zsh`.
 
 #### zsh-syntax-highlighting
 
@@ -116,26 +117,27 @@ zsh conf/first_setup.zsh
 
 Right now, customization is feasible but not yet easy.
 
-#### Personal settings
+#### Your own overlay (`user/`)
 
-Copy `conf/settings.example.zsh` to `$ZDOTDIR/settings.local.zsh` (gitignored). `.zshenv` sources it right after `lib/core/`, before any stage, so it applies to every kind of shell.
+Personal settings and overrides go in `$ZDOTDIR/user/`, which is gitignored, so updating the repo never touches it. Start from `conf/user.example/` (its README explains each file):
 
-Two functions set what loads, with the same syntax:
+- `user/settings.zsh` is sourced by `.zshenv` right after `lib/core/`, before every stage, so it applies to every kind of shell. Use it for `zext`, `zsubmod` and plain variables such as `ZSH_THEME`.
+- `user/<stage>/` (`env`, `profile`, `rc`, `login`, `logout`) is merged into `zstages/<stage>/`: all files are sourced together in filename order, so the number sets where yours runs. For example, `user/rc/22-omz.zsh` runs after `zstages/rc/21-omz-config.zsh` and before OMZ loads at 25, the place to change OMZ settings or add plugins.
+- A file with the same name as a tracked one replaces it. `zupdate` warns when a tracked file you replaced changes upstream, so you can merge the changes in.
+- `user/` can be a symlink, e.g. into a synced folder, to share it between machines.
+
+#### Choosing what loads
+
+Two functions, meant for `user/settings.zsh`, set what loads with the same syntax:
 
 - `zext` for extensions: `zext --off docker vscode`, or `zext --off '*' --on git ssh` to load only a few (a name always wins over `'*'`).
 - `zsubmod` for submodules: `zsubmod --off powerlevel10k`.
 
 Run either with no arguments to list everything and whether it's on. Both just set zstyles (`':zprofile:extensions:<name>' enabled` and `':zprofile:submodules:<name>' enabled`), so setting those directly works too.
 
-#### Plugins, themes, etc.
-
-Currently not possible to configure without OMZ. The idea would be a file in `zstages/rc/` between priorities 10-20, where one would set the plugins, themes, etc.
-
 #### OMZ configuration, plugins, themes
 
-Every OMZ configuration you'd find from their `.zshrc` template happen in `zstages/rc/21-omz-config.zsh`.
-This includes setting the plugins or themes. Although you cannot override one of these files yet, you may add a file in `zstages/rc/` with a higher priority (ideally before 25, where OMZ is sourced) to reflect your preferences.
-
+The defaults from OMZ's `.zshrc` template are set in `zstages/rc/21-omz-config.zsh`, including the plugins and the theme. Adjust them from `user/rc/22-*.zsh`, or replace the file entirely with your own `user/rc/21-omz-config.zsh`.
 
 ### SSH
 

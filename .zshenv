@@ -56,11 +56,29 @@ _zsh_source_dir() {
 
 	[[ -d "$target_dir" ]] || return 1
 
-	# Use glob qualifiers: N (null_glob), . (regular LIST_files), o (order by name)
+	# Stage dirs (zstages/<stage>) are overlaid with the user's untracked
+	# user/<stage>: both sets are sourced together in filename order, and a user
+	# file with the same name as a tracked one replaces it.
+	local user_dir
+	[[ "$target_dir" == "${ZDOTDIR}/zstages/"* ]] && user_dir="${ZDOTDIR}/user/${target_dir:t}"
+
 	local zsh_file
-	for zsh_file in "${target_dir}"/${~pattern}(N.on); do
-		[[ -n "$ctx" ]] && ! zstyle -T "${ctx}:${zsh_file:h:t}" enabled && continue
-		_zsh_source_file "$zsh_file" "$stage"
+	if [[ -z "$user_dir" || ! -d "$user_dir" ]]; then
+		# Use glob qualifiers: N (null_glob), . (regular LIST_files), o (order by name)
+		for zsh_file in "${target_dir}"/${~pattern}(N.on); do
+			[[ -n "$ctx" ]] && ! zstyle -T "${ctx}:${zsh_file:h:t}" enabled && continue
+			_zsh_source_file "$zsh_file" "$stage"
+		done
+		return 0
+	fi
+
+	local -A stage_files
+	for zsh_file in "${target_dir}"/${~pattern}(N.) "${user_dir}"/${~pattern}(N.); do
+		stage_files[${zsh_file:t}]=$zsh_file
+	done
+	local name
+	for name in ${(ok)stage_files}; do
+		_zsh_source_file "${stage_files[$name]}" "$stage"
 	done
 }
 
@@ -74,12 +92,12 @@ _zsh_source_dir "${ZDOTDIR}/lib/core" "lib/core"
 # ============================================================================
 # User settings
 # ============================================================================
-# Gitignored file for the user's own choices, e.g. which extensions or
-# submodules to load (`zext`, `zsubmod`). Sourced after lib/core, so those
+# The user's own choices, e.g. which extensions or submodules to load (`zext`,
+# `zsubmod`), in the gitignored user/ overlay. Sourced after lib/core, so those
 # functions exist, and before every stage, so all of them see the result.
-# See conf/settings.example.zsh.
+# See conf/user.example/.
 
-[[ -r "${ZDOTDIR}/settings.local.zsh" ]] && _zsh_source_file "${ZDOTDIR}/settings.local.zsh" "settings"
+[[ -r "${ZDOTDIR}/user/settings.zsh" ]] && _zsh_source_file "${ZDOTDIR}/user/settings.zsh" "settings"
 
 # ============================================================================
 # Stage 2: Load zshenv stage files
