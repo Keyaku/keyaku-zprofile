@@ -1,7 +1,10 @@
 [ -s "/opt/adguard-cli/bash-completion.sh" ] || return
 
-if [[ -f "/opt/adguard-cli/bash-completion.sh" ]]; then
-	# Move or link bash completion file to home for bash completions
-	[[ -d "${$XDG_DATA_HOME:-$HOME/.local/share}"/bash-completion/completions ]] || mkdir -p "${$XDG_DATA_HOME:-$HOME/.local/share}"/bash-completion/completions
-	ln -s "/opt/adguard-cli/bash-completion.sh" "${$XDG_DATA_HOME:-$HOME/.local/share}"/bash-completion/completions/.
-fi
+# Link the bash completion file where zstages/rc/30-completion.zsh loads them
+() {
+	local -r comp_dir="${XDG_DATA_HOME:-$HOME/.local/share}"/bash-completion/completions
+	[[ -L "$comp_dir/adguard-cli" || -L "$comp_dir/bash-completion.sh" ]] && return  # (older installs used the latter name)
+	[[ -d "$comp_dir" ]] || mkdir -p "$comp_dir"
+	ln -sfn /opt/adguard-cli/bash-completion.sh "$comp_dir/adguard-cli" && \
+		print_fn -i "Linked AdGuard CLI's bash completion into $comp_dir"
+}

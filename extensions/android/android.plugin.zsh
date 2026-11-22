@@ -8,7 +8,8 @@ if ! whatami Android; then
 elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.termux/files/usr" ]]; then
 	# Silence Message of the Day (motd)
 	if [[ -f "$HOME"/../usr/etc/motd ]]; then
-		mv "$HOME"/../usr/etc/motd{,.old}
+		mv "$HOME"/../usr/etc/motd{,.old} && \
+			print_fn -i "Silenced Termux's message of the day (renamed \$PREFIX/etc/motd to motd.old; rename it back to undo)"
 	fi
 	# Apply rish (Shizuku) configuration
 	if [[ -d "$HOME"/.termux/rish.d && -f "$HOME"/.termux/rish.d/rish ]]; then
@@ -17,7 +18,8 @@ elif (( ${+TERMUX_VERSION} )) && [[ "${TERMUX__PREFIX:P}" == "/data/data/com.ter
 		)
 		if [[ ! -L "$HOME"/.local/bin/rish ]]; then
 			rm -f "$HOME"/.local/bin/rish
-			ln -s "$HOME"/.termux/rish.d/rish "$HOME"/.local/bin/rish
+			ln -s "$HOME"/.termux/rish.d/rish "$HOME"/.local/bin/rish && \
+				print_fn -i "Linked ~/.local/bin/rish to ~/.termux/rish.d/rish (Shizuku)"
 		fi
 		[[ "${RISH_APPLICATION_ID}" == "com.termux" ]] || export RISH_APPLICATION_ID="com.termux"
 	fi

@@ -5,20 +5,24 @@ if (( ${(v)#vsc_flatpaks} )); then
 	local _vscode _vscode_dir
 	for _vscode in ${(k)vsc_flatpaks}; do
 		_vscode_dir="$HOME"/.var/app/$_vscode
-		# Point Flatpak's .ssh config to user's config
+		# Point the Flatpak's .ssh config to the user's config. Fork-free checks,
+		# so this runs in the foreground and can say what it changed (once).
 		{
 			local _ssh_dir="$_vscode_dir"/.ssh
 			local _ssh_configfile="$_ssh_dir"/config
+			local _ssh_include="Include ${SSH_HOME:-$HOME/.ssh}/config.d/*"
 			# Prepare ssh_config
-			if [[ ! -f "$_ssh_configfile" ]] || ! \grep -q "Include ${SSH_HOME:-$HOME/.ssh}/config.d" "$_ssh_configfile"; then
+			if [[ ! -f "$_ssh_configfile" || "$(<"$_ssh_configfile")" != *"Include ${SSH_HOME:-$HOME/.ssh}/config.d"* ]]; then
 				[[ -d "$_ssh_dir" ]] || mkdir -p "$_ssh_dir"
-				echo "Include ${SSH_HOME:-$HOME/.ssh}/config.d/*" >> "$_ssh_configfile"
+				print -r -- "$_ssh_include" >> "$_ssh_configfile"
+				print_fn -i "Added '$_ssh_include' to $_ssh_configfile so $_vscode sees your SSH hosts (remove that line to undo)"
 			fi
 			# Prepare ssh link
 			if [[ ! -L "$_vscode_dir/config/ssh" ]]; then
 				ln -s "${SSH_HOME:-$HOME/.ssh}" "$_vscode_dir/config/ssh"
+				print_fn -i "Linked $_vscode_dir/config/ssh to ${SSH_HOME:-$HOME/.ssh} (remove the link to undo)"
 			fi
-		} &|
+		}
 
 		# Use VSCode's java binary if java isn't available
 		if (( ! ${+commands[java]} )); then

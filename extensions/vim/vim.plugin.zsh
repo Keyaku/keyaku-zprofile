@@ -3,7 +3,8 @@
 # Copy the whole vimrc file. Any user plugin should be loaded in a 'plugins' file, or additional configuration in 'myvimrc'
 if [[ -n "$MYVIMRC" && ! -f "$MYVIMRC" ]]; then
 	[[ -d "${MYVIMRC:h}" ]] || mkdir -p "${MYVIMRC:h}"
-	cp "$ZDOTDIR/conf/home/vim/vimrc" "$MYVIMRC"
+	cp "$ZDOTDIR/conf/home/vim/vimrc" "$MYVIMRC" && \
+		print_fn -i "Installed this repo's default vimrc at $MYVIMRC (put your own settings in ${MYVIMRC:h}/myvimrc)"
 fi
 
 # Alias to open vim with encoding information
