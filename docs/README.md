@@ -156,7 +156,7 @@ SSH is set up to follow the XDG Base Directory Specification, and its agent runs
 
 ### Tasks
 
-I store a [list of all major tasks](TODO.md) (that I can think of) to improve this setup, on top of the [Issues](issues) page.
+Planned work is tracked on the [Issues](https://github.com/Keyaku/keyaku-zprofile/issues) page, grouped by milestone.
 
 ### Contributing
 

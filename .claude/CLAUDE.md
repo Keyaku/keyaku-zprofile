@@ -121,6 +121,9 @@ The dominant remaining startup cost is OMZ (`oh-my-zsh.sh` core + the loader in 
 - **pyvenv auto-activation**: `zstages/login/90-user.zsh` sources `$XDG_DATA_HOME/pyvenv/bin/activate` whenever `$XDG_DATA_HOME/pyvenv/pyvenv.cfg` exists, so `python` points at that default venv from every login shell (~2.7ms). Intentional convenience, not a leak — delete the pyvenv dir to opt out.
 - **Per-session guards**: some interactive setup that only needs to run once per session (e.g. the gpg-agent `systemctl` probe in `extensions/gpg-agent/`) is gated behind an exported marker so nested shells skip it; daemon-probing work that only an interactive session needs (e.g. the docker container-alias block) is deferred to a one-shot `precmd` hook so non-interactive shells skip it entirely.
 
+## Task tracking
+Planned work lives in GitHub issues (`Keyaku/keyaku-zprofile`, grouped by milestone). `docs/TODO.md` is an untracked personal list: keep it aligned with the issues (reference `#N` on items that have one), though it may hold small extra tasks that don't warrant an issue.
+
 ## What NOT to do
 - Do not add commands that produce output to `.zshenv` (it's sourced even in non-interactive, non-TTY contexts).
 - Do not add personal/private config (API keys, host-specific vars) to tracked files — use `*.local.*` files (gitignored).
