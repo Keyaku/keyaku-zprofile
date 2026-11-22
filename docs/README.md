@@ -72,7 +72,8 @@ Its plugin loader was replaced by my own code, which is optimized as much as pos
 #### Powerlevel10k
 
 This theme is set at the usual `zshrc` stage, before OMZ is loaded, with a code block in `zstages/rc/10-setup.zsh` that loads the cached instant prompt file if it's enabled.
-Its folder is symlinked into `custom/themes/`.
+The submodule's theme file is symlinked into `custom/themes/`, where OMZ finds it.
+When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead (e.g. Arch's `zsh-theme-powerlevel10k`, Homebrew, NixOS). OMZ can't find that one, so `zstages/rc/90-user.zsh` sources it right before `.p10k.zsh`. The setup script offers to switch to it when it finds one. To skip powerlevel10k altogether, disable the submodule and set `ZSH_THEME` to another theme in `settings.local.zsh`.
 
 #### zsh-syntax-highlighting
 

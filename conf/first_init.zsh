@@ -100,19 +100,27 @@ function setup_ssh {
 	fi
 }
 
-# Offers to use a distro-installed zsh-syntax-highlighting instead of the
-# vendored submodule, recording the choice in $ZDOTDIR/settings.local.zsh.
+# Offers to use distro-installed copies of zsh-syntax-highlighting and
+# powerlevel10k instead of their vendored submodules, recording each choice in
+# $ZDOTDIR/settings.local.zsh.
 function setup_submodules {
-	_zsubmodule_enabled zsh-syntax-highlighting || return 0
-	local sys_path
-	sys_path=$(_zsh_highlight_system_path) || return 0
+	local name sm_path
+	local -A sm_paths=(
+		[zsh-syntax-highlighting]=vendor/plugins/zsh-syntax-highlighting
+		[powerlevel10k]=vendor/themes/powerlevel10k
+	)
+	for name sm_path in ${(kv)sm_paths}; do
+		_zsubmodule_enabled $name || continue
+		_zsubmodule_system_path $name || continue
 
-	ask -B -d y "zsh-syntax-highlighting is installed system-wide ($sys_path). Use it instead of the vendored submodule?" || return 0
+		ask -B -d y "$name is installed system-wide ($REPLY). Use it instead of the vendored submodule?" || continue
 
-	print -r -- "zsubmod --off zsh-syntax-highlighting" >> "$ZDOTDIR/settings.local.zsh"
-	zsubmod --off zsh-syntax-highlighting
-	print_fn -s "Disabled the zsh-syntax-highlighting submodule in $ZDOTDIR/settings.local.zsh"
-	print_fn -i "To free its disk space: git -C \"\$ZDOTDIR\" submodule deinit vendor/plugins/zsh-syntax-highlighting"
+		print -r -- "zsubmod --off $name" >> "$ZDOTDIR/settings.local.zsh"
+		zsubmod --off $name
+		print_fn -s "Disabled the $name submodule in $ZDOTDIR/settings.local.zsh"
+		print_fn -i "To free its disk space: git -C \"\$ZDOTDIR\" submodule deinit $sm_path"
+	done
+	return 0
 }
 
 # Initializes the password store with one of the user's existing GPG secret keys.

@@ -185,15 +185,31 @@ function zsubmod {
 	_ztoggle ':zprofile:submodules' submodule known "$@"
 }
 
-# Prints the path of a zsh-syntax-highlighting installed by the system's
-# package manager, if any (fails otherwise).
-function _zsh_highlight_system_path {
-	local -a candidates=(
-		/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Arch
-		/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Debian, Ubuntu, Fedora
-		/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Homebrew, BSD
-	)
-	[[ -n "$PREFIX" ]] && candidates+=("$PREFIX"/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh)  # Termux
+# Finds a copy of the submodule NAME installed by the system's package manager
+# and sets REPLY to its entry file (fails when there's none, or NAME has no
+# known locations). Sets REPLY instead of printing so callers don't fork.
+function _zsubmodule_system_path {
+	local -a candidates=()
+	case $1 in
+	zsh-syntax-highlighting )
+		candidates=(
+			/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Arch
+			/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Debian, Ubuntu, Fedora
+			/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Homebrew (Intel), BSD
+			/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh  # Homebrew (Apple Silicon)
+		)
+		[[ -n "$PREFIX" ]] && candidates+=("$PREFIX"/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh)  # Termux
+	;;
+	powerlevel10k )
+		candidates=(
+			/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme  # Arch (zsh-theme-powerlevel10k)
+			/usr/local/share/powerlevel10k/powerlevel10k.zsh-theme  # Homebrew (Intel)
+			/opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme  # Homebrew (Apple Silicon)
+			/run/current-system/sw/share/zsh-powerlevel10k/powerlevel10k.zsh-theme  # NixOS
+		)
+	;;
+	esac
 	local -a found=(${^candidates}(N.))
-	(( ${#found} )) && print -r -- "${found[1]}"
+	(( ${#found} )) || return 1
+	REPLY="${found[1]}"
 }

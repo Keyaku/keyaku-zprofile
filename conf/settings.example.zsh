@@ -14,7 +14,10 @@
 
 # Vendored submodules: ohmyzsh, powerlevel10k, zsh-syntax-highlighting.
 # A disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
-# - powerlevel10k off: the prompt falls back to robbyrussell.
-# - zsh-syntax-highlighting off: a distro-installed copy is used if present.
+# - powerlevel10k or zsh-syntax-highlighting off: a distro-installed copy is used
+#   if present; otherwise the prompt falls back to robbyrussell (or the theme
+#   set below) and there's no highlighting.
+# - To skip powerlevel10k even with a distro copy installed, pick another theme:
+# ZSH_THEME=robbyrussell
 # - ohmyzsh off: no OMZ, which today also means no compinit and no plugins.
 # zsubmod --off powerlevel10k

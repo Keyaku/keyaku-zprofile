@@ -9,7 +9,8 @@
 () {
 	local zsh_hl="$ZDOTDIR"/vendor/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 	if ! _zsubmodule_enabled zsh-syntax-highlighting || [[ ! -f "$zsh_hl" ]]; then
-		zsh_hl=$(_zsh_highlight_system_path) || return 0
+		_zsubmodule_system_path zsh-syntax-highlighting || return 0
+		zsh_hl=$REPLY
 	fi
 	_zsh_source_file "$zsh_hl"
 }

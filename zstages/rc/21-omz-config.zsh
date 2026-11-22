@@ -64,8 +64,9 @@ plugins+=($plugins_no_aliases)
 # OMZ themes
 # ============================================================================
 
-# Set default theme if not yet set
-if [[ -z "$ZSH_THEME" ]]; then
+# Set default theme if not yet set (and powerlevel10k isn't loaded outside OMZ,
+# see 10-setup.zsh)
+if [[ -z "$ZSH_THEME" && -z "$ZPROFILE_P10K_THEME" ]]; then
 	ZSH_THEME="robbyrussell"
 fi
 
