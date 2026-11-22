@@ -448,8 +448,9 @@ function _zcompile_file {
 
 # Check for zprofile git repo changes
 # Clones each enabled vendored repo (see _zvendor_entries) that's missing and
-# fast-updates the rest: a shallow fetch of the tracked branch, then a reset to
-# it, skipped when tracked files have local changes. They're plain gitignored
+# fast-updates the rest: a shallow fetch of its branch, then a checkout of that
+# branch tracking origin's (never a detached commit), skipped when tracked files
+# have local changes. They're plain gitignored
 # clones, so updates never show as changes in this repo. Checkouts left by the
 # old git-submodule layout are turned into standalone clones in place, and the
 # superproject's leftover submodule config is dropped. Used by zupdate.
@@ -498,8 +499,22 @@ function _zvendor_sync {
 			print_fn -w "$vpath has local changes; not updating it"
 			continue
 		fi
-		git -C "$vdir" fetch -q --depth 1 origin "${${branch:#-}:-HEAD}" \
-			&& git -C "$vdir" reset -q --hard FETCH_HEAD \
+		# Stay on a local branch that tracks origin's: "-" means the remote's
+		# default branch, known from origin/HEAD (asked from the remote once)
+		local track=$branch
+		if [[ "$track" == - ]]; then
+			track=$(git -C "$vdir" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)
+			[[ -n "$track" ]] || { git -C "$vdir" remote set-head origin -a &>/dev/null \
+				&& track=$(git -C "$vdir" symbolic-ref -q --short refs/remotes/origin/HEAD) }
+			track=${track#origin/}
+		fi
+		if [[ -z "$track" ]]; then
+			print_fn -e "Can't tell which branch $vpath should track"
+			(( failed++ ))
+			continue
+		fi
+		git -C "$vdir" fetch -q --depth 1 origin "+refs/heads/${track}:refs/remotes/origin/${track}" \
+			&& git -C "$vdir" checkout -q -B "$track" --track "origin/$track" \
 			|| (( failed++ ))
 	done
 
