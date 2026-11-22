@@ -100,6 +100,55 @@ function setup_ssh {
 	fi
 }
 
+# Initializes the password store with one of the user's existing GPG secret keys.
+# Skipped when pass/gpg are absent, the store is already initialized, or no
+# secret key exists (key creation is left to the user: `gpg --full-generate-key`).
+function setup_pass {
+	command-has -a pass gpg || return 0
+
+	local store="${PASSWORD_STORE_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/password-store}"
+	if [[ -f "$store/.gpg-id" ]]; then
+		print_fn -i "Password store already initialized at $store"
+		return 0
+	fi
+
+	# Collect each secret key's fingerprint and first user ID from the colon
+	# listing: `sec` opens a key, its first `fpr` is the primary fingerprint,
+	# its first `uid` field 10 is the user ID.
+	local -a fprs uids
+	local line in_sec=0 want_fpr=0 want_uid=0
+	local -a fields
+	while IFS= read -r line; do
+		fields=("${(@s.:.)line}")
+		case $fields[1] in
+		sec ) in_sec=1 want_fpr=1 want_uid=1 ;;
+		ssb ) in_sec=0 ;;
+		fpr ) (( in_sec && want_fpr )) && { fprs+=("$fields[10]"); want_fpr=0 } ;;
+		uid ) (( in_sec && want_uid )) && { uids+=("$fields[10]"); want_uid=0 } ;;
+		esac
+	done < <(gpg --list-secret-keys --with-colons 2>/dev/null)
+
+	if (( ! ${#fprs} )); then
+		print_fn -w "No GPG secret key found; skipping password store setup (create one with 'gpg --full-generate-key')"
+		return 0
+	fi
+
+	print_fn -i "Available GPG secret keys:"
+	local -i i
+	local -a choice_opts=()
+	for (( i=1; i<=${#fprs}; i++ )); do
+		printf '  %d) %s  %s\n' $i "$fprs[$i]" "$uids[$i]"
+		choice_opts+=(-o $i)
+	done
+
+	ask -d s ${choice_opts} -o s \
+		-p "Initialize the password store at $store with which key? (s to skip)" || return 1
+	[[ "$REPLY" == s ]] && return 0
+
+	pass init "$fprs[$REPLY]" || { print_fn -e "pass init failed"; return 1; }
+	print_fn -s "Password store initialized with key $fprs[$REPLY]"
+}
+
 # Sets up systemd system-wide to follow XDG Base Directory Specification
 function setup_systemd {
 	# Synchronize /etc/systemd. -p preserves the source file modes so the
@@ -417,7 +466,7 @@ function setup_git_hooks {
 ### Function filters
 
 # Base functions for all platforms
-typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh setup_git_hooks)
+typeset -ra BASE_FUNCTIONS=(install_pkgs setup_zsh setup_ssh setup_pass setup_git_hooks)
 # Android functions
 typeset -ra ANDROID_FUNCTIONS=(setup_termux)
 # Linux functions
