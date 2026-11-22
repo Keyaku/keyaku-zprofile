@@ -27,56 +27,63 @@ function file_contents_in {
 		return 1
 	}
 
-	function _file_contents_in_file {
+	# Lines compare with comments and all whitespace removed, as plain strings
+	# (no regex), so `Key  value` and `Key value # note` match each other.
+	_file_contents_in_file() {
 		local source="$1" target="$2"
 		local -i missing=0
 		local line
+		local -A have=()
 
-		while IFS= read -r line; do
-			# Strip inline comments and surrounding whitespace
+		if [[ -r "$target" ]]; then
+			for line in "${(@f)$(<$target)}"; do
+				line="${${line%%#*}//[[:space:]]}"
+				[[ -n "$line" ]] && have[$line]=1
+			done
+		fi
+
+		while IFS= read -r line || [[ -n "$line" ]]; do
 			line="${${line%%#*}//[[:space:]]}"
-			# Skip blank lines
 			[[ -z "$line" ]] && continue
-			# Check if line exists in target, ignoring whitespace
-			if ! grep -qw "$line" "$target" 2>/dev/null; then
+			if (( ! ${+have[$line]} )); then
 				(( missing++ ))
-				[[ -z "$f_quiet" ]] && print "$line"
+				[[ -z "$f_quiet" ]] && print -r -- "$line"
 			fi
 		done < "$source"
 
-		return $(( missing > 0 ))
+		(( missing == 0 ))
 	}
 
-	function _file_contents_in_dir {
+	_file_contents_in_dir() {
 		local source="$1" target="$2"
 		local -i missing=0
+		local file relative
 
-		local file
-		while IFS= read -r file; do
-			local relative="${file#$source/}"
-			local target_file="$target/$relative"
-
-			if [[ ! -f "$target_file" ]]; then
+		for file in "$source"/**/*(.DN); do
+			relative="${file#$source/}"
+			if [[ ! -f "$target/$relative" ]]; then
 				(( missing++ ))
 				[[ -z "$f_quiet" ]] && print_fn -w "Missing file: $relative"
-				continue
-			fi
-
-			if ! _file_contents_in_file "$file" "$target_file"; then
+			elif ! _file_contents_in_file "$file" "$target/$relative"; then
 				(( missing++ ))
 			fi
-		done < <(find "$source" -type f)
+		done
 
-		return $(( missing > 0 ))
+		(( missing == 0 ))
 	}
 
+	local -i rc
 	if [[ -f "$source" ]]; then
 		_file_contents_in_file "$source" "$target"
 	else
 		_file_contents_in_dir "$source" "$target"
 	fi
+	rc=$?
 
+	# Keep the result: unfunction's own status used to replace it, so this
+	# always reported success
 	unfunction _file_contents_in_file _file_contents_in_dir
+	return rc
 }
 
 # For truly minimal overhead, fastcmp is a wrapper
