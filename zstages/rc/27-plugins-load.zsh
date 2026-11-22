@@ -34,6 +34,7 @@ if (( ${ZSH_PROFILE_BENCHMARK} )); then
 	print "plugin loader: $((_tploader1-_tploader0 - _tsources))s"
 fi
 
-# Remove fpath duplicates and empty directories (OMZ adds some).
+# Remove fpath duplicates and empty directories (OMZ adds some); `-` follows
+# symlinks, since root's code dirs are links into this repo.
 # Comment this line in case fpath is bloated.
-fpath=(${(u)^fpath}(FN))
+fpath=(${(u)^fpath}(-FN))

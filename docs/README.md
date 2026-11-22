@@ -53,11 +53,12 @@ It's structured as follows:
 	* Completion files (`_*`) are not loaded or considered, avoiding `fpath` pollution.
 	* They follow the same naming schemes and structure as `plugins`, including the `.plugin.zsh` filename extension.
 	* A few extensions also provision host state on first load. For example, `ssh-agent` symlinks its user unit from `conf/home/systemd/user/ssh-agent.service` into `${XDG_CONFIG_HOME}/systemd/user/` (the repo copy is the source of truth, so the unit travels and self-heals across machines) and exports `SSH_AUTH_SOCK` from the agent's deterministic socket. The unit itself publishes `SSH_AUTH_SOCK` into the systemd/D-Bus session environment so graphical and Flatpak apps inherit it, while the extension covers shells that don't descend from the session manager (TTY logins, `--host` shells).
-3. Zsh completions for `lib/` functions under `completions/`. One `_<funcname>` file per public function, prepended to `$fpath` before `compinit` runs. Drift between `lib/` and `completions/` is checked by `conf/check-completions.zsh` (invoked by `zupdate` and by the pre-commit hook at `conf/hooks/pre-commit`); `completions/.skip` lists intentionally uncompleted functions.
-4. Custom functions under `custom/functions/`.
-5. Custom plugins under `custom/plugins/`.
-6. Custom themes under `custom/themes/`.
-7. Your own settings and stage overrides under `user/` (gitignored; template in `conf/user.example/`).
+3. Zsh completions for `lib/` functions under `completions/`, and for the standalone scripts in `conf/` under `completions/scripts/`. One `_<funcname>` file per public function, prepended to `$fpath` before `compinit` runs. Drift between `lib/` and `completions/` is checked by `conf/check-completions.zsh` (invoked by `zupdate` and by the pre-commit hook at `conf/hooks/pre-commit`); `completions/.skip` lists intentionally uncompleted functions.
+4. Your own functions, plugins and themes under `custom/functions/`, `custom/plugins/` and `custom/themes/` (empty by default).
+5. Shared helpers for standalone scripts under `lib/script/`, sourced by the scripts themselves rather than at startup.
+6. Setup and support files under `conf/`: the setup scripts (`install.zsh`, `first_init.zsh`), standalone scripts (`home/bin/` for ones you put on `PATH`, `tools/` for one-shot provisioners), system and home config files (`etc/`, `home/`), Syncthing rules, git hooks and the `user/` template.
+7. Git submodules under `vendor/` (see [Dependencies](#dependencies)).
+8. Your own settings and stage overrides under `user/` (gitignored; template in `conf/user.example/`).
 
 ### Dependencies
 

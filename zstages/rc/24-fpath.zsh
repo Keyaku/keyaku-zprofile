@@ -38,7 +38,7 @@ unset plugin
 
 # Update fpath
 fpath=(
-	$ZDOTDIR/completions
+	$ZDOTDIR/completions{,/scripts}
 	${fpaths_found}
 	$ZSH_CUSTOM/{functions,completions}(/N)
 	$ZSH_CACHE_DIR/completions

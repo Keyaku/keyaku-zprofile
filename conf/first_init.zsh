@@ -358,7 +358,7 @@ function setup_root {
 
 	# Symlink shared code directories — always reflect the live repo state
 	local dir
-	for dir in lib extensions zstages vendor conf; do
+	for dir in lib extensions zstages vendor conf completions; do
 		[[ -e "$ZDOTDIR/$dir" ]] || continue
 		sudo ln -sfn "$ZDOTDIR/$dir" "$root_zdotdir/$dir"
 	done

@@ -19,7 +19,8 @@ zstages/rc/       # Loaded by .zshrc (OMZ loaded at 25-omz-load.zsh)
 zstages/login/    # Loaded by .zlogin
 extensions/       # Own plugins (unconditionally sourced but self-guard via command checks)
 completions/      # Zsh `_<funcname>` completions for lib/ functions (prepended to $fpath)
-custom/           # User plugins/themes/functions (tracked but empty by default)
+completions/scripts/  # Completions for the standalone scripts in conf/home/bin/ and conf/tools/
+custom/           # User plugins/themes/functions (only .gitkeeps and the p10k symlink are tracked)
 user/             # The user's own overlay (gitignored; template conf/user.example/):
                   # settings.zsh + user/<stage>/ merged into zstages/<stage>/
 vendor/ohmyzsh/   # Git submodule
@@ -79,7 +80,8 @@ Use **POSIX ERE** patterns, not PCRE. Termux (Android) `zsh` builds without PCRE
 - Function definition forms carry meaning: `function NAME { … }` for top-level (public) functions, `name() { … }` for nested locals. The completions drift checker uses this distinction.
 
 ### Completions (`completions/`)
-- One `_<funcname>` file per user-facing function in `lib/core/` and `lib/interactive/` (the checker only scans those two — `lib/login/`, `lib/script/` and `extensions/` are out of scope). Files start with `#compdef NAME` and use `_arguments -s -S`. Style reference: [custom/plugins/owrt-config/_owrt-config](custom/plugins/owrt-config/_owrt-config).
+- One `_<funcname>` file per user-facing function in `lib/core/` and `lib/interactive/` (the checker only scans those two — `lib/login/`, `lib/script/` and `extensions/` are out of scope). Files start with `#compdef NAME` and use `_arguments -s -S`. Style reference: [completions/scripts/_owrt-config](completions/scripts/_owrt-config).
+- Completions for standalone scripts (`conf/home/bin/`, `conf/tools/`) go in `completions/scripts/`, which is also on `$fpath`; the checker only scans the top level, so they never count as orphans. Don't put tracked completions in `custom/`.
 - `completions/.skip` lists `lib/` functions that intentionally have no completion (internal helpers, free-value checkers). Underscore-prefixed names are auto-skipped.
 - Drift between `lib/` and `completions/` is caught by [conf/check-completions.zsh](conf/check-completions.zsh) — invoked at the tail of `zupdate` (warn-only) and by the pre-commit hook at [conf/hooks/pre-commit](conf/hooks/pre-commit) (blocking; bypass with `--no-verify`). Hook is enabled by `setup_git_hooks` in `first_init.zsh` via `git config core.hooksPath conf/hooks`. The hook is POSIX sh and re-execs the checker through `flatpak-spawn --host` when `/.flatpak-info` is present, so it works from Flatpak-sandboxed git clients (e.g. VSCode-in-Flatpak).
 
@@ -94,6 +96,7 @@ ${XDG_CONFIG_HOME:-$HOME/.local/config}/zsh/
   zstages/    → symlink to $ZDOTDIR/zstages     (live)
   vendor/     → symlink to $ZDOTDIR/vendor      (live)
   conf/       → symlink to $ZDOTDIR/conf        (live)
+  completions/ → symlink to $ZDOTDIR/completions (live)
   custom/                                        (own, empty)
   user/                                          (own, optional overlay)
   .zshenv / .zprofile / .zshrc / .zlogin / .zlogout   (copied — sync if changed)
