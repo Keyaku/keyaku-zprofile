@@ -474,9 +474,39 @@ typeset -ra LINUX_FUNCTIONS=(setup_xdg setup_de setup_steam_xdg setup_root setup
 # Arch Linux functions
 typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
+# What each step does, shown when asking whether to run it
+typeset -rA FN_DESCRIPTIONS=(
+	[install_pkgs]="Install base packages (git, zsh, rsync, curl, vim, fastfetch…)"
+	[setup_zsh]="Make zsh read this ZDOTDIR system-wide (/etc/zsh/zshenv)"
+	[setup_ssh]="Sync the XDG-aware SSH client/server drop-ins into /etc/ssh"
+	[setup_termux]="Set up Termux (mirrors, storage, .termux config)"
+	[setup_xdg]="Disable xdg-user-dirs-update and move ~/.config, ~/.cache under ~/.local"
+	[setup_de]="Install desktop extras (KDE: kdeconnect)"
+	[setup_steam_xdg]="Wrap Steam so it stops creating ~/.pki"
+	[setup_root]="Share this zsh environment with root (sparse ZDOTDIR)"
+	[setup_borg]="Link this repo's borg config into \$XDG_CONFIG_HOME/borg"
+	[setup_flatpak]="Set up the Flatpak user repo and base packages"
+	[setup_systemd]="Sync this repo's systemd drop-ins into /etc/systemd"
+	[setup_pacman]="Install the pacman hook that rehashes zsh commands"
+)
+# Steps that already ask before doing anything, so main doesn't ask again
+typeset -ra SELF_PROMPTING=(setup_pass setup_claude setup_git_hooks)
+
 ### Main function
 
 function main {
+	local -r usage=(
+		"Usage: ${SCRIPT_NAME} [OPTION...]"
+		"\t[-h|--help]"
+		"\t[-y|--yes] : Run every step without asking (steps with their own prompts still ask)"
+	)
+	local f_help f_yes
+	zparseopts -D -F -K -- {h,-help}=f_help {y,-yes}=f_yes || return 1
+	if (( ${#f_help} )); then
+		>&2 print -l $usage
+		return 0
+	fi
+
 	# Gather all functions to run
 	local -A fn_results
 	local -a fn_to_run=($BASE_FUNCTIONS)
@@ -493,8 +523,17 @@ function main {
 
 	# Run all functions
 	local fn_current
+	local -a fn_skipped=()
 	for fn_current in ${fn_to_run}; do
 		fn_results[$fn_current]=0
+		# Ask first unless told not to; a declined step counts as done so the
+		# "not initialized" warning in zstages/rc/00-init.zsh stays quiet.
+		if (( ! ${#f_yes} )) && (( ! ${SELF_PROMPTING[(Ie)$fn_current]} )) \
+			&& ! ask -B -d y "${FN_DESCRIPTIONS[$fn_current]:-$fn_current}? ($fn_current)"; then
+			fn_skipped+=($fn_current)
+			fn_results[$fn_current]=1
+			continue
+		fi
 		if $fn_current; then
 			(( fn_completed++ ))
 			fn_results[$fn_current]=1
@@ -508,6 +547,7 @@ function main {
 	# Mini report
 	if (( $fn_completed/$fn_total )); then
 		echo "${SCRIPT_NAME}: First-time initialization completed successfully."
+		(( ${#fn_skipped} )) && echo "${SCRIPT_NAME}: Skipped by choice: ${fn_skipped}"
 		if (( $NEEDS_RESTART )); then
 			echo "${SCRIPT_NAME}: Restart your system for changes to take effect."
 		fi
