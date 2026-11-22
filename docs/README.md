@@ -53,7 +53,7 @@ It's structured as follows:
 	* Completion files (`_*`) are not loaded or considered, avoiding `fpath` pollution.
 	* They follow the same naming schemes and structure as `plugins`, including the `.plugin.zsh` filename extension.
 	* A few extensions also provision host state on first load. For example, `ssh-agent` symlinks its user unit from `conf/home/systemd/user/ssh-agent.service` into `${XDG_CONFIG_HOME}/systemd/user/` (the repo copy is the source of truth, so the unit travels and self-heals across machines) and exports `SSH_AUTH_SOCK` from the agent's deterministic socket. The unit itself publishes `SSH_AUTH_SOCK` into the systemd/D-Bus session environment so graphical and Flatpak apps inherit it, while the extension covers shells that don't descend from the session manager (TTY logins, `--host` shells).
-3. Zsh completions for `lib/` functions under `completions/`. One `_<funcname>` file per public function, prepended to `$fpath` before OMZ runs `compinit`. Drift between `lib/` and `completions/` is checked by `conf/check-completions.zsh` (invoked by `zupdate` and by the pre-commit hook at `conf/hooks/pre-commit`); `completions/.skip` lists intentionally uncompleted functions.
+3. Zsh completions for `lib/` functions under `completions/`. One `_<funcname>` file per public function, prepended to `$fpath` before `compinit` runs. Drift between `lib/` and `completions/` is checked by `conf/check-completions.zsh` (invoked by `zupdate` and by the pre-commit hook at `conf/hooks/pre-commit`); `completions/.skip` lists intentionally uncompleted functions.
 4. Custom functions under `custom/functions/`.
 5. Custom plugins under `custom/plugins/`.
 6. Custom themes under `custom/themes/`.
@@ -63,18 +63,18 @@ It's structured as follows:
 
 _Oh-My-ZSH_, _powerlevel10k_ and _zsh-syntax-highlighting_ are git submodules, enabled and loaded by default. Each can be turned off with `zsubmod --off <name>` in `user/settings.zsh` (see [Customization](#customization)); a disabled submodule is neither fetched by `zupdate --submodules` nor loaded.
 
-Turning off _powerlevel10k_ or _zsh-syntax-highlighting_ is fully supported. Turning off _Oh-My-ZSH_ works, but nothing replaces it yet, so you also lose `compinit` and plugin loading.
+Turning off any of them is fully supported. Without _Oh-My-ZSH_ you get plain zsh: the environment still sets up `fpath`, runs `compinit` and loads plugins from `custom/plugins/`, but nothing replaces OMZ's own settings, plugins or themes.
 
 #### Oh-My-ZSH
 
 This addon is loaded at the usual `zshrc` stage after disabling auto-updates and having gone through any user configuration, in file `zstages/rc/25-omz-load.zsh`.
-Its plugin loader was replaced by my own code, which is optimized as much as possible and avoids `fpath` pollution, guaranteeing faster load times than OMZ (based on current tests).
+Everything around it works without it: `24-fpath.zsh` finds plugins and builds `fpath`, `26-compinit.zsh` runs `compinit` when OMZ didn't, and `27-plugins-load.zsh` loads the plugins. That loader replaces OMZ's own; it's optimized as much as possible and avoids `fpath` pollution, guaranteeing faster load times than OMZ (based on current tests).
 
 #### Powerlevel10k
 
 This theme is set at the usual `zshrc` stage, before OMZ is loaded, with a code block in `zstages/rc/10-setup.zsh` that loads the cached instant prompt file if it's enabled.
-The submodule's theme file is symlinked into `custom/themes/`, where OMZ finds it.
-When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead (e.g. Arch's `zsh-theme-powerlevel10k`, Homebrew, NixOS). OMZ can't find that one, so `zstages/rc/90-user.zsh` sources it right before `.p10k.zsh`. The setup script offers to switch to it when it finds one. To skip powerlevel10k altogether, disable the submodule and set `ZSH_THEME` to another theme in `user/settings.zsh`.
+The submodule's theme file is symlinked into `custom/themes/`, where OMZ finds it; without OMZ, `zstages/rc/90-p10k.zsh` sources it.
+When the submodule is disabled or not checked out, a copy installed by the system's package manager is used instead (e.g. Arch's `zsh-theme-powerlevel10k`, Homebrew, NixOS). OMZ can't find that one, so `zstages/rc/90-p10k.zsh` sources it right before `.p10k.zsh`. The setup script offers to switch to it when it finds one. To skip powerlevel10k altogether, disable the submodule and set `ZSH_THEME` to another theme in `user/settings.zsh`.
 
 #### zsh-syntax-highlighting
 
@@ -90,27 +90,27 @@ In the future, this block should be adapted to any fetch program of your choice.
 
 ### Installation
 
-There's still some work to be done, particularly with the setup script, but most of the environment is at an acceptable stage for anyone to pick up and use.  
-Currently, it works best with Arch Linux, but it should work with any Linux distro; some systems require a bit more tweaking due to differences in file layout.
-If you are adventurous enough, the procedure is a bit straightforward (with plans to make it much easier in the future). The following presumes `$XDG_CONFIG_HOME` is set to `$HOME/.local/config` (later potentially being flexible to any other path _except `$HOME/.config`_): 
+Most of the environment is at an acceptable stage for anyone to pick up and use. It works best with Arch Linux, but it should work with any Linux distro, macOS or Termux; some systems require a bit more tweaking due to differences in file layout. The environment lives in `$HOME/.local/config/zsh`, with `$XDG_CONFIG_HOME` set to `$HOME/.local/config`.
 
-0. Make sure `zsh` is installed, and set as default shell:
+With `zsh` and `git` installed, run:
 ```shell
-sudo pacman -S zsh # Arch Linux command to install; this *will* differ with from other distros
-chsh -s /bin/zsh # Change shell to zsh
+zsh -c "$(curl -fsSL https://raw.githubusercontent.com/Keyaku/keyaku-zprofile/main/conf/install.zsh)"
 ```
-1. Head to `$XDG_CONFIG_HOME` and clone this repository to a target directory named `zsh`:
+It clones this repository into `$HOME/.local/config/zsh`, offers to make zsh your login shell, and runs the setup script `conf/first_init.zsh`. Arguments after the command go to the setup script, e.g. `zsh -c "$(curl …)" install -y` answers yes to every step. Running it again on an existing clone skips the clone.
+
+To do it by hand instead:
+1. Clone this repository into `$HOME/.local/config/zsh`:
 ```shell
-cd "${XDG_CONFIG_HOME:-$HOME/.local/config}"
-git clone https://github.com/Keyaku/keyaku-zprofile zsh
+git clone https://github.com/Keyaku/keyaku-zprofile "$HOME/.local/config/zsh"
 ```
 2. Run the initial setup script:
 ```shell
-cd zsh
-zsh conf/first_init.zsh
+zsh "$HOME/.local/config/zsh/conf/first_init.zsh"
 ```
-3. Answer the script's prompts: it asks before each step (pass `-y` to run them all). The first step installs the base packages with your system's package manager (pacman, apt, dnf, zypper, apk, xbps, Homebrew or Termux's pkg) through `pkg-install`. Make sure it sets up everything correctly. It'll keep track of every substep in the file `.first_init` at the root of the git repo.
-4. Log out and log back in.
+
+Then:
+1. Answer the script's prompts: it asks before each step (pass `-y` to run them all). The first step installs the base packages with your system's package manager (pacman, apt, dnf, zypper, apk, xbps, Homebrew or Termux's pkg) through `pkg-install`. Make sure it sets up everything correctly. It'll keep track of every substep in the file `conf/.first_init`.
+2. Log out and log back in.
 
 
 ### Customization
