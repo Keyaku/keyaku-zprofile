@@ -126,6 +126,24 @@ Every OMZ configuration you'd find from their `.zshrc` template happen in `zstag
 This includes setting the plugins or themes. Although you cannot override one of these files yet, you may add a file in `zstages/rc/` with a higher priority (ideally before 25, where OMZ is sourced) to reflect your preferences.
 
 
+### SSH
+
+SSH is set up to follow the XDG Base Directory Specification, and its agent runs as a systemd user service.
+
+#### Configuration layout
+
+- `setup_ssh` (in `conf/first_init.zsh`) syncs `conf/etc/ssh/` into `/etc/ssh/`. The client drop-in `ssh_config.d/99-user.conf` points `IdentityFile` and `UserKnownHostsFile` at `${XDG_CONFIG_HOME}/ssh/` and includes `${XDG_CONFIG_HOME}/ssh/config.d/*`. The server drop-in `sshd_config.d/99-user.conf` disables password and root logins and reads keys from `.local/config/ssh/authorized_keys`.
+- The `ssh` extension exports `SSH_HOME=${XDG_CONFIG_HOME}/ssh`, migrates a leftover `~/.ssh` into it, and creates the `agent`, `config.d`, `control_paths`, `keys` and `known_hosts.d` subdirectories (mode `700`). `control_paths` must exist for `ControlMaster` sockets, since ssh won't create it and silently falls back to a full handshake.
+- Hosts declared in `${SSH_HOME}/config` and `config.d/*.conf` are offered as completions for `ssh`, `scp`, `rsync` and the like (wildcard patterns are skipped).
+
+#### Agent
+
+- The user unit `conf/home/systemd/user/ssh-agent.service` runs `ssh-agent -D -a %t/ssh-agent.socket`, so the socket always lives at `${XDG_RUNTIME_DIR}/ssh-agent.socket`.
+- The `ssh-agent` extension symlinks that unit into `${XDG_CONFIG_HOME}/systemd/user/` and enables it (a real file in the way is kept as `.bak`). The repo copy is the source of truth, so the unit travels and self-heals across machines. After it's first linked, restart the agent or log in again for it to take effect.
+- On start, the unit publishes `SSH_AUTH_SOCK` into the systemd and D-Bus session environment (`ExecStartPost`), so graphical and Flatpak apps inherit it without per-app overrides. It's removed again when the agent stops. No `environment.d` drop-in is used.
+- Shells that don't descend from the session manager (TTY logins, `flatpak-spawn --host` shells) don't inherit it, so the extension exports `SSH_AUTH_SOCK` itself when the variable is unset and the socket exists.
+- Keys are loaded passively: put `AddKeysToAgent yes` under `Host *` in `${SSH_HOME}/config.d/user.conf`, and the first successful use of a key adds it to the agent for the rest of the session.
+
 ### Tasks
 
 I store a [list of all major tasks](TODO.md) (that I can think of) to improve this setup, on top of the [Issues](issues) page.
