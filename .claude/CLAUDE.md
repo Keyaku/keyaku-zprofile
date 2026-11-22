@@ -43,6 +43,10 @@ Numbers in filenames control load order within each stage (lower = earlier).
 - `addpath` / `rmpath` / `haspath` — manipulate `$path` (ZSH array tied to `$PATH`).
 - `addvar` / `rmvar` / `hasvar` — manipulate colon-delimited env vars.
 - `command-has` — check for command/function/alias existence with `-a` (AND) / `-o` (OR).
+- `whatami` lists `ID` plus every `ID_LIKE` entry of `/etc/os-release`, so `whatami Arch` is also true on Arch-based distros.
+
+### Installing packages (lib/interactive/packages.zsh)
+`pkg-install [-n] [-y] [-u] PKG...` installs through the system's package manager, detected by binary (`pkg` on Termux, then pacman, apt-get, dnf, zypper, apk, xbps-install, brew), never by distro name. It skips installed packages, uses sudo where needed, and maps names that differ per manager through `conf/packages.tsv` ("=" same name, "-" unavailable). Setup steps use it instead of calling a package manager directly; extensions never install packages.
 
 ### Script helpers (lib/script/)
 Sourced à la carte by standalone scripts under [conf/home/bin/](conf/home/bin/) — never by `.zshenv`/`.zshrc`/zstages. After the script does its `$0` plugin-standard dance and sets `THIS` / `THIS_NAME`, it sources whichever of these it needs:

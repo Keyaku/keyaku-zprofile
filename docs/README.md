@@ -107,9 +107,9 @@ git clone https://github.com/Keyaku/keyaku-zprofile zsh
 2. Run the initial setup script:
 ```shell
 cd zsh
-zsh conf/first_setup.zsh
+zsh conf/first_init.zsh
 ```
-3. Answer the script's prompts: it asks before each step (pass `-y` to run them all). Make sure it sets up everything correctly. It'll keep track of every substep in the file `.first_init` at the root of the git repo.
+3. Answer the script's prompts: it asks before each step (pass `-y` to run them all). The first step installs the base packages with your system's package manager (pacman, apt, dnf, zypper, apk, xbps, Homebrew or Termux's pkg) through `pkg-install`. Make sure it sets up everything correctly. It'll keep track of every substep in the file `.first_init` at the root of the git repo.
 4. Log out and log back in.
 
 

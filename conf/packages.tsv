@@ -1,0 +1,15 @@
+# Package names per package manager, for pkg-install (lib/interactive/packages.zsh).
+# Columns are tab-separated. "=" means the same name as the first column, "-" means
+# not available there (pkg-install skips it with a warning). A package missing
+# from this table is installed under its own name everywhere.
+#
+name	pacman	apt-get	dnf	zypper	apk	xbps-install	brew	pkg
+fd	=	fd-find	fd-find	=	=	=	=	=
+vim	=	=	vim-enhanced	=	=	=	=	=
+kdeconnect	=	=	kde-connect	kdeconnect-kde	-	=	-	-
+ttf-meslo-nerd	=	-	-	-	-	-	font-meslo-lg-nerd-font	-
+plymouth	=	=	=	=	-	=	-	-
+power-profiles-daemon	=	=	=	=	=	=	-	-
+flatpak	=	=	=	=	=	=	-	-
+getconf	-	-	-	-	-	-	-	=
+mount-utils	-	-	-	-	-	-	-	=

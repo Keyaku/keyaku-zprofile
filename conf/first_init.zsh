@@ -46,19 +46,17 @@ typeset -i NEEDS_RESTART=0
 
 ### Setup functions
 
-# Installs system packages
+# Installs system packages through pkg-install (lib/interactive/packages.zsh),
+# which picks the package manager and skips what's already installed. The
+# system is only refreshed and upgraded when something is actually missing.
 function install_pkgs {
-	local pkgs_needed=(rsync patch git zsh wget curl vim fastfetch)
-	if ! command -v ${pkgs_needed} &>/dev/null; then
-		if whatami Android; then
-			local pkgs_termux=(getconf mount-utils)
-			pkg install -y ${pkgs_needed} ${pkgs_termux}
-		elif whatami Arch; then
-			local pkgs_arch=(ttf-meslo-nerd flatpak plymouth power-profiles-daemon)
-			sudo pacman -Syu --noconfirm ${pkgs_needed} ${pkgs_arch}
-		fi
-		# TODO: install for other systems
+	local -a pkgs=(rsync patch git zsh wget curl vim fastfetch)
+	if whatami Android; then
+		pkgs+=(getconf mount-utils)
+	elif whatami Arch; then
+		pkgs+=(ttf-meslo-nerd flatpak plymouth power-profiles-daemon)
 	fi
+	pkg-install -u -y ${pkgs}
 }
 
 # Sets up ZSH system-wide to follow XDG Base Directory Specification
@@ -408,8 +406,7 @@ function setup_flatpak {
 function setup_de {
 	if [[ "$XDG_CURRENT_DESKTOP" == KDE ]]; then
 		# Install required packages
-		local -a pkgs_needed=(kdeconnect)
-		whatami Arch && $SUDO pacman -S ${pkgs_needed}
+		pkg-install kdeconnect
 		# FIXME: Set Monospace font to the insalled Meslo Nerd font
 		#qt6ct -set monospace_font "MesloLGS Nerd Font Mono"
 
@@ -608,7 +605,7 @@ typeset -ra ARCH_FUNCTIONS=(setup_pacman)
 
 # What each step does, shown when asking whether to run it
 typeset -rA FN_DESCRIPTIONS=(
-	[install_pkgs]="Install base packages (git, zsh, rsync, curl, vim, fastfetch…)"
+	[install_pkgs]="Install base packages (git, zsh, rsync, curl, vim, fastfetch…) with the system's package manager"
 	[setup_zsh]="Make zsh read this ZDOTDIR system-wide (/etc/zsh/zshenv)"
 	[setup_ssh]="Sync the XDG-aware SSH client/server drop-ins into /etc/ssh"
 	[setup_termux]="Set up Termux (mirrors, storage, .termux config)"

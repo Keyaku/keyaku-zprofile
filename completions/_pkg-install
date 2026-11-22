@@ -1,0 +1,14 @@
+#compdef pkg-install
+
+local -a names
+[[ -r "$ZDOTDIR/conf/packages.tsv" ]] && \
+	names=(${${(M)${(f)"$(<"$ZDOTDIR/conf/packages.tsv")"}:#[^\#]*}%%$'\t'*})
+names=(${names:#name})
+
+_arguments -s -S \
+	'(- *)'{-h,--help}'[show help]' \
+	'(-n --dry-run)'{-n,--dry-run}'[print the commands instead of running them]' \
+	'(-y --yes)'{-y,--yes}'[do not ask the package manager for confirmation]' \
+	'(-u --upgrade)'{-u,--upgrade}'[refresh and upgrade the system first]' \
+	'(- *)'{-w,--which}'[print the detected package manager]' \
+	'*:package:compadd -a names'
