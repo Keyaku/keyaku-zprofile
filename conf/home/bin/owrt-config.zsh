@@ -870,9 +870,27 @@ function _select_routers {
 		' <<< "$data"
 }
 
+# Tame owut's build poll, a Status:/Progress: pair every ~2 s that it only redraws in place on a terminal
+# (never through ssh): redraw it on one line when stdout is a terminal, else print only status changes.
+function _progress_filter {
+	local -i tty=0
+	[[ -t 1 ]] && tty=1
+	awk -v tty=$tty '
+		/^Status: / { st = $0; next }
+		/^Progress: / {
+			if (tty) { printf "\r\033[K%s  %s", st, $0; open = 1 }
+			else if (st != last) { print st; print; last = st }
+			fflush(); next
+		}
+		/^--$/ && st != "" { next }
+		{ if (open) { printf "\n"; open = 0 } print; fflush() }
+		END { if (open) printf "\n" }'
+}
+
 function _run_one {
-	# Streams to a per-router log file; writes exit code into <log>.exit.
-	local id="$1" cmd="$2" logfile="$3" dry_run="$4"
+	# Writes the raw output to a per-router log file (and, with stream=1, also live through
+	# _progress_filter to stdout); writes the exit code into <log>.exit.
+	local id="$1" cmd="$2" logfile="$3" dry_run="$4" stream="${5:-0}"
 
 	local router endpoint port user_host
 	router="$(_find_router "$id")" || { print 127 > "${logfile}.exit"; return; }
@@ -882,6 +900,7 @@ function _run_one {
 
 	if (( dry_run )); then
 		print -r -- "[dry-run] ssh -p $port $user_host -- $cmd" > "$logfile"
+		(( stream )) && < "$logfile"
 		print 0 > "${logfile}.exit"
 		return
 	fi
@@ -897,8 +916,9 @@ function _run_one {
 		"$user_host" \
 		"$cmd" \
 		</dev/null \
-		>"$logfile" 2>&1
-	ec=$?
+		2>&1 \
+		| { if (( stream )); then tee "$logfile" | _progress_filter; else cat > "$logfile"; fi }
+	ec=${pipestatus[1]}
 	print -- "$ec" > "${logfile}.exit"
 }
 
@@ -1014,14 +1034,14 @@ function owrt_run {
 			fi
 			(( verbosity > 0 )) && [[ -s "$tmpdir/$id" ]] && {
 				print -- "--- $id output ---"
-				< "$tmpdir/$id"
+				_progress_filter < "$tmpdir/$id"
 			}
 		done
 	else
 		local id ec
 		for id in "${router_ids[@]}"; do
 			print_fn -i "→ %s" "$id"
-			_run_one "$id" "$joined" "$tmpdir/$id" "$dry"
+			_run_one "$id" "$joined" "$tmpdir/$id" "$dry" 1
 			ec="$(< "$tmpdir/$id.exit")"
 			# A reboot task drops the SSH link (255): wait for the router before moving on.
 			if (( reboots && ! dry )) && { (( ec == 255 )) || { (( ec == 0 )) && grep -q "rebooting" "$tmpdir/$id" 2>/dev/null; }; }; then
@@ -1031,12 +1051,11 @@ function owrt_run {
 					ec=0
 				else
 					print "$id did not come back within the timeout" >> "$tmpdir/$id"
+					print_fn -e "%s did not come back within the timeout." "$id"
 					ec=254
 				fi
 			fi
 			exit_codes[$id]=$ec
-			# Stream the captured output now
-			[[ -s "$tmpdir/$id" ]] && < "$tmpdir/$id"
 			if (( ec != 0 )); then
 				failures+=("$id")
 				print_fn -e "FAIL %s (exit %d)" "$id" "$ec"
@@ -1081,7 +1100,7 @@ function owrt_run {
 		local fail_id
 		for fail_id in "${failures[@]}"; do
 			print -- "--- $fail_id ---"
-			[[ -s "$tmpdir/$fail_id" ]] && < "$tmpdir/$fail_id" || print -- "(no output)"
+			[[ -s "$tmpdir/$fail_id" ]] && _progress_filter < "$tmpdir/$fail_id" || print -- "(no output)"
 		done
 	fi
 
