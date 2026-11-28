@@ -140,6 +140,10 @@ The dominant remaining startup cost is OMZ (`oh-my-zsh.sh` in `25-omz-load.zsh`)
 ## Task tracking
 Planned work lives in GitHub issues (`Keyaku/keyaku-zprofile`, grouped by milestone). `docs/TODO.md` is an untracked personal list: keep it aligned with the issues (reference `#N` on items that have one), though it may hold small extra tasks that don't warrant an issue.
 
+## Scripts with unattended callers
+
+- `owrt-config.zsh` is driven by an unattended OpenWrt AP update scheduler on the home server, which runs `run -r ID --task sysupgrade[:VERSION]` and `ssh ID CMD` and parses the run `Summary:` table and exit codes (0 ok, 254 never came back). The scheduler self-tests on every change of this file and blocks upgrades when it fails; after changing that interface, run its self-test there (`openwrt-auto-update.sh --self-test`) and adapt it.
+
 ## What NOT to do
 - Do not add commands that produce output to `.zshenv` (it's sourced even in non-interactive, non-TTY contexts).
 - Do not add personal/private config (API keys, host-specific vars) to tracked files — use `*.local.*` files (gitignored).

@@ -77,7 +77,7 @@ typeset -gA CMD_HELP=(
 	edit     "Usage: ${THIS} edit ID [--host H] [--user U] [--port N] [--id NEW] [--network NAME] [--tag T]... [--untag T]...\n\tEdit a router; with no options opens it in \$EDITOR."
 	ssh      "Usage: ${THIS} ssh ID [CMD...]\n\tOpen an SSH session, or run a one-shot command."
 	scan     "Usage: ${THIS} scan [--subnet CIDR] [--add] [--columns COLS] [--user U] [--port N] [--tag T]...\n\tDiscover OpenWRT devices on the LAN (requires nmap)."
-	run      "Usage: ${THIS} run [SELECTORS] [-c CMD]... [--task NAME]... [OPTIONS]\n\tSelectors: -r/--router ID, -R/--exclude-router ID, -t/--tag TAG, --all\n\tOptions: -c/--command CMD, --task NAME, -p/--parallel, -i/--interactive, -e/--exit-on-error, -n/--dry-run\n\tRouters run one at a time by default; failures don't stop the batch and a summary table is printed.\n\tTasks that reboot the router (sysupgrade) are always sequential and wait for each router to return."
+	run      "Usage: ${THIS} run [SELECTORS] [-c CMD]... [--task NAME]... [OPTIONS]\n\tSelectors: -r/--router ID, -R/--exclude-router ID, -t/--tag TAG, --all\n\tOptions: -c/--command CMD, --task NAME, -p/--parallel, -i/--interactive, -e/--exit-on-error, -n/--dry-run\n\tRouters run one at a time by default; failures don't stop the batch and a summary table is printed.\n\tTasks that reboot the router (sysupgrade, sysupgrade:VERSION) are always sequential and wait for each router to return."
 	task     "Usage: ${THIS} task [list|add|rm] ...   or   ${THIS} task NAME [RUN OPTIONS]\n\tlist             List tasks\n\tadd NAME ...     Save a task\n\trm NAME          Remove a config task\n\tNAME [OPTIONS]   Run the named task (shortcut for 'run --task NAME'; see 'run -h')"
 	task:list "Usage: ${THIS} task list [--names] [--columns COLS]\n\t    --names        Machine-readable name:description lines\n\t    --columns COLS Comma list of columns ('help' lists them)"
 	task:add  "Usage: ${THIS} task add NAME [-d|--description DESC] -c CMD [-c CMD]...\n\tSave a named task to the config."
@@ -86,6 +86,8 @@ typeset -gA CMD_HELP=(
 )
 
 # Tasks that reboot the router: always sequential, wait for the router to come back.
+# An unattended AP update scheduler drives `run -r ID --task sysupgrade[:VERSION]` and `ssh ID CMD` and parses
+# the run Summary table and exit codes (254 = never came back); it self-tests whenever this file changes.
 typeset -gA TASK_REBOOTS=(sysupgrade 1)
 
 # --- Storage paths ---
@@ -102,14 +104,14 @@ typeset -gi verbosity=0
 typeset -gA TASK_DESCRIPTIONS=(
 	wifi-passwd "Prompt for new Wi-Fi password and apply to both radios"
 	update-pkgs "Update package index and upgrade installed packages (apk)"
-	sysupgrade  "Run owut (attended sysupgrade)"
+	sysupgrade  "Run owut (attended sysupgrade); sysupgrade:VERSION targets that release"
 )
 
 # Human-readable command summary per built-in task (for `task list`).
 typeset -gA TASK_BUILTIN_COMMANDS=(
 	wifi-passwd "<prompts> && uci set wireless.default_radio{0,1}.key=... && uci commit wireless && wifi"
 	update-pkgs "apk update && apk upgrade"
-	sysupgrade  "owut upgrade"
+	sysupgrade  "owut upgrade [-V VERSION]"
 )
 
 function _task_cmds {
@@ -143,6 +145,15 @@ function _task_cmds {
 		;;
 		sysupgrade)
 			print -- "owut upgrade"
+		;;
+		sysupgrade:*)
+			# Target another release, e.g. sysupgrade:25.12.7.
+			local ver="${1#sysupgrade:}"
+			[[ "$ver" =~ '^([0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?|[0-9]+\.[0-9]+-SNAPSHOT|SNAPSHOT)$' ]] || {
+				print_fn -e "Invalid version: %s" "$ver"
+				return 1
+			}
+			print -r -- "owut upgrade -V $ver"
 		;;
 		*)
 			# Fall back to a user-defined task in the config file.
@@ -772,7 +783,7 @@ function owrt_task {
 		;;
 		*)
 			# `task NAME [OPTS]` runs the named task across routers.
-			if [[ -n "${TASK_DESCRIPTIONS[$sub]-}" ]] || jaq -e --arg n "$sub" '(.tasks // {}) | has($n)' "$CONFIG_FILE_PATH" >/dev/null 2>&1; then
+			if [[ -n "${TASK_DESCRIPTIONS[${sub%%:*}]-}" ]] || jaq -e --arg n "$sub" '(.tasks // {}) | has($n)' "$CONFIG_FILE_PATH" >/dev/null 2>&1; then
 				owrt_run --task "$sub" "$@"
 				return
 			fi
@@ -955,7 +966,7 @@ function owrt_run {
 	(( ${#router_ids} )) || { print_fn -e "No routers matched."; return 1; }
 
 	local -i reboots=0
-	for task in "${tasks[@]}"; do [[ -n "${TASK_REBOOTS[$task]-}" ]] && reboots=1; done
+	for task in "${tasks[@]}"; do [[ -n "${TASK_REBOOTS[${task%%:*}]-}" ]] && reboots=1; done
 	if (( reboots && ${#f_parallel} )); then
 		print_fn -w "Reboot tasks run one router at a time; ignoring --parallel."
 		f_parallel=()
